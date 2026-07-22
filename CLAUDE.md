@@ -29,6 +29,7 @@ npx prisma generate        # regenerate Prisma client after schema changes
 npx prisma migrate dev     # create + apply a migration (dev)
 npx prisma migrate deploy  # apply pending migrations (CI/prod)
 npx prisma migrate status  # what's applied vs pending
+npx prisma db seed         # instrument catalogue (idempotent, upsert by slug)
 ```
 
 **Do not use `prisma db push`.** This project is on `prisma migrate` because the schema depends on hand-written SQL that `db push` would silently drop (see *Integrity constraints* below).
@@ -112,6 +113,13 @@ Things that will bite you:
 
 The engine narrows candidates; it is **not** the booking guarantee. Two requests can pass through it concurrently for the same slot — the exclusion constraint below is what actually prevents the double booking.
 
+Its one caller is `app/api/teachers/[slug]/availability/route.ts` (`GET ?from=&to=&duration=`), which is **public** — discovery is the point of a marketplace, so a student can browse a calendar before signing up. It returns slots only, never student identities or the teacher's private notes.
+
+Two things that route establishes and new code should follow:
+
+- **Teacher visibility is derived, never stored:** `status === "PUBLISHED" && stripeCurrentPeriodEnd > now()`. A lapsed subscription hides the profile with no webhook writing a `SUSPENDED` state. It answers **404, not 403**, for an invisible teacher, so the endpoint doesn't confirm that an unpublished profile exists.
+- The booking query filters on `status IN (PENDING, CONFIRMED)` — the same set as `booking_teacher_no_overlap`. If you change one, change the other, or the UI will offer slots the database then refuses.
+
 #### Integrity constraints (hand-written SQL)
 
 The tail of `prisma/migrations/20260722120000_init_noteva/migration.sql`, below the generated section, is written by hand and **`prisma migrate diff` will not regenerate it**. If you ever rebuild the migration from scratch, port that block over.
@@ -154,9 +162,10 @@ Teacher visibility should be **derived at read time** (`status = PUBLISHED AND s
 
 The schema is migrated and applied, but the app on top of it is still the boilerplate. Concretely:
 
-- The `instrument` table is **empty**, so nothing is bookable until it's seeded. There is no seed script yet (`prisma db seed` on a `.ts` file would need `tsx` added).
-- The slot engine exists and is tested (27 tests), but **nothing calls it yet** — there is no API route exposing availability.
-- No onboarding page, no teacher/student areas, no public teacher pages — `app/dashboard/page.tsx` is still the boilerplate demo.
+- `prisma/seed.ts` (run via `tsx`, declared in `prisma.config.ts`) holds 37 instruments across the 8 families, with search aliases. Seeded and idempotent.
+- The slot engine is tested (27 tests) and exposed through the public availability route.
+- **No booking route yet** — nothing writes a `Booking`. That handler is where the `23P01` → "créneau déjà pris" mapping needs to live.
+- No onboarding page, no teacher/student areas, no public teacher pages — `app/dashboard/page.tsx` is still the boilerplate demo, and `User.role` is null for existing accounts.
 - `npm run lint` reports two pre-existing errors (an `any` in the Stripe webhook, an unescaped apostrophe in the dashboard).
 
 ## Docker
