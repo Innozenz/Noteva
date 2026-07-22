@@ -1,57 +1,83 @@
-import { auth } from "@/lib/auth";
-import prisma from "@/lib/prisma";
-import { stripe } from "@/lib/stripe";
-import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
-export async function POST(req: Request) {
-  try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
+import prisma from "@/lib/prisma";
+import { stripe } from "@/lib/stripe";
+import { requireTeacher } from "@/lib/teacher/session";
+import { isSubscriptionActive } from "@/lib/teacher/visibility";
 
-    if (!session || !session.user) {
-      return new NextResponse("Unauthorized", { status: 401 });
+/**
+ * Souscription à l'abonnement prof.
+ *
+ * Le modèle économique porte sur les profs : ce sont eux les clients de la
+ * plateforme, les élèves règlent leur prof hors ligne. C'est donc la seule
+ * route de paiement de l'application.
+ */
+
+export async function POST() {
+  try {
+    const teacher = await requireTeacher();
+
+    if (!teacher.ok) {
+      return NextResponse.json(
+        { error: teacher.error },
+        { status: teacher.status }
+      );
     }
 
-    const { priceId } = await req.json();
+    const priceId = process.env.STRIPE_PRICE_ID ?? process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
 
     if (!priceId) {
-      return new NextResponse("Price ID is required", { status: 400 });
+      console.error("[STRIPE_CHECKOUT] STRIPE_PRICE_ID non configuré");
+      return NextResponse.json(
+        { error: "Abonnement indisponible" },
+        { status: 500 }
+      );
     }
 
-    // Seuls les profs s'abonnent : sans profil prof, le webhook n'aurait aucune
-    // ligne à mettre à jour au retour de Stripe.
-    const teacher = await prisma.teacherProfile.findUnique({
-      where: { userId: session.user.id },
-      select: { id: true },
-    });
-
-    if (!teacher) {
-      return new NextResponse("Teacher profile required", { status: 403 });
-    }
-
-    const stripeSession = await stripe.checkout.sessions.create({
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?canceled=true`,
-      payment_method_types: ["card"],
-      mode: "subscription",
-      billing_address_collection: "auto",
-      customer_email: session.user.email,
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      metadata: {
-        userId: session.user.id,
+    const profile = await prisma.teacherProfile.findUniqueOrThrow({
+      where: { id: teacher.teacherId },
+      select: {
+        stripeCustomerId: true,
+        stripeCurrentPeriodEnd: true,
+        user: { select: { email: true } },
       },
     });
 
-    return NextResponse.json({ url: stripeSession.url });
+    // Déjà abonné : renvoyer vers le portail plutôt que d'ouvrir un second
+    // abonnement, qui serait facturé en double.
+    if (isSubscriptionActive(profile.stripeCurrentPeriodEnd, new Date())) {
+      return NextResponse.json(
+        { error: "Un abonnement est déjà actif", alreadySubscribed: true },
+        { status: 409 }
+      );
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      // Réutiliser le client existant : passer `customer_email` à chaque fois
+      // créerait un client Stripe par tentative, et l'historique de facturation
+      // du prof se retrouverait éparpillé.
+      ...(profile.stripeCustomerId
+        ? { customer: profile.stripeCustomerId }
+        : { customer_email: profile.user.email }),
+      // Seul lien entre la session et le profil, exploité par le webhook.
+      metadata: { userId: teacher.userId },
+      subscription_data: { metadata: { userId: teacher.userId } },
+      success_url: `${appUrl}/dashboard/prof/abonnement?success=1`,
+      cancel_url: `${appUrl}/dashboard/prof/abonnement?canceled=1`,
+      billing_address_collection: "auto",
+      allow_promotion_codes: true,
+    });
+
+    return NextResponse.json({ url: session.url });
   } catch (error) {
     console.error("[STRIPE_CHECKOUT_ERROR]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    return NextResponse.json(
+      { error: "Impossible d'ouvrir le paiement" },
+      { status: 500 }
+    );
   }
 }

@@ -205,11 +205,14 @@ Teacher visibility is **derived at read time**, never stored: `lib/teacher/visib
 
 Publishing and being visible are **separate**: a teacher without a subscription can complete and publish a profile, and it appears the moment they subscribe.
 
-- `lib/stripe.ts` — server-side Stripe SDK client.
-- `app/api/stripe/checkout/route.ts` — creates a subscription-mode Checkout Session, 403s if the user has no `TeacherProfile` (otherwise the webhook would have no row to update), and stamps `userId` into `metadata`. Returns `{ url }`; the client does a plain `window.location.href` redirect (`components/subscription-button.tsx`).
-- `lib/stripe-client.ts` (`loadStripe`) exists but is **not imported anywhere** — it's leftover scaffolding for a `redirectToCheckout` flow the app doesn't use.
-- `app/api/webhooks/stripe/route.ts` — verifies the Stripe signature and handles `checkout.session.completed` (initial attach, matched by `metadata.userId` → `teacherProfile.userId`) and `invoice.payment_succeeded` (renewal, matched by `stripeSubscriptionId`, which is `@unique` for exactly that reason). Both read the period end off `subscription.items.data[0].current_period_end` — the Stripe v20 API shape, where the field lives on the item rather than the subscription. Extend this handler for new lifecycle behavior (cancellation, plan change) rather than polling Stripe elsewhere.
-- `app/api/user/subscription/route.ts` — read-only endpoint deriving `isActive` from a non-null `stripeSubscriptionId` plus `stripeCurrentPeriodEnd > now()`. Returns `isActive: false` rather than 404 for a user with no teacher profile (i.e. every student). This is the source of truth for the client; there's no separate cache.
+- `app/api/stripe/checkout/route.ts` — subscription Checkout for the signed-in teacher. **The price comes from `STRIPE_PRICE_ID` server-side.** It used to be read from the request body, which let anyone subscribe at a price of their choosing; don't reintroduce a client-supplied price. Reuses `stripeCustomerId` when present — passing `customer_email` every time creates a fresh Stripe customer per attempt and scatters the billing history. 409s if a subscription is already active.
+- `app/api/stripe/portal/route.ts` — Billing Portal session. Cancellation, card changes and invoices are delegated to Stripe rather than rebuilt; the portal never writes to the DB, the resulting webhook does.
+- `app/api/webhooks/stripe/route.ts` — state is tracked from `customer.subscription.created/updated/deleted`, which carry the whole subscription in the payload. No `subscriptions.retrieve()` round-trip, so one less failure mode, and the handler is testable with locally signed events. `checkout.session.completed` does one job only: attach `stripeCustomerId` to the profile via `metadata.userId`. It deliberately does *not* write subscription state — `subscription.created` can arrive first, and writing in both places risks an out-of-order overwrite. Unhandled events return 200; a 4xx/5xx would make Stripe retry forever.
+- `lib/stripe/subscription.ts` — pure mapping from a `Stripe.Subscription` to the profile columns, unit-tested. Two traps it encodes: the period end lives on `items.data[0]` in API v20, not on the subscription; and a `canceled`/`unpaid` subscription must **null out** `stripeCurrentPeriodEnd`, or the profile stays visible until an already-paid period expires. `past_due` deliberately keeps access — Stripe retries for days and cutting a teacher off on the first card failure would be brutal.
+- `app/api/user/subscription/route.ts` — read-only endpoint deriving `isActive`. Returns `isActive: false` rather than 404 for a user with no teacher profile (i.e. every student).
+- `lib/stripe-client.ts` (`loadStripe`) and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are **unused** boilerplate leftovers — checkout is a plain redirect to the URL the server returns.
+
+**The Stripe API calls themselves are unverified.** `.env` holds the `.env.example` placeholders, so `checkout.sessions.create` and `billingPortal.sessions.create` fail with `StripeAuthenticationError` and the routes return 500. Everything up to that boundary is tested, including the full webhook path against the database. Put real test keys in `.env` to exercise the rest.
 
 ### State management convention
 
@@ -234,7 +237,7 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 What is missing:
 
 - **`app/page.tsx` is still boilerplate demo content.** Nothing links to `/profs`, and a visitor can't tell what Noteva is. Biggest gap, and it's the entry point for all search traffic. `app/dashboard/page.tsx` is likewise untouched demo code — the only addition is the role banner in its layout.
-- **Stripe subscriptions are never actually purchased.** No flow calls checkout for a teacher plan; subscription state has only ever been set directly in the database for testing. The business model is not wired up.
+- **Stripe needs real test keys.** The subscription flow is built and wired (`/dashboard/prof/abonnement`), but `.env` still holds placeholders, so no real payment has ever been made — see the Payments section.
 - No instrument/city landing pages; `/profs?instrument=…` serves the need but isn't linked from anywhere crawlable.
 - Students have no profile form: `StudentProfile` is created empty and nothing fills it — instruments, level, goals, guardian contacts are all unused.
 - No notifications at all. A teacher learns of a request only by opening the inbox; a student learns of a confirmation only by reloading.

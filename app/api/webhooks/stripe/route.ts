@@ -1,12 +1,34 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
-import prisma from "@/lib/prisma";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 
-export async function POST(req: Request) {
-  const body = await req.text();
-  const signature = (await headers()).get("Stripe-Signature") as string;
+import prisma from "@/lib/prisma";
+import { stripe } from "@/lib/stripe";
+import { mapSubscription } from "@/lib/stripe/subscription";
+
+/**
+ * Événements d'abonnement Stripe.
+ *
+ * Le suivi s'appuie sur les événements `customer.subscription.*`, qui portent
+ * l'abonnement complet dans leur charge utile. C'est la source canonique de
+ * l'état, et cela évite un aller-retour vers l'API à chaque événement — donc
+ * un point de panne de moins.
+ *
+ * `checkout.session.completed` ne sert qu'à une chose : rattacher le client
+ * Stripe au profil prof. C'est le seul moment où le lien existe, via
+ * `metadata.userId` posé à la création de la session.
+ *
+ * Répondre 200 même quand rien n'est fait est délibéré : un 4xx ou 5xx pousse
+ * Stripe à retenter indéfiniment un événement qui ne nous concerne pas.
+ */
+
+export async function POST(request: Request) {
+  const body = await request.text();
+  const signature = (await headers()).get("Stripe-Signature");
+
+  if (!signature) {
+    return new NextResponse("Signature manquante", { status: 400 });
+  }
 
   let event: Stripe.Event;
 
@@ -16,62 +38,86 @@ export async function POST(req: Request) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-  } catch (error: any) {
-    return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 });
+  } catch (error) {
+    // Signature invalide : la requête ne vient pas de Stripe.
+    const message = error instanceof Error ? error.message : "signature invalide";
+    return new NextResponse(`Webhook Error: ${message}`, { status: 400 });
   }
 
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
-    const subscription = await stripe.subscriptions.retrieve(
-      session.subscription as string
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        await linkCustomer(event.data.object);
+        break;
+      }
+
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted": {
+        await syncSubscription(event.data.object);
+        break;
+      }
+    }
+
+    return new NextResponse(null, { status: 200 });
+  } catch (error) {
+    console.error("[STRIPE_WEBHOOK_ERROR]", event.type, error);
+    // Erreur de notre côté : on rend 500 pour que Stripe retente.
+    return new NextResponse("Internal Error", { status: 500 });
+  }
+}
+
+/**
+ * Rattache le client Stripe au profil prof.
+ *
+ * L'état de l'abonnement lui-même n'est pas écrit ici : il arrive par
+ * `customer.subscription.created`, qui peut précéder cet événement. Écrire les
+ * deux ferait courir le risque qu'un ordre d'arrivée inattendu écrase l'état
+ * le plus récent.
+ */
+async function linkCustomer(session: Stripe.Checkout.Session) {
+  const userId = session.metadata?.userId;
+  const customerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer?.id;
+
+  if (!userId || !customerId) return;
+
+  await prisma.teacherProfile.updateMany({
+    where: { userId },
+    data: { stripeCustomerId: customerId },
+  });
+}
+
+/**
+ * Applique l'état d'un abonnement au profil correspondant.
+ *
+ * Le rattachement se fait par `stripeCustomerId` : c'est le seul identifiant
+ * partagé par tous les événements d'abonnement. On accepte aussi un profil
+ * déjà porteur du même `stripeSubscriptionId`, pour le cas où le client
+ * n'aurait pas encore été rattaché.
+ */
+async function syncSubscription(subscription: Stripe.Subscription) {
+  const fields = mapSubscription(subscription);
+
+  const updated = await prisma.teacherProfile.updateMany({
+    where: {
+      OR: [
+        { stripeCustomerId: fields.stripeCustomerId },
+        { stripeSubscriptionId: fields.stripeSubscriptionId },
+      ],
+    },
+    data: fields,
+  });
+
+  if (updated.count === 0) {
+    // Aucun profil ne correspond : abonnement d'un autre produit, ou
+    // checkout.session.completed pas encore reçu. Ni l'un ni l'autre n'est une
+    // erreur, mais ça vaut d'être tracé.
+    console.warn(
+      "[STRIPE_WEBHOOK] abonnement sans profil correspondant",
+      fields.stripeSubscriptionId
     );
-
-    if (!session?.metadata?.userId) {
-      return new NextResponse("User id is required", { status: 400 });
-    }
-
-    // L'abonnement est rattaché au profil prof, pas au User : seuls les profs
-    // sont clients de la plateforme.
-    await prisma.teacherProfile.update({
-      where: {
-        userId: session.metadata.userId,
-      },
-      data: {
-        stripeSubscriptionId: subscription.id,
-        stripeCustomerId: subscription.customer as string,
-        stripePriceId: subscription.items.data[0].price.id,
-        stripeCurrentPeriodEnd: new Date(
-          subscription.items.data[0].current_period_end * 1000
-        ),
-      },
-    });
   }
-
-  if (event.type === "invoice.payment_succeeded") {
-    const invoice = event.data.object as Stripe.Invoice;
-    const subscriptionId =
-      typeof invoice.parent?.subscription_details?.subscription === "string"
-        ? invoice.parent.subscription_details.subscription
-        : null;
-
-    if (!subscriptionId) {
-      return new NextResponse(null, { status: 200 });
-    }
-
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-
-    await prisma.teacherProfile.update({
-      where: {
-        stripeSubscriptionId: subscription.id,
-      },
-      data: {
-        stripePriceId: subscription.items.data[0].price.id,
-        stripeCurrentPeriodEnd: new Date(
-          subscription.items.data[0].current_period_end * 1000
-        ),
-      },
-    });
-  }
-
-  return new NextResponse(null, { status: 200 });
 }
