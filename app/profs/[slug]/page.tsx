@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   BadgeCheck,
+  ChevronLeft,
   Globe,
   Home,
   MapPin,
@@ -147,6 +149,14 @@ export default async function TeacherPublicPage({
 
       <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
         <div className="flex flex-col gap-6">
+          <Link
+            href="/profs"
+            className="flex w-fit items-center gap-1 text-sm text-zinc-500 hover:underline"
+          >
+            <ChevronLeft className="h-3 w-3" />
+            Tous les profs
+          </Link>
+
           <header className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-3xl font-semibold">{name}</h1>

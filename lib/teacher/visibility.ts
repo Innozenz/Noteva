@@ -29,3 +29,17 @@ export function isTeacherVisible(
     isSubscriptionActive(teacher.stripeCurrentPeriodEnd, now)
   );
 }
+
+/**
+ * Même règle, exprimée comme filtre Prisma pour la recherche.
+ *
+ * Volontairement voisine de `isTeacherVisible` : une recherche qui remonterait
+ * des fiches que la page individuelle refuse ensuite en 404 serait pire que
+ * pas de recherche du tout. Les deux se modifient ensemble.
+ */
+export function visibleTeacherWhere(now: Date) {
+  return {
+    status: "PUBLISHED" as const,
+    stripeCurrentPeriodEnd: { gt: now },
+  };
+}

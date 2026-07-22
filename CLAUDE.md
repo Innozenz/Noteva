@@ -103,6 +103,17 @@ Search discovery is how a marketplace lives, so the public surface needs Server 
 
 `getPublicTeacher` is wrapped in React `cache()` because `generateMetadata` and the page component both need the profile — without it the query runs twice per render.
 
+### Search (`/profs`)
+
+Server-rendered results with a client island (`SearchFilters`) that holds **no results** — it only rewrites the URL. Filters therefore live in `searchParams`, which makes every search a shareable, crawlable, back-button-correct address. Keep it that way; moving filter state into React would silently kill the SEO rationale for the whole page.
+
+- `visibleTeacherWhere()` sits next to `isTeacherVisible()` in `lib/teacher/visibility.ts` on purpose: search filters in SQL, the profile page checks in JS, and a search returning profiles that then 404 would be worse than no search. Change one, change the other. Verified: expiring a subscription or unpublishing removes the teacher from both at once.
+- `buildQueryString` omits defaults so one search has exactly one URL.
+- `isIndexableSearch` decides `robots`: instrument and city are indexed (`cours de chant à Lyon` is a real query and there are few such pages), while mode/price/trial/pagination are `noindex` — they multiply near-identical pages.
+- An unrecognised instrument term returns **no results** rather than silently dropping the filter, which would bury the student in irrelevant teachers.
+
+**Known limitation:** instruments are flat. Searching `guitare` matches the `guitare` instrument only — a teacher listed under `guitare-electrique` will not appear. Defensible (they are distinct instruments) but probably not what a student expects; fixing it means a parent/family relation in the schema, not fuzzier matching, which would wreck precision elsewhere.
+
 ### Domain model (Prisma)
 
 `User`/`Session`/`Account`/`Verification` match Better Auth's expected shape and are `@@map`ped to lowercase tables — don't rename fields or mappings without adjusting the adapter config in `lib/auth.ts`. Everything else is Noteva's domain. `lib/prisma.ts` exports a singleton `PrismaClient` cached on `globalThis` outside production to survive dev hot-reload.
@@ -213,9 +224,10 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 - The slot engine is tested (27 tests) and exposed through the public availability route.
 - The booking API is complete: create, list, read, and the full lifecycle. Nothing consumes it — **there is no UI**.
 - **The teacher loop is closed and works through the UI**: onboarding → profile → weekly grid → publish → a student books → confirm/decline/complete. Verified end to end against the database.
-- `/profs/[slug]` exists and a student can book from it end to end.
-- **No search or discovery.** A profile is only reachable by knowing its URL — nothing lists or filters teachers, so the marketplace can't actually be browsed. Biggest gap.
-- **No "my lessons" screen for students**: they can book but then can't see or cancel a booking without calling the API by hand.
+- The student path works: `/profs` → filters → `/profs/[slug]` → booking.
+- **No "my lessons" screen for students**: they can book but then can't see or cancel a booking without calling the API by hand. Biggest gap.
+- **Nothing links to `/profs`** from the landing page — `app/page.tsx` is still boilerplate demo content.
+- No instrument/city landing pages yet; `/profs?instrument=…` covers it but isn't linked from anywhere crawlable.
 - `app/dashboard/page.tsx` is still boilerplate demo code; the only addition is a banner linking teachers to `/dashboard/prof`.
 - Students have no profile form; `StudentProfile` is created empty at onboarding.
 - Stripe subscriptions are never actually purchased in any flow — subscription state has only ever been set directly in the database for testing.

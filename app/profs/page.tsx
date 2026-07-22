@@ -1,0 +1,205 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Globe, MapPin, Music, Sparkles } from "lucide-react";
+import { Suspense } from "react";
+
+import { SearchFilters } from "@/components/search-filters";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  buildQueryString,
+  isIndexableSearch,
+  parseFilters,
+  SEARCH_PAGE_SIZE,
+  type RawParams,
+} from "@/lib/search/query";
+import { getSearchableInstruments, searchTeachers } from "@/lib/search/teachers";
+
+/**
+ * Recherche de profs.
+ *
+ * Server Component : les résultats sont dans le HTML, donc explorables. Les
+ * filtres ne sont qu'un îlot client qui réécrit l'URL — chaque combinaison est
+ * ainsi une adresse partageable et indexable, ce dont vit une marketplace.
+ *
+ * Rendue à la demande, comme la fiche individuelle : les résultats dépendent
+ * des abonnements en cours, qui expirent en continu.
+ */
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<RawParams>;
+}): Promise<Metadata> {
+  const filters = parseFilters(await searchParams);
+
+  const subject = filters.instrument ? `de ${filters.instrument}` : "de musique";
+  const place = filters.city ? ` à ${filters.city}` : "";
+  const title = `Cours ${subject}${place} — trouvez votre prof`;
+
+  return {
+    title,
+    description: `Parcourez les profs ${subject}${place} sur Noteva et réservez votre premier cours.`,
+    alternates: { canonical: `/profs${buildQueryString(filters)}` },
+    // Instrument et ville sont indexés — ce sont les requêtes qui amènent des
+    // élèves. Prix, modalité, essai et pagination ne le sont pas : ils
+    // multiplient des pages quasi identiques.
+    robots: isIndexableSearch(filters) ? undefined : { index: false },
+  };
+}
+
+function PageLink({
+  href,
+  enabled,
+  children,
+}: {
+  href: string;
+  enabled: boolean;
+  children: React.ReactNode;
+}) {
+  if (!enabled) {
+    return (
+      <span className="cursor-not-allowed rounded-md border border-zinc-200 px-3 py-1.5 text-sm text-zinc-300 dark:border-zinc-800 dark:text-zinc-700">
+        {children}
+      </span>
+    );
+  }
+
+  return (
+    <Button variant="outline" size="sm" asChild>
+      <Link href={href}>{children}</Link>
+    </Button>
+  );
+}
+
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<RawParams>;
+}) {
+  const filters = parseFilters(await searchParams);
+
+  const [{ results, total, matchedInstrument }, instruments] = await Promise.all(
+    [searchTeachers(filters), getSearchableInstruments()]
+  );
+
+  const lastPage = Math.max(1, Math.ceil(total / SEARCH_PAGE_SIZE));
+
+  return (
+    <main className="mx-auto max-w-5xl px-4 py-10">
+      <header className="mb-8 flex flex-col gap-2">
+        <h1 className="text-3xl font-semibold">
+          {matchedInstrument
+            ? `Cours de ${matchedInstrument.name}`
+            : "Trouvez votre prof"}
+          {filters.city ? ` à ${filters.city}` : ""}
+        </h1>
+        <p className="text-zinc-500">
+          {total === 0
+            ? "Aucun prof ne correspond à cette recherche."
+            : `${total} prof${total > 1 ? "s" : ""} disponible${total > 1 ? "s" : ""}.`}
+        </p>
+      </header>
+
+      <div className="mb-8">
+        <Suspense fallback={null}>
+          <SearchFilters instruments={instruments} />
+        </Suspense>
+      </div>
+
+      {results.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <p className="text-zinc-500">
+              Essayez d&apos;élargir votre recherche : un autre instrument, une
+              autre ville, ou les cours en visio.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <ul className="grid gap-4 sm:grid-cols-2">
+          {results.map((teacher) => (
+            <li key={teacher.slug}>
+              <Link href={`/profs/${teacher.slug}`} className="block h-full">
+                <Card className="h-full transition-colors hover:border-zinc-400 dark:hover:border-zinc-600">
+                  <CardContent className="flex flex-col gap-3 pt-6">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-medium">
+                          {teacher.name ?? "Prof de musique"}
+                        </p>
+                        {teacher.headline ? (
+                          <p className="line-clamp-2 text-sm text-zinc-500">
+                            {teacher.headline}
+                          </p>
+                        ) : null}
+                      </div>
+                      {teacher.hourlyRateCents !== null ? (
+                        <p className="shrink-0 text-sm font-medium">
+                          {`${(teacher.hourlyRateCents / 100).toFixed(0)} €/h`}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {teacher.instruments.slice(0, 4).map((instrument) => (
+                        <Badge key={instrument.slug} variant="secondary">
+                          <Music className="mr-1 h-3 w-3" />
+                          {instrument.name}
+                        </Badge>
+                      ))}
+                      {teacher.trialLessonOffered ? (
+                        <Badge variant="success">
+                          <Sparkles className="mr-1 h-3 w-3" />
+                          Essai
+                        </Badge>
+                      ) : null}
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 text-xs text-zinc-500">
+                      {teacher.teachesOnline ? (
+                        <span className="flex items-center gap-1">
+                          <Globe className="h-3 w-3" />
+                          Visio
+                        </span>
+                      ) : null}
+                      {teacher.city ? (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {teacher.city}
+                        </span>
+                      ) : null}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {lastPage > 1 ? (
+        <nav className="mt-8 flex items-center justify-center gap-3">
+          {/* Rendu conditionnel plutôt qu'un bouton désactivé : `disabled` sur
+              un lien produit un <a> toujours cliquable. */}
+          <PageLink
+            href={`/profs${buildQueryString({ ...filters, page: filters.page - 1 })}`}
+            enabled={filters.page > 1}
+          >
+            Précédent
+          </PageLink>
+          <span className="text-sm text-zinc-500">
+            Page {filters.page} sur {lastPage}
+          </span>
+          <PageLink
+            href={`/profs${buildQueryString({ ...filters, page: filters.page + 1 })}`}
+            enabled={filters.page < lastPage}
+          >
+            Suivant
+          </PageLink>
+        </nav>
+      ) : null}
+    </main>
+  );
+}
