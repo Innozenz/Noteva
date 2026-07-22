@@ -80,6 +80,15 @@ Real validation only happens server-side in API routes via `auth.api.getSession`
 
 This matters more now than it did for the boilerplate: the data is multi-tenant. Every handler touching a booking, a calendar or a profile must check *this user owns this resource*, not merely *this user is logged in* — otherwise any student can read another's lessons through `/api/bookings/[id]`.
 
+### Teacher area (`/dashboard/prof`)
+
+Self-service profile editing and availability, behind a second Server Component gate (`app/dashboard/prof/layout.tsx`) that checks for a `TeacherProfile`. Every `/api/teacher/*` route acts on **"my" profile** via `requireTeacher()` and accepts no profile id — there is no other profile to reach by mistake, so authorization stays trivial.
+
+- `checkPublishable()` in `lib/teacher/publishable.ts` is the **single** publish rule, feeding both the form's "what's missing" list and the `POST /api/teacher/profile/publish` guard. Duplicating it guarantees drift. It only covers completeness — visibility adds the subscription on top.
+- `PUT /api/teacher/availability` **replaces the whole weekly grid** rather than exposing per-slot CRUD: the editor manipulates a week as a unit, and an atomic replace avoids incoherent intermediate states.
+- Overlapping ranges are **merged, not rejected** (`normalizeWeeklyGrid`). "9am–12pm" then "11am–2pm" is a clear intention; a form that refuses it is just annoying. The editor re-renders what the server kept, not what was typed.
+- Exceptions take a bare civil date (`AAAA-MM-JJ`), never an instant — `@db.Date` is stored at UTC midnight, so an instant would shift a teacher west of Greenwich onto the wrong day.
+
 ### Public pages must be Server Components
 
 Search discovery is how a marketplace lives, so the public surface (teacher profiles at `/profs/[slug]`, search, instrument/city landing pages) needs Server Components with `generateMetadata` and ISR. **Do not copy the pattern from `app/dashboard/page.tsx`** — it is `"use client"` and reads the session via `authClient.useSession()`, which renders nothing crawlable. Public = RSC; the signed-in area can stay client-side.
@@ -163,7 +172,9 @@ Writing a booking needs **two** guards, and neither replaces the other: re-deriv
 
 The Stripe integration bills **teachers** for platform access. All four `stripe*` fields live on `TeacherProfile`, not `User`. Students never touch Stripe.
 
-Teacher visibility should be **derived at read time** (`status = PUBLISHED AND stripeCurrentPeriodEnd > now()`) rather than flipping the profile to `SUSPENDED` from a webhook — that keeps one source of truth instead of a state to resynchronize.
+Teacher visibility is **derived at read time**, never stored: `lib/teacher/visibility.ts` (`isTeacherVisible`) is the single implementation, used by the public availability route, booking creation and the teacher area. A lapsed subscription hides the profile with no webhook writing a `SUSPENDED` state — nothing to resynchronize. Don't reinline the check; it drifts.
+
+Publishing and being visible are **separate**: a teacher without a subscription can complete and publish a profile, and it appears the moment they subscribe.
 
 - `lib/stripe.ts` — server-side Stripe SDK client.
 - `app/api/stripe/checkout/route.ts` — creates a subscription-mode Checkout Session, 403s if the user has no `TeacherProfile` (otherwise the webhook would have no row to update), and stamps `userId` into `metadata`. Returns `{ url }`; the client does a plain `window.location.href` redirect (`components/subscription-button.tsx`).
@@ -191,8 +202,11 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 - `prisma/seed.ts` (run via `tsx`, declared in `prisma.config.ts`) holds 37 instruments across the 8 families, with search aliases. Seeded and idempotent.
 - The slot engine is tested (27 tests) and exposed through the public availability route.
 - The booking API is complete: create, list, read, and the full lifecycle. Nothing consumes it — **there is no UI**.
-- `/onboarding` exists and gates `/dashboard`. Everything past it is still boilerplate: no availability editor, no request inbox for teachers, no public teacher pages, and `app/dashboard/page.tsx` is unchanged demo code.
-- A teacher profile is created in `DRAFT` with nothing but a slug — there is no form to fill in a bio, rates, instruments or availability, so no teacher can reach `PUBLISHED` yet.
+- A teacher can now go from signup to a published, bookable profile entirely through the UI. Verified end to end: onboarding → fill profile → weekly grid → publish → a student books a real slot.
+- **No request inbox**: teachers have no screen listing `PENDING` bookings, so the confirm/decline API is only reachable by hand. That's the most visible gap.
+- **No public teacher page** (`/profs/[slug]`) and no search — the marketplace side is entirely unbuilt.
+- `app/dashboard/page.tsx` is still boilerplate demo code and doesn't link to `/dashboard/prof`.
+- Students have no profile form; `StudentProfile` is created empty at onboarding.
 - `npm run lint` reports two pre-existing errors (an `any` in the Stripe webhook, an unescaped apostrophe in the dashboard).
 
 ## Docker

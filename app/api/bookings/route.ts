@@ -5,6 +5,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { computeAvailableSlots } from "@/lib/availability";
 import prisma from "@/lib/prisma";
+import { isTeacherVisible } from "@/lib/teacher/visibility";
 
 /**
  * Demande de réservation d'un cours.
@@ -195,13 +196,7 @@ export async function POST(request: Request) {
     // Même règle de visibilité que la route de disponibilités : on ne réserve
     // pas chez un prof qu'on ne peut pas voir. 404 plutôt que 403 pour ne pas
     // révéler l'existence d'une fiche non publiée.
-    const isVisible =
-      teacher !== null &&
-      teacher.status === "PUBLISHED" &&
-      teacher.stripeCurrentPeriodEnd !== null &&
-      teacher.stripeCurrentPeriodEnd.getTime() > Date.now();
-
-    if (!teacher || !isVisible) {
+    if (!teacher || !isTeacherVisible(teacher, new Date())) {
       return NextResponse.json({ error: "Prof introuvable" }, { status: 404 });
     }
 

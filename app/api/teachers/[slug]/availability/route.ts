@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { computeAvailableSlots } from "@/lib/availability";
 import prisma from "@/lib/prisma";
+import { isTeacherVisible } from "@/lib/teacher/visibility";
 
 /**
  * Créneaux réservables d'un prof.
@@ -78,13 +79,7 @@ export async function GET(
     // La visibilité est dérivée, pas stockée : fiche publiée ET abonnement en
     // cours de validité. On répond 404 plutôt que 403 pour ne pas révéler
     // l'existence d'une fiche non publiée.
-    const isVisible =
-      teacher !== null &&
-      teacher.status === "PUBLISHED" &&
-      teacher.stripeCurrentPeriodEnd !== null &&
-      teacher.stripeCurrentPeriodEnd.getTime() > Date.now();
-
-    if (!teacher || !isVisible) {
+    if (!teacher || !isTeacherVisible(teacher, new Date())) {
       return NextResponse.json({ error: "Prof introuvable" }, { status: 404 });
     }
 
