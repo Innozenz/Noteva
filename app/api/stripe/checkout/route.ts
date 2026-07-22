@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
@@ -17,6 +18,17 @@ export async function POST(req: Request) {
 
     if (!priceId) {
       return new NextResponse("Price ID is required", { status: 400 });
+    }
+
+    // Seuls les profs s'abonnent : sans profil prof, le webhook n'aurait aucune
+    // ligne à mettre à jour au retour de Stripe.
+    const teacher = await prisma.teacherProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { id: true },
+    });
+
+    if (!teacher) {
+      return new NextResponse("Teacher profile required", { status: 403 });
     }
 
     const stripeSession = await stripe.checkout.sessions.create({

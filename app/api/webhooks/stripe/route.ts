@@ -30,9 +30,11 @@ export async function POST(req: Request) {
       return new NextResponse("User id is required", { status: 400 });
     }
 
-    await prisma.user.update({
+    // L'abonnement est rattaché au profil prof, pas au User : seuls les profs
+    // sont clients de la plateforme.
+    await prisma.teacherProfile.update({
       where: {
-        id: session.metadata.userId,
+        userId: session.metadata.userId,
       },
       data: {
         stripeSubscriptionId: subscription.id,
@@ -58,7 +60,7 @@ export async function POST(req: Request) {
 
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-    await prisma.user.update({
+    await prisma.teacherProfile.update({
       where: {
         stripeSubscriptionId: subscription.id,
       },

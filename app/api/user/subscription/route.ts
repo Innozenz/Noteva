@@ -13,8 +13,10 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+    // L'abonnement porte sur le prof : c'est lui le client de la plateforme.
+    // Un élève n'a pas d'abonnement, on répond isActive: false sans erreur.
+    const teacher = await prisma.teacherProfile.findUnique({
+      where: { userId: session.user.id },
       select: {
         stripeCustomerId: true,
         stripeSubscriptionId: true,
@@ -23,19 +25,24 @@ export async function GET() {
       },
     });
 
-    if (!user) {
-      return new NextResponse("User not found", { status: 404 });
+    if (!teacher) {
+      return NextResponse.json({
+        subscriptionId: null,
+        priceId: null,
+        currentPeriodEnd: null,
+        isActive: false,
+      });
     }
 
     const isActive =
-      user.stripeSubscriptionId !== null &&
-      user.stripeCurrentPeriodEnd !== null &&
-      user.stripeCurrentPeriodEnd.getTime() > Date.now();
+      teacher.stripeSubscriptionId !== null &&
+      teacher.stripeCurrentPeriodEnd !== null &&
+      teacher.stripeCurrentPeriodEnd.getTime() > Date.now();
 
     return NextResponse.json({
-      subscriptionId: user.stripeSubscriptionId,
-      priceId: user.stripePriceId,
-      currentPeriodEnd: user.stripeCurrentPeriodEnd,
+      subscriptionId: teacher.stripeSubscriptionId,
+      priceId: teacher.stripePriceId,
+      currentPeriodEnd: teacher.stripeCurrentPeriodEnd,
       isActive,
     });
   } catch (error) {

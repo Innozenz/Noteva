@@ -1,8 +1,15 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Schéma Noteva — marketplace de cours de musique/chant.
+//
+// Deux conventions structurantes, à lire avant de modifier quoi que ce soit :
+//
+// 1. Les disponibilités d'un prof sont des RÈGLES, pas des créneaux. On ne
+//    matérialise jamais un slot en base : les créneaux libres se calculent à la
+//    lecture (règles − exceptions − réservations). Voir AvailabilityRule.
+//
+// 2. Distinction heure locale / instant. Les règles de dispo sont stockées en
+//    minutes depuis minuit dans le fuseau du prof (User.timezone) : « dispo le
+//    lundi 9h » doit rester 9h après le changement d'heure. Les Booking, eux,
+//    sont des instants absolus en timestamptz.
 
 generator client {
   provider = "prisma-client-js"
@@ -12,22 +19,38 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
+// ---------------------------------------------------------------------------
+// Auth (Better Auth) — ne pas renommer les champs ni les @@map sans ajuster
+// l'adaptateur dans lib/auth.ts.
+// ---------------------------------------------------------------------------
 
-  // Stripe
-  stripeCustomerId       String?   @unique
-  stripeSubscriptionId   String?   @unique
-  stripePriceId          String?
-  stripeCurrentPeriodEnd DateTime?
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // null tant que l'onboarding n'est pas fait : avec Google OAuth l'utilisateur
+  // est créé avant d'avoir choisi son rôle. Les routes doivent rediriger vers
+  // /onboarding tant que ce champ est nul.
+  role     Role?
+  // Fuseau IANA ("Europe/Paris"). Sert à interpréter les règles de dispo côté
+  // prof, et à afficher les créneaux dans l'heure locale côté élève.
+  timezone String @default("Europe/Paris")
+
+  sessions       Session[]
+  accounts       Account[]
+  teacherProfile TeacherProfile?
+  studentProfile StudentProfile?
 
   @@map("user")
 }
@@ -74,4 +97,333 @@ model Verification {
   updatedAt  DateTime? @updatedAt
 
   @@map("verification")
+}
+
+// ---------------------------------------------------------------------------
+// Catalogue d'instruments — table à part et non String[] : on filtre et on
+// facette dessus dans la recherche, et les alias servent à faire matcher
+// « technique vocale » ou « coaching vocal » sur « chant ».
+// ---------------------------------------------------------------------------
+
+enum InstrumentFamily {
+  VOICE
+  KEYBOARD
+  STRINGS
+  WINDS
+  BRASS
+  PERCUSSION
+  ELECTRONIC
+  THEORY
+}
+
+model Instrument {
+  id      String           @id @default(cuid())
+  slug    String           @unique // "chant", "guitare-classique"
+  name    String
+  family  InstrumentFamily
+  aliases String[]         @default([])
+
+  teachers TeacherInstrument[]
+  students StudentInstrument[]
+  bookings Booking[]
+
+  @@index([family])
+  @@map("instrument")
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  PROFESSIONAL
+}
+
+// Tessiture — pertinent uniquement pour le chant.
+enum VoiceType {
+  SOPRANO
+  MEZZO_SOPRANO
+  ALTO
+  COUNTERTENOR
+  TENOR
+  BARITONE
+  BASS
+  UNKNOWN
+}
+
+// ---------------------------------------------------------------------------
+// Profil prof
+// ---------------------------------------------------------------------------
+
+enum ProfileStatus {
+  DRAFT // en cours de création, invisible
+  PENDING // soumis à modération
+  PUBLISHED // visible dans la recherche
+  SUSPENDED // retiré (modération, ou abonnement expiré)
+}
+
+model TeacherProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  slug        String        @unique // URL publique : /profs/[slug]
+  status      ProfileStatus @default(DRAFT)
+  headline    String? // accroche courte affichée dans les résultats
+  bio         String?
+  videoUrl    String? // vidéo de présentation
+  publishedAt DateTime?
+
+  // Modalités
+  teachesOnline   Boolean  @default(true)
+  teachesInPerson Boolean  @default(false)
+  teachesAtHome   Boolean  @default(false) // se déplace chez l'élève
+  city            String?
+  postalCode      String?
+  country         String   @default("FR")
+  latitude        Float?
+  longitude       Float?
+  travelRadiusKm  Int?
+  languages       String[] @default(["fr"])
+
+  // Tarifs affichés. L'élève règle le prof directement, hors plateforme :
+  // ces montants sont indicatifs et ne déclenchent aucun paiement.
+  hourlyRateCents    Int?
+  trialLessonOffered Boolean @default(false)
+  trialLessonMinutes Int?
+
+  // Règles de réservation, appliquées par le moteur de créneaux
+  defaultDurationMin      Int @default(60)
+  bufferMin               Int @default(0) // battement entre deux cours
+  minNoticeHours          Int @default(24) // délai mini avant le début du cours
+  bookingHorizonDays      Int @default(60) // jusqu'où on peut réserver à l'avance
+  cancellationWindowHours Int @default(24)
+
+  // Abonnement Stripe — le modèle économique porte sur le prof, pas sur
+  // l'élève. Une fiche n'est PUBLISHED que si l'abonnement est actif ;
+  // app/api/webhooks/stripe/route.ts écrit ces champs.
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+
+  instruments TeacherInstrument[]
+  rules       AvailabilityRule[]
+  exceptions  AvailabilityException[]
+  bookings    Booking[]
+  reviews     Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, city])
+  @@index([status, teachesOnline])
+  @@map("teacher_profile")
+}
+
+model TeacherInstrument {
+  teacherId    String
+  teacher      TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  instrumentId String
+  instrument   Instrument     @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  yearsExperience Int?
+  levelsTaught    SkillLevel[] @default([])
+
+  @@id([teacherId, instrumentId])
+  @@index([instrumentId])
+  @@map("teacher_instrument")
+}
+
+// ---------------------------------------------------------------------------
+// Profil élève
+// ---------------------------------------------------------------------------
+
+model StudentProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Mineurs : beaucoup d'élèves de musique le sont. Le contact du responsable
+  // légal est requis côté applicatif si birthDate implique moins de 18 ans.
+  birthDate     DateTime? @db.Date
+  guardianName  String?
+  guardianEmail String?
+  guardianPhone String?
+
+  // Contexte musical
+  goals             String? // « chanter en groupe », « préparer le conservatoire »
+  musicalBackground String?
+  readsSheetMusic   Boolean    @default(false)
+  preferredGenres   String[]   @default([])
+  voiceType         VoiceType? // chant uniquement
+
+  // Préférences de cours
+  prefersOnline Boolean @default(true)
+  city          String?
+  postalCode    String?
+
+  instruments StudentInstrument[]
+  bookings    Booking[]
+  reviews     Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("student_profile")
+}
+
+// Le niveau est porté par le couple élève/instrument : un élève peut être
+// avancé au piano et débutant au chant.
+model StudentInstrument {
+  studentId    String
+  student      StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  instrumentId String
+  instrument   Instrument     @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  level          SkillLevel @default(BEGINNER)
+  yearsPracticed Int?
+  ownsInstrument Boolean    @default(false)
+
+  @@id([studentId, instrumentId])
+  @@index([instrumentId])
+  @@map("student_instrument")
+}
+
+// ---------------------------------------------------------------------------
+// Disponibilités
+// ---------------------------------------------------------------------------
+
+// Règle hebdomadaire récurrente. startMinute/endMinute sont des minutes depuis
+// minuit (0-1440) dans le fuseau du prof, PAS en UTC : c'est ce qui rend la
+// règle stable au passage à l'heure d'été.
+model AvailabilityRule {
+  id        String         @id @default(cuid())
+  teacherId String
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  weekday     Int // ISO-8601 : 1 = lundi … 7 = dimanche
+  startMinute Int
+  endMinute   Int
+
+  validFrom  DateTime? @db.Date
+  validUntil DateTime? @db.Date
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId, weekday])
+  @@map("availability_rule")
+}
+
+enum ExceptionType {
+  BLOCKED // congés, indisponibilité ponctuelle
+  EXTRA // dispo exceptionnelle hors règles hebdo
+}
+
+// Exception sur une date précise. start/endMinute nuls avec type BLOCKED =
+// journée entière bloquée.
+model AvailabilityException {
+  id        String         @id @default(cuid())
+  teacherId String
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  date        DateTime      @db.Date
+  type        ExceptionType
+  startMinute Int?
+  endMinute   Int?
+  reason      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([teacherId, date])
+  @@map("availability_exception")
+}
+
+// ---------------------------------------------------------------------------
+// Réservations
+// ---------------------------------------------------------------------------
+
+enum BookingStatus {
+  PENDING // demande envoyée, le prof doit valider
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+  DECLINED // refusée par le prof
+}
+
+enum LessonMode {
+  ONLINE
+  TEACHER_PLACE
+  STUDENT_PLACE
+}
+
+// startsAt/endsAt sont en timestamptz : indispensable pour la contrainte
+// d'exclusion anti-chevauchement posée dans la migration (tstzrange).
+model Booking {
+  id String @id @default(cuid())
+
+  teacherId    String
+  teacher      TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  instrumentId String
+  instrument   Instrument     @relation(fields: [instrumentId], references: [id])
+
+  startsAt DateTime      @db.Timestamptz(3)
+  endsAt   DateTime      @db.Timestamptz(3)
+  status   BookingStatus @default(PENDING)
+  mode     LessonMode    @default(ONLINE)
+  isTrial  Boolean       @default(false)
+
+  // Montant convenu, réglé directement au prof. Conservé pour l'historique et
+  // les statistiques du prof — aucun encaissement en ligne.
+  priceCents Int?
+
+  studentMessage String? // message joint à la demande
+  teacherNote    String? // note privée du prof
+  meetingUrl     String? // visio
+  address        String? // présentiel
+
+  confirmedAt        DateTime?
+  cancelledAt        DateTime?
+  cancelledById      String? // User.id de celui qui annule
+  cancellationReason String?
+  completedAt        DateTime?
+
+  review Review?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId, startsAt])
+  @@index([studentId, startsAt])
+  @@index([status, startsAt])
+  @@map("booking")
+}
+
+// ---------------------------------------------------------------------------
+// Avis — rattachés à un cours effectivement réalisé, pour éviter le spam.
+// ---------------------------------------------------------------------------
+
+model Review {
+  id        String  @id @default(cuid())
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  teacherId String
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  rating      Int // 1 à 5, contrainte CHECK en base
+  comment     String?
+  teacherRepl String? // droit de réponse du prof
+  publishedAt DateTime? // null = en attente de modération
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId, publishedAt])
+  @@map("review")
 }
