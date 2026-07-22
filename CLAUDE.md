@@ -66,7 +66,11 @@ Tests cover `lib/availability` only, and that's deliberate: it's the one piece o
 
 **There are no `/login` or `/register` pages.** Sign-in/sign-up is the `AuthButtons` client component rendered inline on `app/page.tsx`, with Zod-validated email/password fields plus a Google button. `middleware.ts` lists `/login` and `/register` in `authRoutes` and in its `matcher`, but those routes 404 today — the entries are placeholders for when dedicated pages get added.
 
-**`User.role` is nullable on purpose.** With Google OAuth the account is created before the user can say whether they're a teacher or a student, so the role is filled in by a post-signup onboarding step. Treat `role === null` as "onboarding incomplete" and redirect there; don't assume a role is present.
+**`User.role` is nullable on purpose.** With Google OAuth the account is created before the user can say whether they're a teacher or a student, so `POST /api/onboarding` fills it in and creates the matching profile in one transaction. Treat `role === null` as "onboarding incomplete"; don't assume a role is present.
+
+**The role gate is in `app/dashboard/layout.tsx`, not the middleware** — and it has to be. The middleware runs on the edge, sees only the session cookie, and has no Prisma access, so it cannot read a role. Any new signed-in area needs its own Server Component layout doing the same check, or it will be reachable with `role === null`.
+
+Choosing a role is **one-way**: `/api/onboarding` answers 409 once `role` is set. A teacher profile carries a public slug, availability and lesson history that a switch to "student" would orphan. Teacher slugs come from `lib/slug.ts` (accent-stripped, reserved words avoided, `-2`/`-3` on collision) and are unit-tested — they end up in indexed public URLs, so they're painful to change later.
 
 **Route gating is two-layer and both layers are shallow:**
 1. `middleware.ts` checks only for the *presence* of the `better-auth.session_token` cookie (no signature/expiry check at the edge). Unauthenticated hits on `protectedRoutes` (`/dashboard`) redirect to `/` with a `callbackUrl` search param — note nothing currently consumes `callbackUrl`.
@@ -187,7 +191,8 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 - `prisma/seed.ts` (run via `tsx`, declared in `prisma.config.ts`) holds 37 instruments across the 8 families, with search aliases. Seeded and idempotent.
 - The slot engine is tested (27 tests) and exposed through the public availability route.
 - The booking API is complete: create, list, read, and the full lifecycle. Nothing consumes it — **there is no UI**.
-- No onboarding page, no teacher/student areas, no public teacher pages — `app/dashboard/page.tsx` is still the boilerplate demo, and `User.role` is null for existing accounts.
+- `/onboarding` exists and gates `/dashboard`. Everything past it is still boilerplate: no availability editor, no request inbox for teachers, no public teacher pages, and `app/dashboard/page.tsx` is unchanged demo code.
+- A teacher profile is created in `DRAFT` with nothing but a slug — there is no form to fill in a bio, rates, instruments or availability, so no teacher can reach `PUBLISHED` yet.
 - `npm run lint` reports two pre-existing errors (an `any` in the Stripe webhook, an unescaped apostrophe in the dashboard).
 
 ## Docker
