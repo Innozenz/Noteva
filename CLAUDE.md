@@ -61,7 +61,7 @@ Tests cover `lib/availability` only, and that's deliberate: it's the one piece o
 
 - `lib/auth.ts` — server-side Better Auth instance, wired to Prisma via `prismaAdapter`. Email/password and Google OAuth.
 - `lib/auth-client.ts` — browser client (`createAuthClient` from `better-auth/react`); `authClient.useSession()` is how client components read the session.
-- `app/api/auth/[...better-auth]/route.ts` — catch-all that mounts Better Auth's handlers; all auth traffic (sign-in, session, OAuth callback) flows through here.
+- `app/api/auth/[...all]/route.ts` — catch-all that mounts Better Auth's handlers; all auth traffic (sign-in, session, OAuth callback) flows through here. **Keep the segment name a valid JS identifier.** It used to be `[...better-auth]`, and the hyphen made Next 16 crash its dev render worker on *every* `/api/auth/*` request ("Jest worker encountered 2 child process exceptions") — a total auth outage that looked like a Better Auth bug rather than a routing one. Renaming a route directory also requires a dev-server restart; hot reload keeps serving 404s.
 - Server-side session reads (API routes, server components) go through `auth.api.getSession({ headers: await headers() })` — see `app/api/stripe/checkout/route.ts` and `app/api/user/subscription/route.ts`.
 
 **There are no `/login` or `/register` pages.** Sign-in/sign-up is the `AuthButtons` client component rendered inline on `app/page.tsx`, with Zod-validated email/password fields plus a Google button. `middleware.ts` lists `/login` and `/register` in `authRoutes` and in its `matcher`, but those routes 404 today — the entries are placeholders for when dedicated pages get added.
@@ -131,7 +131,9 @@ The important one is anti-double-booking. An application-level "is this slot fre
 - Ranges are half-open `[)`: a 11:00 lesson right after a 10:00–11:00 one is allowed. Cancelled/declined bookings release the slot.
 - Plus `CHECK`s: `booking_time_order`, minute ranges on availability rows, `review_rating_range` (1–5).
 
-Expect SQLSTATE `23P01` (exclusion violation) on a booking conflict and surface it as "créneau déjà pris" rather than a 500.
+A booking conflict surfaces as an exclusion violation. **The driver adapter does not expose SQLSTATE `23P01` on the error object** — the constraint *name* is what survives into the serialized error, so `overlapConflict()` in `app/api/bookings/route.ts` matches on `booking_teacher_no_overlap` / `booking_student_no_overlap`. Rename a constraint and you must update that function, or conflicts start returning 500.
+
+Writing a booking therefore needs **two** guards, and neither replaces the other: re-derive availability server-side (a client can POST any timestamp — the constraint stops overlaps, not 3am on a Sunday), then let the constraint arbitrate the race that re-derivation cannot see. Verified: six concurrent requests for one slot produce exactly one booking, one constraint-driven 409, and four re-validation 409s.
 
 ### Payments (Stripe) — teachers only
 
@@ -164,7 +166,7 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 
 - `prisma/seed.ts` (run via `tsx`, declared in `prisma.config.ts`) holds 37 instruments across the 8 families, with search aliases. Seeded and idempotent.
 - The slot engine is tested (27 tests) and exposed through the public availability route.
-- **No booking route yet** — nothing writes a `Booking`. That handler is where the `23P01` → "créneau déjà pris" mapping needs to live.
+- `POST /api/bookings` creates `PENDING` requests. Nothing yet **confirms, declines or cancels** one — the teacher side of the lifecycle is missing, as is `GET` on bookings.
 - No onboarding page, no teacher/student areas, no public teacher pages — `app/dashboard/page.tsx` is still the boilerplate demo, and `User.role` is null for existing accounts.
 - `npm run lint` reports two pre-existing errors (an `any` in the Stripe webhook, an unescaped apostrophe in the dashboard).
 
