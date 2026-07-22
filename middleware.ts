@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const protectedRoutes = ["/dashboard", "/onboarding"];
-const authRoutes = ["/login", "/register"];
+// `/connexion` gère elle-même la redirection d'un utilisateur déjà connecté :
+// elle a besoin du rôle, que le middleware ne peut pas lire depuis l'edge.
+const authRoutes: string[] = [];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -17,7 +19,7 @@ export async function middleware(request: NextRequest) {
   );
 
   if (isProtected && !sessionToken) {
-    const loginUrl = new URL("/", request.url);
+    const loginUrl = new URL("/connexion", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -30,5 +32,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/onboarding", "/login", "/register"],
+  matcher: ["/dashboard/:path*", "/onboarding"],
 };

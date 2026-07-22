@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { BookingWidget } from "@/components/booking-widget";
+import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -111,7 +112,9 @@ export default async function TeacherPublicPage({
   ].filter(Boolean) as { icon: typeof Globe; label: string }[];
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10">
+    <>
+      <SiteHeader />
+      <main className="mx-auto max-w-5xl px-4 py-10">
       {/* Données structurées : ce qui permet aux moteurs de comprendre qu'il
           s'agit d'un service de cours, et non d'une page quelconque. */}
       <script
@@ -243,6 +246,7 @@ export default async function TeacherPublicPage({
           />
         </aside>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

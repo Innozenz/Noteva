@@ -175,10 +175,10 @@ export default function DashboardPage() {
                     <div className="flex items-start gap-3 rounded-lg bg-zinc-50 p-4 dark:bg-zinc-900">
                       <Sparkles className="mt-0.5 h-5 w-5 text-yellow-500" />
                       <div>
-                        <p className="font-medium">Passez à Premium</p>
+                        <p className="font-medium">Abonnement prof</p>
                         <p className="text-sm text-zinc-500">
-                          Débloquez toutes les fonctionnalités et profitez d'une
-                          expérience complète.
+                          Rendez votre fiche visible des élèves et recevez des
+                          demandes de cours.
                         </p>
                       </div>
                     </div>

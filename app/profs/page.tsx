@@ -4,6 +4,7 @@ import { Globe, MapPin, Music, Sparkles } from "lucide-react";
 import { Suspense } from "react";
 
 import { SearchFilters } from "@/components/search-filters";
+import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -87,7 +88,9 @@ export default async function SearchPage({
   const lastPage = Math.max(1, Math.ceil(total / SEARCH_PAGE_SIZE));
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10">
+    <>
+      <SiteHeader />
+      <main className="mx-auto max-w-5xl px-4 py-10">
       <header className="mb-8 flex flex-col gap-2">
         <h1 className="text-3xl font-semibold">
           {matchedInstrument
@@ -200,6 +203,7 @@ export default async function SearchPage({
           </PageLink>
         </nav>
       ) : null}
-    </main>
+      </main>
+    </>
   );
 }

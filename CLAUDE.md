@@ -64,7 +64,9 @@ Tests cover `lib/availability` only, and that's deliberate: it's the one piece o
 - `app/api/auth/[...all]/route.ts` — catch-all that mounts Better Auth's handlers; all auth traffic (sign-in, session, OAuth callback) flows through here. **Keep the segment name a valid JS identifier.** It used to be `[...better-auth]`, and the hyphen made Next 16 crash its dev render worker on *every* `/api/auth/*` request ("Jest worker encountered 2 child process exceptions") — a total auth outage that looked like a Better Auth bug rather than a routing one. Renaming a route directory also requires a dev-server restart; hot reload keeps serving 404s.
 - Server-side session reads (API routes, server components) go through `auth.api.getSession({ headers: await headers() })` — see `app/api/stripe/checkout/route.ts` and `app/api/user/subscription/route.ts`.
 
-**There are no `/login` or `/register` pages.** Sign-in/sign-up is the `AuthButtons` client component rendered inline on `app/page.tsx`, with Zod-validated email/password fields plus a Google button. `middleware.ts` lists `/login` and `/register` in `authRoutes` and in its `matcher`, but those routes 404 today — the entries are placeholders for when dedicated pages get added.
+Sign-in lives at **`/connexion`** (`AuthButtons`: Zod-validated email/password plus a Google button). It redirects an already-signed-in user to their own area, which needs the role — so that check is in the page, not the middleware. `authRoutes` in `middleware.ts` is consequently empty; unauthenticated hits on protected routes redirect to `/connexion?callbackUrl=…` (nothing consumes `callbackUrl` yet).
+
+`AuthButtons` is a client component reading the session via `authClient.useSession()`, so `/connexion` server-renders a spinner and fills in after hydration. Fine for a `noindex` page, but don't copy the pattern onto anything public.
 
 **`User.role` is nullable on purpose.** With Google OAuth the account is created before the user can say whether they're a teacher or a student, so `POST /api/onboarding` fills it in and creates the matching profile in one transaction. Treat `role === null` as "onboarding incomplete"; don't assume a role is present.
 
@@ -104,6 +106,10 @@ A cancellation inside the teacher's `cancellationWindowHours` comes back with `l
 ### Public pages must be Server Components
 
 Search discovery is how a marketplace lives, so the public surface needs Server Components with `generateMetadata`. **Do not copy the pattern from `app/dashboard/page.tsx`** — it is `"use client"` and reads the session via `authClient.useSession()`, which renders nothing crawlable. Public = RSC; the signed-in area can stay client-side.
+
+`app/layout.tsx` sets `metadataBase` (from `NEXT_PUBLIC_APP_URL`) and a title template — without `metadataBase` every canonical and OG image stays relative and unusable to crawlers.
+
+`app/page.tsx` is the landing page and is server-rendered. It lists **only instruments and cities that actually have visible teachers**, queried live, each linking to `/profs?instrument=…` / `?ville=…`. That's what makes those searches crawlable at all, and it's why they're the combinations `isIndexableSearch` allows; linking to empty searches would waste crawl budget and disappoint visitors. `SiteHeader` (a Server Component, so no session flicker) carries navigation on all three public pages.
 
 `/profs/[slug]` is the reference implementation: server-rendered profile with `generateMetadata`, canonical, OpenGraph and `Service` JSON-LD, plus one client island (`BookingWidget`) for slot selection. Slots can't be prerendered — they change on every booking — so the island fetches them on mount while the rest stays crawlable.
 
@@ -236,13 +242,13 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 
 What is missing:
 
-- **`app/page.tsx` is still boilerplate demo content.** Nothing links to `/profs`, and a visitor can't tell what Noteva is. Biggest gap, and it's the entry point for all search traffic. `app/dashboard/page.tsx` is likewise untouched demo code — the only addition is the role banner in its layout.
-- **Stripe needs real test keys.** The subscription flow is built and wired (`/dashboard/prof/abonnement`), but `.env` still holds placeholders, so no real payment has ever been made — see the Payments section.
-- No instrument/city landing pages; `/profs?instrument=…` serves the need but isn't linked from anywhere crawlable.
+- **Stripe needs real test keys.** The subscription flow is built and wired (`/dashboard/prof/abonnement`), but `.env` holds placeholders (and at one point a *live* key — never test against that), so no real payment has ever been made. See the Payments section. Biggest gap.
+- `app/dashboard/page.tsx` is still boilerplate demo code showing a generic subscription card. With `/dashboard/prof/*` and `/dashboard/cours` doing the real work, it's mostly redundant — its layout banner is what routes people onward.
+- No dedicated instrument/city landing pages, but `/profs?instrument=…` is now linked from the home page and indexable, which covers the need for now.
 - Students have no profile form: `StudentProfile` is created empty and nothing fills it — instruments, level, goals, guardian contacts are all unused.
 - No notifications at all. A teacher learns of a request only by opening the inbox; a student learns of a confirmation only by reloading.
 - Reviews are modelled (`Review`, gated on `COMPLETED`) but there is no route and no UI.
-- `npm run lint` reports two pre-existing errors (an `any` in the Stripe webhook, an unescaped apostrophe in the dashboard).
+- `npm run lint`, `npx tsc --noEmit`, `npm test` and `npm run build` are all clean. Keep them that way.
 
 ## Docker
 
