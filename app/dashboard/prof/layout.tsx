@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, UserCog } from "lucide-react";
+import { CalendarDays, Inbox, UserCog } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -33,6 +33,16 @@ export default async function TeacherLayout({
     redirect("/dashboard");
   }
 
+  // Compteur dans l'onglet : une demande non traitée immobilise un créneau,
+  // elle ne doit pas pouvoir passer inaperçue.
+  const pendingCount = await prisma.booking.count({
+    where: {
+      teacherId: teacher.id,
+      status: "PENDING",
+      endsAt: { gt: new Date() },
+    },
+  });
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
@@ -42,6 +52,12 @@ export default async function TeacherLayout({
             href="/dashboard/prof/disponibilites"
             icon={CalendarDays}
             label="Disponibilités"
+          />
+          <TabLink
+            href="/dashboard/prof/demandes"
+            icon={Inbox}
+            label="Demandes"
+            badge={pendingCount || undefined}
           />
         </nav>
       </header>
@@ -54,10 +70,12 @@ function TabLink({
   href,
   icon: Icon,
   label,
+  badge,
 }: {
   href: string;
   icon: typeof UserCog;
   label: string;
+  badge?: number;
 }) {
   return (
     <Link
@@ -66,6 +84,11 @@ function TabLink({
     >
       <Icon className="h-4 w-4" />
       {label}
+      {badge ? (
+        <span className="rounded-full bg-blue-600 px-1.5 text-xs font-semibold text-white">
+          {badge}
+        </span>
+      ) : null}
     </Link>
   );
 }

@@ -89,6 +89,10 @@ Self-service profile editing and availability, behind a second Server Component 
 - Overlapping ranges are **merged, not rejected** (`normalizeWeeklyGrid`). "9am–12pm" then "11am–2pm" is a clear intention; a form that refuses it is just annoying. The editor re-renders what the server kept, not what was typed.
 - Exceptions take a bare civil date (`AAAA-MM-JJ`), never an instant — `@db.Date` is stored at UTC midnight, so an instant would shift a teacher west of Greenwich onto the wrong day.
 
+`/dashboard/prof/demandes` is the request inbox. `groupBookings()` in `lib/teacher/inbox.ts` decides the ordering, and the ordering *is* the point: a `PENDING` request holds its slot, so leaving one untreated blocks the teacher's own calendar. Hence pending first, soonest first, and a count badge in the tab. A `PENDING` booking whose time has passed drops to history — it is no longer confirmable. The screen reimplements **no** lifecycle rule; every action goes through `PATCH /api/bookings/[id]`.
+
+Dates in the teacher area are always rendered with `timeZone: teacher.timezone`, not the browser's — a teacher travelling must still read their own schedule.
+
 ### Public pages must be Server Components
 
 Search discovery is how a marketplace lives, so the public surface (teacher profiles at `/profs/[slug]`, search, instrument/city landing pages) needs Server Components with `generateMetadata` and ISR. **Do not copy the pattern from `app/dashboard/page.tsx`** — it is `"use client"` and reads the session via `authClient.useSession()`, which renders nothing crawlable. Public = RSC; the signed-in area can stay client-side.
@@ -202,11 +206,12 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 - `prisma/seed.ts` (run via `tsx`, declared in `prisma.config.ts`) holds 37 instruments across the 8 families, with search aliases. Seeded and idempotent.
 - The slot engine is tested (27 tests) and exposed through the public availability route.
 - The booking API is complete: create, list, read, and the full lifecycle. Nothing consumes it — **there is no UI**.
-- A teacher can now go from signup to a published, bookable profile entirely through the UI. Verified end to end: onboarding → fill profile → weekly grid → publish → a student books a real slot.
-- **No request inbox**: teachers have no screen listing `PENDING` bookings, so the confirm/decline API is only reachable by hand. That's the most visible gap.
-- **No public teacher page** (`/profs/[slug]`) and no search — the marketplace side is entirely unbuilt.
-- `app/dashboard/page.tsx` is still boilerplate demo code and doesn't link to `/dashboard/prof`.
+- **The teacher loop is closed and works through the UI**: onboarding → profile → weekly grid → publish → a student books → confirm/decline/complete. Verified end to end against the database.
+- **The student side has no UI at all.** No search, no teacher page, no "my lessons" screen — a student can only book via `POST /api/bookings` by hand. This is now the biggest gap.
+- **No public teacher page** (`/profs/[slug]`), so nothing is indexable and the marketplace half is unbuilt.
+- `app/dashboard/page.tsx` is still boilerplate demo code; the only addition is a banner linking teachers to `/dashboard/prof`.
 - Students have no profile form; `StudentProfile` is created empty at onboarding.
+- Stripe subscriptions are never actually purchased in any flow — subscription state has only ever been set directly in the database for testing.
 - `npm run lint` reports two pre-existing errors (an `any` in the Stripe webhook, an unescaped apostrophe in the dashboard).
 
 ## Docker
