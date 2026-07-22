@@ -95,7 +95,13 @@ Dates in the teacher area are always rendered with `timeZone: teacher.timezone`,
 
 ### Public pages must be Server Components
 
-Search discovery is how a marketplace lives, so the public surface (teacher profiles at `/profs/[slug]`, search, instrument/city landing pages) needs Server Components with `generateMetadata` and ISR. **Do not copy the pattern from `app/dashboard/page.tsx`** — it is `"use client"` and reads the session via `authClient.useSession()`, which renders nothing crawlable. Public = RSC; the signed-in area can stay client-side.
+Search discovery is how a marketplace lives, so the public surface needs Server Components with `generateMetadata`. **Do not copy the pattern from `app/dashboard/page.tsx`** — it is `"use client"` and reads the session via `authClient.useSession()`, which renders nothing crawlable. Public = RSC; the signed-in area can stay client-side.
+
+`/profs/[slug]` is the reference implementation: server-rendered profile with `generateMetadata`, canonical, OpenGraph and `Service` JSON-LD, plus one client island (`BookingWidget`) for slot selection. Slots can't be prerendered — they change on every booking — so the island fetches them on mount while the rest stays crawlable.
+
+**It is rendered on demand, with no cache, deliberately.** Visibility depends on subscription expiry, so a cached page would stay online after it lapses; recomputing per request is the only way a profile disappears exactly when it should. Note that `export const revalidate` alone does **not** make a dynamic route ISR — without `generateStaticParams` it stays `ƒ` (server-rendered on demand), which the build output will tell you. Moving to ISR would mean accepting a staleness window on visibility and driving invalidation from the publish and subscription routes; the `revalidatePath` calls already sitting in `/api/teacher/profile*` are there for that day and are inert until then.
+
+`getPublicTeacher` is wrapped in React `cache()` because `generateMetadata` and the page component both need the profile — without it the query runs twice per render.
 
 ### Domain model (Prisma)
 
@@ -207,8 +213,9 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 - The slot engine is tested (27 tests) and exposed through the public availability route.
 - The booking API is complete: create, list, read, and the full lifecycle. Nothing consumes it — **there is no UI**.
 - **The teacher loop is closed and works through the UI**: onboarding → profile → weekly grid → publish → a student books → confirm/decline/complete. Verified end to end against the database.
-- **The student side has no UI at all.** No search, no teacher page, no "my lessons" screen — a student can only book via `POST /api/bookings` by hand. This is now the biggest gap.
-- **No public teacher page** (`/profs/[slug]`), so nothing is indexable and the marketplace half is unbuilt.
+- `/profs/[slug]` exists and a student can book from it end to end.
+- **No search or discovery.** A profile is only reachable by knowing its URL — nothing lists or filters teachers, so the marketplace can't actually be browsed. Biggest gap.
+- **No "my lessons" screen for students**: they can book but then can't see or cancel a booking without calling the API by hand.
 - `app/dashboard/page.tsx` is still boilerplate demo code; the only addition is a banner linking teachers to `/dashboard/prof`.
 - Students have no profile form; `StudentProfile` is created empty at onboarding.
 - Stripe subscriptions are never actually purchased in any flow — subscription state has only ever been set directly in the database for testing.

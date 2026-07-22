@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -148,7 +149,13 @@ export async function PATCH(request: Request) {
       });
     }
 
-    return NextResponse.json(await readProfile(teacher.teacherId));
+    const profile = await readProfile(teacher.teacherId);
+
+    // Sans effet tant que la fiche publique est rendue à la demande ; en place
+    // pour le jour où elle passera en ISR.
+    revalidatePath(`/profs/${profile.slug}`);
+
+    return NextResponse.json(profile);
   } catch (error) {
     console.error("[TEACHER_PROFILE_PATCH_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });

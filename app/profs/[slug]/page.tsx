@@ -1,0 +1,238 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import {
+  BadgeCheck,
+  Globe,
+  Home,
+  MapPin,
+  Music,
+  Sparkles,
+} from "lucide-react";
+
+import { BookingWidget } from "@/components/booking-widget";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { getPublicTeacher } from "@/lib/teacher/public-profile";
+
+/**
+ * Fiche prof publique.
+ *
+ * Server Component : c'est la page qui porte l'enjeu de référencement, elle
+ * doit donc être rendue côté serveur, complète, sans dépendre du JavaScript.
+ * Seul le sélecteur de créneaux est un îlot client — les disponibilités
+ * changent à chaque réservation et ne peuvent pas être rendues à l'avance.
+ *
+ * Rendue à la demande, sans cache, et c'est délibéré : la visibilité dépend de
+ * l'échéance d'abonnement, donc une fiche mise en cache resterait en ligne
+ * après l'expiration. La recalculer à chaque requête est la seule façon qu'une
+ * fiche disparaisse à la seconde où elle le doit.
+ *
+ * Passer en ISR demanderait un `generateStaticParams` — une route dynamique
+ * sans lui reste servie à la demande, `revalidate` ou pas. Ce serait alors au
+ * prix d'une fenêtre de péremption sur la visibilité, à traiter par
+ * invalidation explicite depuis les routes de publication et d'abonnement.
+ */
+
+const MODE_ICONS = {
+  online: Globe,
+  teacher: Home,
+  student: MapPin,
+} as const;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const teacher = await getPublicTeacher((await params).slug);
+
+  if (!teacher) {
+    return { title: "Prof introuvable", robots: { index: false } };
+  }
+
+  const name = teacher.user.name ?? "Prof de musique";
+  const subjects = teacher.instruments.map((i) => i.instrument.name).join(", ");
+  const place = teacher.city ? ` à ${teacher.city}` : "";
+
+  const title = `${name} — cours de ${subjects}${place}`;
+  const description =
+    teacher.headline ??
+    `Réservez un cours de ${subjects}${place} avec ${name} sur Noteva.`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/profs/${teacher.slug}` },
+    openGraph: {
+      title,
+      description,
+      type: "profile",
+      images: teacher.user.image ? [teacher.user.image] : undefined,
+    },
+  };
+}
+
+export default async function TeacherPublicPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const teacher = await getPublicTeacher((await params).slug);
+
+  // Fiche inexistante, en brouillon ou sans abonnement : indiscernables de
+  // l'extérieur, et c'est voulu.
+  if (!teacher) notFound();
+
+  const name = teacher.user.name ?? "Prof de musique";
+  const instruments = teacher.instruments.map((i) => i.instrument);
+  const rate =
+    teacher.hourlyRateCents === null
+      ? null
+      : (teacher.hourlyRateCents / 100).toFixed(0);
+
+  const modes = [
+    teacher.teachesOnline && { icon: MODE_ICONS.online, label: "En visio" },
+    teacher.teachesInPerson && {
+      icon: MODE_ICONS.teacher,
+      label: `Chez le prof${teacher.city ? ` — ${teacher.city}` : ""}`,
+    },
+    teacher.teachesAtHome && {
+      icon: MODE_ICONS.student,
+      label: "Se déplace chez l'élève",
+    },
+  ].filter(Boolean) as { icon: typeof Globe; label: string }[];
+
+  return (
+    <main className="mx-auto max-w-5xl px-4 py-10">
+      {/* Données structurées : ce qui permet aux moteurs de comprendre qu'il
+          s'agit d'un service de cours, et non d'une page quelconque. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Service",
+            serviceType: `Cours de ${instruments.map((i) => i.name).join(", ")}`,
+            provider: {
+              "@type": "Person",
+              name,
+              ...(teacher.city
+                ? {
+                    address: {
+                      "@type": "PostalAddress",
+                      addressLocality: teacher.city,
+                      addressCountry: teacher.country,
+                    },
+                  }
+                : {}),
+            },
+            ...(rate
+              ? {
+                  offers: {
+                    "@type": "Offer",
+                    price: rate,
+                    priceCurrency: "EUR",
+                  },
+                }
+              : {}),
+          }),
+        }}
+      />
+
+      <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+        <div className="flex flex-col gap-6">
+          <header className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-3xl font-semibold">{name}</h1>
+              {teacher.trialLessonOffered ? (
+                <Badge variant="success">
+                  <Sparkles className="mr-1 h-3 w-3" />
+                  Cours d&apos;essai
+                </Badge>
+              ) : null}
+            </div>
+
+            {teacher.headline ? (
+              <p className="text-lg text-zinc-600 dark:text-zinc-400">
+                {teacher.headline}
+              </p>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2">
+              {instruments.map((instrument) => (
+                <Badge key={instrument.slug} variant="secondary">
+                  <Music className="mr-1 h-3 w-3" />
+                  {instrument.name}
+                </Badge>
+              ))}
+            </div>
+          </header>
+
+          <Separator />
+
+          {teacher.bio ? (
+            <section className="flex flex-col gap-2">
+              <h2 className="text-lg font-medium">À propos</h2>
+              <p className="whitespace-pre-line text-zinc-600 dark:text-zinc-400">
+                {teacher.bio}
+              </p>
+            </section>
+          ) : null}
+
+          <section className="flex flex-col gap-3">
+            <h2 className="text-lg font-medium">Modalités</h2>
+            <ul className="flex flex-col gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+              {modes.map(({ icon: Icon, label }) => (
+                <li key={label} className="flex items-center gap-2">
+                  <Icon className="h-4 w-4 text-zinc-400" />
+                  {label}
+                </li>
+              ))}
+              <li className="flex items-center gap-2">
+                <BadgeCheck className="h-4 w-4 text-zinc-400" />
+                Cours de {teacher.defaultDurationMin} minutes
+              </li>
+            </ul>
+          </section>
+        </div>
+
+        {/* Colonne de réservation */}
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
+          {rate ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-2xl">
+                  {`${rate} €`}
+                  <span className="text-base font-normal text-zinc-500">
+                    {" / heure"}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-zinc-500">
+                  Réglé directement au prof, hors plateforme.
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <BookingWidget
+            teacherSlug={teacher.slug}
+            instruments={instruments.map((i) => ({
+              slug: i.slug,
+              name: i.name,
+            }))}
+            timezone={teacher.user.timezone}
+            trialOffered={teacher.trialLessonOffered}
+          />
+        </aside>
+      </div>
+    </main>
+  );
+}

@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -42,8 +43,13 @@ export async function POST(request: Request) {
       const profile = await prisma.teacherProfile.update({
         where: { id: teacher.teacherId },
         data: { status: "DRAFT", publishedAt: null },
-        select: { status: true, publishedAt: true },
+        select: { status: true, publishedAt: true, slug: true },
       });
+
+      // Sans effet tant que la page publique est rendue à la demande, mais
+      // indispensable le jour où elle passera en ISR : dépublier doit prendre
+      // effet immédiatement, pas à la prochaine régénération.
+      revalidatePath(`/profs/${profile.slug}`);
 
       return NextResponse.json(profile);
     }
@@ -88,6 +94,8 @@ export async function POST(request: Request) {
       data: { status: "PUBLISHED", publishedAt: new Date() },
       select: { status: true, publishedAt: true, slug: true },
     });
+
+    revalidatePath(`/profs/${published.slug}`);
 
     return NextResponse.json(published);
   } catch (error) {
