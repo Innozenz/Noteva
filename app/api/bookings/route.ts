@@ -33,6 +33,102 @@ const BLOCKING_STATUSES = ["PENDING", "CONFIRMED"] as const;
 /** Statuts d'un cours d'essai déjà consommé. */
 const HONOURED_STATUSES = ["PENDING", "CONFIRMED", "COMPLETED", "NO_SHOW"] as const;
 
+const listSchema = z.object({
+  role: z.enum(["teacher", "student"]).optional(),
+  status: z
+    .enum([
+      "PENDING",
+      "CONFIRMED",
+      "CANCELLED",
+      "COMPLETED",
+      "NO_SHOW",
+      "DECLINED",
+    ])
+    .optional(),
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+});
+
+/**
+ * Cours de l'utilisateur courant, comme prof et/ou comme élève.
+ *
+ * Un même compte peut porter les deux profils, d'où le filtre `role`. Sans
+ * filtre, on renvoie les deux côtés avec le rôle de l'appelant sur chaque
+ * ligne : c'est ce dont le prof a besoin pour repérer ses demandes PENDING,
+ * qui immobilisent ses créneaux tant qu'il ne les traite pas.
+ */
+export async function GET(request: Request) {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+
+    const url = new URL(request.url);
+    const parsed = listSchema.safeParse({
+      role: url.searchParams.get("role") ?? undefined,
+      status: url.searchParams.get("status") ?? undefined,
+      from: url.searchParams.get("from") ?? undefined,
+      to: url.searchParams.get("to") ?? undefined,
+    });
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Paramètres invalides", issues: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const { role, status, from, to } = parsed.data;
+
+    const sides = [];
+    if (role !== "student") sides.push({ teacher: { userId: session.user.id } });
+    if (role !== "teacher") sides.push({ student: { userId: session.user.id } });
+
+    const bookings = await prisma.booking.findMany({
+      where: {
+        OR: sides,
+        ...(status ? { status } : {}),
+        ...(from ? { endsAt: { gt: from } } : {}),
+        ...(to ? { startsAt: { lt: to } } : {}),
+      },
+      orderBy: { startsAt: "asc" },
+      take: 200,
+      select: {
+        id: true,
+        status: true,
+        startsAt: true,
+        endsAt: true,
+        mode: true,
+        isTrial: true,
+        priceCents: true,
+        studentMessage: true,
+        instrument: { select: { slug: true, name: true } },
+        teacher: {
+          select: { slug: true, userId: true, user: { select: { name: true } } },
+        },
+        student: {
+          select: { userId: true, user: { select: { name: true } } },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      bookings: bookings.map(({ teacher, student, ...booking }) => ({
+        ...booking,
+        viewerRole:
+          teacher.userId === session.user.id ? "teacher" : "student",
+        teacher: { slug: teacher.slug, name: teacher.user.name },
+        student: { name: student.user.name },
+      })),
+    });
+  } catch (error) {
+    console.error("[BOOKING_LIST_ERROR]", error);
+    return new NextResponse("Internal Error", { status: 500 });
+  }
+}
+
 const bodySchema = z.object({
   teacherSlug: z.string().min(1),
   instrumentSlug: z.string().min(1),
