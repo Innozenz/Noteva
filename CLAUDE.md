@@ -199,6 +199,19 @@ Two conventions the handler establishes:
 
 `PATCH` also accepts `teacherNote`/`meetingUrl` **without** an `action`. Don't remove that path: when those fields could only ride along with a transition, a rejected transition silently discarded them.
 
+### Notifications (`lib/notifications`)
+
+All the logic — who gets told, of what, in what words — lives in `templates.ts` as pure functions, so it's tested without a provider (16 tests). `send.ts` is a thin adapter: one hand-rolled `fetch` to Resend, no SDK for a single call.
+
+- **Never notify the actor.** `buildNotification` takes who performed the action and returns `null` when the only candidate recipient is that same person. A test asserts this across every event × actor combination.
+- **Times are always the teacher's timezone**, for both recipients. A lesson happens at one hour; showing each party a different one produces missed lessons.
+- `notifyInBackground` is deliberately **not awaited** and never throws: a booking is valid whether or not the email goes out, and an HTTP response shouldn't wait on a third party. Failures are logged, not propagated.
+- `complete`/`no_show` send nothing — both parties were at the lesson.
+- Without `RESEND_API_KEY` + `NOTIFICATIONS_FROM`, messages go to the console. Dev works with no provider account, and you see exactly what would have been sent.
+- Links are built from `NEXT_PUBLIC_APP_URL`; in production it must be the real public URL or every email links to localhost.
+
+There are **no reminders before a lesson** — that needs a scheduled job, and nothing schedules anything yet.
+
 ### Two guards on writes
 
 Writing a booking needs **two** guards, and neither replaces the other: re-derive availability server-side (a client can POST any timestamp — the constraint stops overlaps, not 3am on a Sunday), then let the constraint arbitrate the race that re-derivation cannot see. Verified: six concurrent requests for one slot produce exactly one booking, one constraint-driven 409, and four re-validation 409s.
@@ -246,7 +259,7 @@ What is missing:
 - `app/dashboard/page.tsx` is still boilerplate demo code showing a generic subscription card. With `/dashboard/prof/*` and `/dashboard/cours` doing the real work, it's mostly redundant — its layout banner is what routes people onward.
 - No dedicated instrument/city landing pages, but `/profs?instrument=…` is now linked from the home page and indexable, which covers the need for now.
 - Students have no profile form: `StudentProfile` is created empty and nothing fills it — instruments, level, goals, guardian contacts are all unused.
-- No notifications at all. A teacher learns of a request only by opening the inbox; a student learns of a confirmation only by reloading.
+- Email notifications fire on request/confirm/decline/cancel, but **no provider is configured** — they go to the console until `RESEND_API_KEY` is set. No reminders before a lesson.
 - Reviews are modelled (`Review`, gated on `COMPLETED`) but there is no route and no UI.
 - `npm run lint`, `npx tsc --noEmit`, `npm test` and `npm run build` are all clean. Keep them that way.
 

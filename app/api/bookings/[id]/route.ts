@@ -9,6 +9,8 @@ import {
   type Actor,
   type BookingAction,
 } from "@/lib/bookings/transitions";
+import { notifyInBackground } from "@/lib/notifications/send";
+import { buildNotification } from "@/lib/notifications/templates";
 import prisma from "@/lib/prisma";
 
 /**
@@ -202,6 +204,8 @@ export async function PATCH(
       );
     }
 
+    await notifyTransition(booking.id, action, actor, parsed.data.reason);
+
     return NextResponse.json({
       ...(await readBooking(booking.id, actor)),
       viewerRole: actor,
@@ -211,6 +215,65 @@ export async function PATCH(
     console.error("[BOOKING_PATCH_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
+}
+
+/** Transitions qui méritent un e-mail. `complete` et `no_show` n'en ont pas :
+ *  les deux parties étaient au cours, la clôture ne leur apprend rien. */
+const NOTIFIED_ACTIONS = {
+  confirm: "booking_confirmed",
+  decline: "booking_declined",
+  cancel: "booking_cancelled",
+} as const;
+
+/**
+ * Prévient l'autre partie du changement d'état.
+ *
+ * Relit la réservation pour disposer des noms et adresses : la transition
+ * elle-même passe par un updateMany, qui ne rend aucune ligne.
+ */
+async function notifyTransition(
+  bookingId: string,
+  action: BookingAction,
+  actor: Actor,
+  reason: string | undefined
+) {
+  const event = NOTIFIED_ACTIONS[action as keyof typeof NOTIFIED_ACTIONS];
+
+  if (!event) return;
+
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: {
+      startsAt: true,
+      isTrial: true,
+      instrument: { select: { name: true } },
+      teacher: {
+        select: { user: { select: { name: true, email: true, timezone: true } } },
+      },
+      student: { select: { user: { select: { name: true, email: true } } } },
+    },
+  });
+
+  if (!booking) return;
+
+  notifyInBackground(
+    buildNotification(
+      event,
+      {
+        teacherName: booking.teacher.user.name,
+        teacherEmail: booking.teacher.user.email,
+        studentName: booking.student.user.name,
+        studentEmail: booking.student.user.email,
+        instrumentName: booking.instrument.name,
+        startsAt: booking.startsAt,
+        timezone: booking.teacher.user.timezone,
+        isTrial: booking.isTrial,
+        cancellationReason: reason,
+        appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+      },
+      actor
+    )
+  );
 }
 
 /** `teacherNote` n'est jamais sélectionné pour l'élève. */

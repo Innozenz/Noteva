@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import { computeAvailableSlots } from "@/lib/availability";
+import { notifyInBackground } from "@/lib/notifications/send";
+import { buildNotification } from "@/lib/notifications/templates";
 import prisma from "@/lib/prisma";
 import { isTeacherVisible } from "@/lib/teacher/visibility";
 
@@ -358,8 +360,37 @@ export async function POST(request: Request) {
           mode: true,
           isTrial: true,
           priceCents: true,
+          studentMessage: true,
+          teacher: {
+            select: { user: { select: { name: true, email: true } } },
+          },
+          student: {
+            select: { user: { select: { name: true, email: true } } },
+          },
         },
       });
+
+      // Le prof ne découvrirait sa demande qu'en ouvrant son agenda, alors
+      // qu'elle immobilise déjà son créneau. Non attendu : la réponse ne doit
+      // pas dépendre de la latence du fournisseur d'e-mail.
+      notifyInBackground(
+        buildNotification(
+          "booking_requested",
+          {
+            teacherName: booking.teacher.user.name,
+            teacherEmail: booking.teacher.user.email,
+            studentName: booking.student.user.name,
+            studentEmail: booking.student.user.email,
+            instrumentName: instrument.name,
+            startsAt: booking.startsAt,
+            timezone: teacher.user.timezone,
+            isTrial: booking.isTrial,
+            studentMessage: booking.studentMessage,
+            appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+          },
+          "student"
+        )
+      );
 
       return NextResponse.json(booking, { status: 201 });
     } catch (error) {
