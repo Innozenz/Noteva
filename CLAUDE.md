@@ -19,6 +19,11 @@ npm run dev      # start dev server (localhost:3000)
 npm run build    # production build (standalone output)
 npm run start    # run production build
 npm run lint     # eslint (flat config, eslint-config-next)
+npm test         # vitest, single run
+npm run test:watch
+
+npx vitest run lib/availability            # one file
+npx vitest run -t "heure d'été"            # one test / describe block by name
 
 npx prisma generate        # regenerate Prisma client after schema changes
 npx prisma migrate dev     # create + apply a migration (dev)
@@ -28,7 +33,7 @@ npx prisma migrate status  # what's applied vs pending
 
 **Do not use `prisma db push`.** This project is on `prisma migrate` because the schema depends on hand-written SQL that `db push` would silently drop (see *Integrity constraints* below).
 
-There is no test suite configured in this repo. The slot-computation engine is the one place that warrants one when it lands.
+Tests cover `lib/availability` only, and that's deliberate: it's the one piece of logic whose bugs are invisible by inspection (see below). Don't feel obliged to backfill tests for CRUD routes.
 
 ### Environment
 
@@ -92,6 +97,21 @@ Other decisions worth knowing:
 - `Booking.status` starts at `PENDING` — with no online payment there's nothing to lock commitment, so the teacher confirms explicitly.
 - `Review` hangs off a `bookingId` (unique) so only a real lesson can be reviewed, and `publishedAt` is null until moderated.
 
+### Slot engine (`lib/availability`)
+
+`computeAvailableSlots(input)` is a **pure function**: no Prisma import, no DB access, and it never reads the clock — `now` is passed in. Load the rules, exceptions and bookings in the caller, then hand them over. Keep it that way; that property is what makes the DST tests possible.
+
+The pipeline is: expand weekly rules per local civil day → union with `EXTRA` exceptions → subtract `BLOCKED` → project each local interval to instants → subtract bookings widened by `bufferMin` → clamp to the request window, the `minNoticeHours` floor and the `bookingHorizonDays` ceiling → slice into slots.
+
+Things that will bite you:
+
+- **`range` is in instants, not civil dates.** A `Date` built from `"2026-10-25T00:00:00Z"` is 2am in Paris and will silently clip the start of the local day. Pass real wall-clock boundaries.
+- **Slicing happens in instant space**, so a local 1am–4am window yields 2 slots on the spring-forward day and 4 on the fall-back day. That's correct: a lesson is a real duration, not a wall-clock one. Both cases are pinned by tests.
+- `@db.Date` columns come back from Prisma as **UTC-midnight** `Date`s. Rule validity bounds and exception dates are therefore read with `getUTC*` — reading them in server-local time shifts them a day for any zone behind UTC.
+- Intervals are half-open `[start, end)` throughout, matching the `tstzrange('[)')` in the DB constraint, so a lesson may start exactly when another ends.
+
+The engine narrows candidates; it is **not** the booking guarantee. Two requests can pass through it concurrently for the same slot — the exclusion constraint below is what actually prevents the double booking.
+
 #### Integrity constraints (hand-written SQL)
 
 The tail of `prisma/migrations/20260722120000_init_noteva/migration.sql`, below the generated section, is written by hand and **`prisma migrate diff` will not regenerate it**. If you ever rebuild the migration from scratch, port that block over.
@@ -135,7 +155,7 @@ Teacher visibility should be **derived at read time** (`status = PUBLISHED AND s
 The schema is migrated and applied, but the app on top of it is still the boilerplate. Concretely:
 
 - The `instrument` table is **empty**, so nothing is bookable until it's seeded. There is no seed script yet (`prisma db seed` on a `.ts` file would need `tsx` added).
-- No slot-computation engine yet. It should be a pure function `(rules, exceptions, bookings, range, timezone) → slots[]` with no DB access, so it can be tested against DST transitions directly.
+- The slot engine exists and is tested (27 tests), but **nothing calls it yet** — there is no API route exposing availability.
 - No onboarding page, no teacher/student areas, no public teacher pages — `app/dashboard/page.tsx` is still the boilerplate demo.
 - `npm run lint` reports two pre-existing errors (an `any` in the Stripe webhook, an unescaped apostrophe in the dashboard).
 
