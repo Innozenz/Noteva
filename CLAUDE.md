@@ -89,9 +89,17 @@ Self-service profile editing and availability, behind a second Server Component 
 - Overlapping ranges are **merged, not rejected** (`normalizeWeeklyGrid`). "9am–12pm" then "11am–2pm" is a clear intention; a form that refuses it is just annoying. The editor re-renders what the server kept, not what was typed.
 - Exceptions take a bare civil date (`AAAA-MM-JJ`), never an instant — `@db.Date` is stored at UTC midnight, so an instant would shift a teacher west of Greenwich onto the wrong day.
 
-`/dashboard/prof/demandes` is the request inbox. `groupBookings()` in `lib/teacher/inbox.ts` decides the ordering, and the ordering *is* the point: a `PENDING` request holds its slot, so leaving one untreated blocks the teacher's own calendar. Hence pending first, soonest first, and a count badge in the tab. A `PENDING` booking whose time has passed drops to history — it is no longer confirmable. The screen reimplements **no** lifecycle rule; every action goes through `PATCH /api/bookings/[id]`.
+`/dashboard/prof/demandes` is the request inbox. `groupBookings()` in `lib/bookings/grouping.ts` decides the ordering, and the ordering *is* the point: a `PENDING` request holds its slot, so leaving one untreated blocks the teacher's own calendar. Hence pending first, soonest first, and a count badge in the tab. A `PENDING` booking whose time has passed drops to history — it is no longer confirmable.
 
 Dates in the teacher area are always rendered with `timeZone: teacher.timezone`, not the browser's — a teacher travelling must still read their own schedule.
+
+### Student area (`/dashboard/cours`)
+
+The mirror of the teacher inbox, sharing `groupBookings()` — the groups are the same, only their meaning differs (`toReview` is a to-do for the teacher, a wait for the student). Both screens reimplement **no** lifecycle rule: every action goes through `PATCH /api/bookings/[id]` and the state machine decides. The student UI simply doesn't offer what the server would refuse — cancel is their only action, and only before the lesson ends.
+
+A cancellation inside the teacher's `cancellationWindowHours` comes back with `lateCancellation: true`. Nothing is charged (no online payment), so it's surfaced as a notice, not a block.
+
+`/dashboard` routes each role to its own area from a single banner. Adding a role-specific area means adding it there too, or it stays URL-only.
 
 ### Public pages must be Server Components
 
@@ -221,16 +229,16 @@ Publishing and being visible are **separate**: a teacher without a subscription 
 The schema is migrated and applied, but the app on top of it is still the boilerplate. Concretely:
 
 - `prisma/seed.ts` (run via `tsx`, declared in `prisma.config.ts`) holds 37 instruments across the 8 families, with search aliases. Seeded and idempotent.
-- The slot engine is tested (27 tests) and exposed through the public availability route.
-- The booking API is complete: create, list, read, and the full lifecycle. Nothing consumes it — **there is no UI**.
-- **The teacher loop is closed and works through the UI**: onboarding → profile → weekly grid → publish → a student books → confirm/decline/complete. Verified end to end against the database.
-- The student path works: `/profs` → filters → `/profs/[slug]` → booking.
-- **No "my lessons" screen for students**: they can book but then can't see or cancel a booking without calling the API by hand. Biggest gap.
-- **Nothing links to `/profs`** from the landing page — `app/page.tsx` is still boilerplate demo content.
-- No instrument/city landing pages yet; `/profs?instrument=…` covers it but isn't linked from anywhere crawlable.
-- `app/dashboard/page.tsx` is still boilerplate demo code; the only addition is a banner linking teachers to `/dashboard/prof`.
-- Students have no profile form; `StudentProfile` is created empty at onboarding.
-- Stripe subscriptions are never actually purchased in any flow — subscription state has only ever been set directly in the database for testing.
+**Both loops are closed end to end through the UI**, verified against the database: a teacher onboards → fills the profile → sets a weekly grid → publishes → receives requests → confirms/declines/closes; a student searches → books → follows the status → cancels.
+
+What is missing:
+
+- **`app/page.tsx` is still boilerplate demo content.** Nothing links to `/profs`, and a visitor can't tell what Noteva is. Biggest gap, and it's the entry point for all search traffic. `app/dashboard/page.tsx` is likewise untouched demo code — the only addition is the role banner in its layout.
+- **Stripe subscriptions are never actually purchased.** No flow calls checkout for a teacher plan; subscription state has only ever been set directly in the database for testing. The business model is not wired up.
+- No instrument/city landing pages; `/profs?instrument=…` serves the need but isn't linked from anywhere crawlable.
+- Students have no profile form: `StudentProfile` is created empty and nothing fills it — instruments, level, goals, guardian contacts are all unused.
+- No notifications at all. A teacher learns of a request only by opening the inbox; a student learns of a confirmation only by reloading.
+- Reviews are modelled (`Review`, gated on `COMPLETED`) but there is no route and no UI.
 - `npm run lint` reports two pre-existing errors (an `any` in the Stripe webhook, an unescaped apostrophe in the dashboard).
 
 ## Docker

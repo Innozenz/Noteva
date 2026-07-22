@@ -36,22 +36,22 @@ export default async function DashboardLayout({
 
   return (
     <>
-      {/* Le seul chemin vers l'espace prof : sans ça, les écrans construits
-          jusqu'ici ne sont atteignables qu'en tapant l'URL. */}
-      {user.role === "TEACHER" ? (
-        <div className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-2">
-            <span className="text-sm text-zinc-500">Compte prof</span>
-            <Link
-              href="/dashboard/prof"
-              className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
-            >
-              Espace prof
-              <ArrowRight className="h-3 w-3" />
-            </Link>
-          </div>
+      {/* Le seul chemin vers les espaces dédiés : sans ce bandeau, les écrans
+          construits jusqu'ici ne sont atteignables qu'en tapant l'URL. */}
+      <div className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-2">
+          <span className="text-sm text-zinc-500">
+            {user.role === "TEACHER" ? "Compte prof" : "Compte élève"}
+          </span>
+          <Link
+            href={user.role === "TEACHER" ? "/dashboard/prof" : "/dashboard/cours"}
+            className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
+          >
+            {user.role === "TEACHER" ? "Espace prof" : "Mes cours"}
+            <ArrowRight className="h-3 w-3" />
+          </Link>
         </div>
-      ) : null}
+      </div>
       {children}
     </>
   );

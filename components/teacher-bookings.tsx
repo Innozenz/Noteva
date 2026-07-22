@@ -22,7 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { groupBookings, isUrgent } from "@/lib/teacher/inbox";
+import { groupBookings, isUrgent } from "@/lib/bookings/grouping";
 import { cn } from "@/lib/utils";
 
 export type BookingRow = {

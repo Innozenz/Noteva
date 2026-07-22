@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BookingStatus } from "@prisma/client";
 
-import { groupBookings, isUrgent, type InboxBooking } from "./inbox";
+import { groupBookings, isUrgent, type InboxBooking } from "./grouping";
 
 const NOW = new Date("2026-07-22T12:00:00Z");
 

@@ -1,12 +1,15 @@
 import type { BookingStatus } from "@prisma/client";
 
 /**
- * Regroupement des cours pour la boîte de réception du prof.
+ * Regroupement des cours par état d'avancement.
  *
- * Fonction pure : c'est elle qui décide de l'ordre de traitement, et l'ordre
- * est le fond du sujet. Une demande en attente immobilise un créneau
- * (booking_teacher_no_overlap) — la laisser traîner revient à bloquer son
- * propre agenda, donc elle passe avant tout le reste.
+ * Partagé par les deux côtés : le prof y voit ce qu'il doit traiter, l'élève
+ * où en sont ses demandes. Les groupes sont les mêmes, seul leur sens diffère
+ * — `toReview` est une action à faire pour le prof, une attente pour l'élève.
+ *
+ * Fonction pure, et l'ordre est le fond du sujet. Une demande en attente
+ * immobilise un créneau (booking_teacher_no_overlap) : la laisser traîner
+ * bloque le planning du prof, donc elle passe avant tout le reste.
  */
 
 export type InboxBooking = {
@@ -17,11 +20,11 @@ export type InboxBooking = {
 };
 
 export type InboxGroups<T extends InboxBooking> = {
-  /** Demandes à trancher. Les plus proches d'abord : ce sont les plus urgentes. */
+  /** En attente de réponse du prof. Les plus proches d'abord. */
   pending: T[];
   /** Cours confirmés encore à venir. */
   upcoming: T[];
-  /** Cours confirmés déjà passés, à clôturer (honoré ou non). */
+  /** Cours confirmés déjà passés : à clôturer par le prof. */
   toReview: T[];
   /** Tout le reste : annulé, refusé, terminé, non honoré. */
   past: T[];
