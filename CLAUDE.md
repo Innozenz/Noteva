@@ -251,9 +251,12 @@ Publishing and being visible are **separate**: a teacher without a subscription 
 - `app/api/webhooks/stripe/route.ts` — state is tracked from `customer.subscription.created/updated/deleted`, which carry the whole subscription in the payload. No `subscriptions.retrieve()` round-trip, so one less failure mode, and the handler is testable with locally signed events. `checkout.session.completed` does one job only: attach `stripeCustomerId` to the profile via `metadata.userId`. It deliberately does *not* write subscription state — `subscription.created` can arrive first, and writing in both places risks an out-of-order overwrite. Unhandled events return 200; a 4xx/5xx would make Stripe retry forever.
 - `lib/stripe/subscription.ts` — pure mapping from a `Stripe.Subscription` to the profile columns, unit-tested. Two traps it encodes: the period end lives on `items.data[0]` in API v20, not on the subscription; and a `canceled`/`unpaid` subscription must **null out** `stripeCurrentPeriodEnd`, or the profile stays visible until an already-paid period expires. `past_due` deliberately keeps access — Stripe retries for days and cutting a teacher off on the first card failure would be brutal.
 - `app/api/user/subscription/route.ts` — read-only endpoint deriving `isActive`. Returns `isActive: false` rather than 404 for a user with no teacher profile (i.e. every student).
+- `lib/stripe.ts` — the client, keyed on **`STRIPE_SECRET_KEY`**. The boilerplate read `STRIPE_API_KEY`, a name present in no `.env`; the `new Stripe(undefined!)` then threw *at module evaluation*, i.e. before the `try` in every route, so `/api/stripe/*` answered a 500 HTML error page instead of their JSON. Nothing caught it because no Stripe call had ever run. The module now fails fast with a message naming the variable.
 - `lib/stripe-client.ts` (`loadStripe`) and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are **unused** boilerplate leftovers — checkout is a plain redirect to the URL the server returns.
 
-**The Stripe API calls themselves are unverified.** `.env` holds the `.env.example` placeholders, so `checkout.sessions.create` and `billingPortal.sessions.create` fail with `StripeAuthenticationError` and the routes return 500. Everything up to that boundary is tested, including the full webhook path against the database. Put real test keys in `.env` to exercise the rest.
+**Verified against Stripe in test mode:** `checkout.sessions.create` returns a real `cs_test_…` session for a signed-in teacher, `/api/stripe/portal` 409s while no customer exists, and the webhook chain applies to the database — `checkout.session.completed` attaches the customer, `subscription.created` (active) writes the period end, `past_due` keeps it, `deleted` nulls it, and a forged signature is rejected with 400.
+
+**Still unexercised: the hosted Checkout page itself** — completing it requires entering a card, so no subscription has ever been paid for end to end. Local webhooks also need `stripe listen --forward-to localhost:3000/api/webhooks/stripe`, whose `whsec_` differs from a Dashboard endpoint's; `STRIPE_WEBHOOK_SECRET` must match whichever one is actually delivering.
 
 ### State management convention
 
@@ -296,7 +299,7 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 
 What is missing:
 
-- **Stripe needs real test keys.** The subscription flow is built and wired (`/dashboard/prof/abonnement`), but `.env` holds placeholders (and at one point a *live* key — never test against that), so no real payment has ever been made. See the Payments section. Biggest gap.
+- **No subscription has ever been paid for.** Test keys are in place and the API calls are verified (see the Payments section), but the hosted Checkout page needs a card to complete, so the loop *paiement → webhook → fiche visible* has only been proven with locally signed events, never by a real payment.
 - `app/dashboard/page.tsx` is still boilerplate demo code showing a generic subscription card. With `/dashboard/prof/*` and `/dashboard/cours` doing the real work, it's mostly redundant — its layout banner is what routes people onward.
 - No dedicated instrument/city landing pages, but `/profs?instrument=…` is now linked from the home page and indexable, which covers the need for now.
 - `StudentProfile.preferredGenres` and `prefersOnline` are stored but never read; `postalCode` has no UI.
