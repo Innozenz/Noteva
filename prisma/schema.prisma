@@ -391,7 +391,8 @@ model Booking {
   cancellationReason String?
   completedAt        DateTime?
 
-  review Review?
+  review    Review?
+  reminders BookingReminder[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -426,4 +427,35 @@ model Review {
 
   @@index([teacherId, publishedAt])
   @@map("review")
+}
+
+// ---------------------------------------------------------------------------
+// Rappels — trace de ce qui a déjà été envoyé.
+//
+// Une table plutôt qu'une colonne `reminderSentAt` : l'unicité (cours, type)
+// laisse la base arbitrer la course entre deux passages de la tâche planifiée
+// qui se chevauchent, exactement comme les contraintes d'exclusion sur les
+// réservations. Un test applicatif « a-t-on déjà envoyé ? » suivi d'un envoi
+// laisse une fenêtre où l'élève reçoit deux fois le même e-mail.
+//
+// Elle ouvre aussi la porte à d'autres échéances (H1, veille au soir) sans
+// nouvelle migration.
+// ---------------------------------------------------------------------------
+
+enum ReminderKind {
+  H24
+}
+
+model BookingReminder {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  kind   ReminderKind
+  sentAt DateTime     @default(now())
+
+  // Le cœur du dispositif : deux passages simultanés ne peuvent pas réclamer
+  // le même rappel.
+  @@unique([bookingId, kind])
+  @@map("booking_reminder")
 }

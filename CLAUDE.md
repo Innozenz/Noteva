@@ -34,6 +34,8 @@ npx prisma db seed         # instrument catalogue (idempotent, upsert by slug)
 
 **Do not use `prisma db push`.** This project is on `prisma migrate` because the schema depends on hand-written SQL that `db push` would silently drop (see *Integrity constraints* below).
 
+**Read every generated migration before applying it.** Prisma does not know about the hand-written SQL and tries to undo it: the `reminders` migration was generated with a `DROP INDEX "instrument_aliases_idx"` on top, which would have killed alias search (« technique vocale » → chant) with no symptom but growing slowness. Generate with `--create-only`, strip what does not belong, then `migrate deploy`.
+
 Tests cover `lib/availability` only, and that's deliberate: it's the one piece of logic whose bugs are invisible by inspection (see below). Don't feel obliged to backfill tests for CRUD routes.
 
 ### Environment
@@ -249,7 +251,23 @@ All the logic — who gets told, of what, in what words — lives in `templates.
 - Without `RESEND_API_KEY` + `NOTIFICATIONS_FROM`, messages go to the console. Dev works with no provider account, and you see exactly what would have been sent.
 - Links are built from `NEXT_PUBLIC_APP_URL`; in production it must be the real public URL or every email links to localhost.
 
-There are **no reminders before a lesson** — that needs a scheduled job, and nothing schedules anything yet.
+Reminders live apart, in `lib/notifications/reminders.ts`, and that separation is deliberate. Everywhere else a notification follows an action and the invariant is *never notify the actor*. A reminder has **no actor** — the clock fires it, and both parties must be told. Folding it into `buildNotification` would mean inventing a fake actor and weakening an invariant a test asserts across every other event. Hence a different signature: `buildReminders` returns **two** notifications, not one.
+
+### Lesson reminders (`lib/reminders`, `/api/cron/reminders`)
+
+Nothing in a Next app survives between requests, so there is no in-process scheduler: `/api/cron/reminders` is an HTTP entry point that any scheduler can hit (Vercel Cron, a GitHub Action, `curl` in a crontab). Accepts `GET` as well as `POST` — several schedulers only emit the former.
+
+**Authentication is `CRON_SECRET`, and the route refuses to run without it** (503, logged). A quietly-open cron route is worse than a broken one, because nothing about it looks wrong. Both `Authorization: Bearer` (Vercel's format) and `x-cron-secret` are accepted.
+
+**The window is open at the bottom** — every `CONFIRMED` lesson starting in `(now, now + 24h]` that has no reminder yet, not "lessons starting in 24h ± a few minutes". Targeting the instant assumes the job always runs on time; one twenty-minute outage and the lessons that fell in the gap are never reminded, with nothing having failed. With an open window a job that missed six hours catches up on its next pass, so **the frequency only affects freshness** — fifteen minutes or one hour give the same result.
+
+**Claim first, send second.** `BookingReminder` has `@@unique([bookingId, kind])`, and inserting the row *is* the claim — the database arbitrates the race between overlapping passes, not an application check with a window (same reasoning as `booking_teacher_no_overlap` and `Review.bookingId`). If both sends then fail, the claim is **deleted** so the next pass retries. A partial failure keeps the claim: re-sending to the party who did receive it is worse than leaving the other without. The residual risk is a duplicate if the process dies between a successful send and returning — accepted, and the cheaper of the two failure modes. Verified: five simultaneous passes over one lesson produce one claim and two emails, not ten.
+
+Unlike booking notifications, sends here are **awaited** — the job's return value (`sent`/`failed`/`skipped`) is how an operator knows it works, and `notifyInBackground` would discard it.
+
+Reminders never say "demain": a lesson confirmed three hours ahead also falls inside the window, and the word would be false. The date and time always are true.
+
+`ReminderKind` is an enum with a single value (`H24`) so a second deadline needs no migration.
 
 ### Two guards on writes
 
@@ -320,7 +338,8 @@ What is missing:
 - `app/dashboard/page.tsx` is still boilerplate demo code showing a generic subscription card. With `/dashboard/prof/*` and `/dashboard/cours` doing the real work, it's mostly redundant — its layout banner is what routes people onward.
 - No dedicated instrument/city landing pages, but `/profs?instrument=…` is now linked from the home page and indexable, which covers the need for now.
 - `StudentProfile.preferredGenres` and `prefersOnline` are stored but never read; `postalCode` has no UI.
-- Email notifications fire on request/confirm/decline/cancel, but **no provider is configured** — they go to the console until `RESEND_API_KEY` is set. No reminders before a lesson.
+- Email notifications fire on request/confirm/decline/cancel/review and 24h before a lesson. `RESEND_API_KEY` is set, but **the Resend account has no verified domain**, so delivery is restricted to the account owner's own address and every other recipient comes back 403. Verify a domain before this counts as working in production.
+- **Nothing schedules `/api/cron/reminders` yet.** The endpoint, the claim table and the retry path are built and verified; wiring an actual scheduler to it is a deployment step, not a code one.
 - Reviews are **published without moderation**: `publishedAt` is set at creation. The column stays as the hook for a future queue, but until a moderation screen exists, being born `null` would mean no review ever appears. See the Reviews section.
 - **Search is still ranked by `publishedAt`, not by rating.** Now that a quality signal exists it is tempting, but a lone 5★ would outrank forty averaging 4.8 — it needs a Bayesian prior first (pull each teacher toward the site mean in inverse proportion to their review count).
 - `npm run lint`, `npx tsc --noEmit`, `npm test` and `npm run build` are all clean. Keep them that way.
