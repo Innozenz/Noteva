@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
+import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { localFailure, postJson, type Failure } from "@/lib/http/failure";
 import {
   formatTime,
   parseTime,
@@ -51,7 +53,7 @@ export function AvailabilityEditor({
   const [exceptions, setExceptions] = useState(initialExceptions);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
 
   const addRow = (weekday: number) =>
     setRows((current) => [...current, { weekday, start: "09:00", end: "12:00" }]);
@@ -77,14 +79,18 @@ export function AvailabilityEditor({
 
       if (startMinute === null || endMinute === null) {
         setError(
-          `Ligne ${index + 1} : horaire illisible, attendu au format 09:00.`
+          localFailure(
+            `Ligne ${index + 1} : horaire illisible, attendu au format 09:00.`
+          )
         );
         setIsSaving(false);
         return;
       }
 
       if (startMinute >= endMinute) {
-        setError(`Ligne ${index + 1} : la fin doit suivre le début.`);
+        setError(
+          localFailure(`Ligne ${index + 1} : la fin doit suivre le début.`)
+        );
         setIsSaving(false);
         return;
       }
@@ -93,31 +99,26 @@ export function AvailabilityEditor({
     }
 
     try {
-      const response = await fetch("/api/teacher/availability", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slots }),
-      });
+      const result = await postJson<{ slots: GridSlot[] }>(
+        "/api/teacher/availability",
+        { method: "PUT", body: JSON.stringify({ slots }) }
+      );
 
-      const body = await response.json();
-
-      if (!response.ok) {
-        setError(body?.error ?? "Enregistrement impossible");
+      if (!result.ok) {
+        setError(result.failure);
         return;
       }
 
       // Le serveur fusionne les plages qui se recouvrent : on réaffiche ce
       // qu'il a réellement retenu, pas ce qui a été tapé.
       setRows(
-        body.slots.map((slot: GridSlot) => ({
+        result.data.slots.map((slot) => ({
           weekday: slot.weekday,
           start: formatTime(slot.startMinute),
           end: formatTime(slot.endMinute),
         }))
       );
       setMessage("Disponibilités enregistrées");
-    } catch {
-      setError("Impossible de contacter le serveur");
     } finally {
       setIsSaving(false);
     }
@@ -209,7 +210,7 @@ export function AvailabilityEditor({
             );
           })}
 
-          {error ? <p className="text-sm text-danger">{error}</p> : null}
+          <FormFailure failure={error} onRetry={save} />
           {message ? <p className="text-sm text-success">{message}</p> : null}
 
           <div className="flex justify-end">
@@ -237,7 +238,7 @@ function ExceptionsCard({
 }) {
   const [date, setDate] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
 
   const addBlockedDay = async () => {
     if (!date) return;
@@ -246,38 +247,44 @@ function ExceptionsCard({
     setError(null);
 
     try {
-      const response = await fetch("/api/teacher/availability/exceptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // Sans bornes horaires, la journée entière est bloquée.
-        body: JSON.stringify({ date, type: "BLOCKED" }),
-      });
+      const result = await postJson<ExceptionRow>(
+        "/api/teacher/availability/exceptions",
+        {
+          method: "POST",
+          // Sans bornes horaires, la journée entière est bloquée.
+          body: JSON.stringify({ date, type: "BLOCKED" }),
+        }
+      );
 
-      const body = await response.json();
-
-      if (!response.ok) {
-        setError(body?.error ?? "Ajout impossible");
+      if (!result.ok) {
+        setError(result.failure);
         return;
       }
 
-      onChange([...exceptions, { ...body, date }]);
+      onChange([...exceptions, { ...result.data, date }]);
       setDate("");
-    } catch {
-      setError("Impossible de contacter le serveur");
     } finally {
       setIsSaving(false);
     }
   };
 
   const remove = async (id: string) => {
-    const response = await fetch(
+    setError(null);
+
+    const result = await postJson(
       `/api/teacher/availability/exceptions?id=${id}`,
       { method: "DELETE" }
     );
 
-    if (response.ok) {
-      onChange(exceptions.filter((e) => e.id !== id));
+    // L'échec était silencieux : on cliquait sur la corbeille, la ligne
+    // restait, et rien n'expliquait pourquoi. Une suppression qui ne dit pas
+    // qu'elle a échoué laisse croire à un congé posé qui ne l'est pas.
+    if (!result.ok) {
+      setError(result.failure);
+      return;
     }
+
+    onChange(exceptions.filter((e) => e.id !== id));
   };
 
   return (
@@ -307,7 +314,7 @@ function ExceptionsCard({
           </Button>
         </div>
 
-        {error ? <p className="text-sm text-danger">{error}</p> : null}
+        <FormFailure failure={error} />
 
         {exceptions.length === 0 ? (
           <p className="text-sm text-subtle">Aucune absence enregistrée.</p>

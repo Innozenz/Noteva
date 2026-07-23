@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { ReviewForm } from "@/components/review-form";
+import { FormFailure } from "@/components/form-failure";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Stars } from "@/components/ui/stars";
+import { postJson, type Failure } from "@/lib/http/failure";
 import { groupBookings } from "@/lib/bookings/grouping";
 import { checkReviewable } from "@/lib/reviews/eligibility";
 
@@ -81,7 +83,7 @@ export function StudentBookings({
 }) {
   const [rows, setRows] = useState(initial);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   /** Cours dont le formulaire d'avis est ouvert. */
   const [reviewing, setReviewing] = useState<string | null>(null);
@@ -136,34 +138,32 @@ export function StudentBookings({
     setNotice(null);
 
     try {
-      const response = await fetch(`/api/bookings/${id}`, {
+      const result = await postJson<{
+        status: StudentBookingRow["status"];
+        lateCancellation?: boolean;
+      }>(`/api/bookings/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "cancel" }),
       });
 
-      const body = await response.json();
-
-      if (!response.ok) {
-        setError(body?.error ?? "Annulation impossible");
+      if (!result.ok) {
+        setError(result.failure);
         return;
       }
 
       setRows((current) =>
         current.map((row) =>
-          row.id === id ? { ...row, status: body.status } : row
+          row.id === id ? { ...row, status: result.data.status } : row
         )
       );
 
       // Le serveur signale une annulation tardive : le prof avait fixé un
       // préavis. Rien n'est facturé, mais l'élève doit le savoir.
       setNotice(
-        body.lateCancellation
+        result.data.lateCancellation
           ? "Cours annulé. C'était dans le délai de préavis du prof — pensez à le prévenir directement."
           : "Cours annulé."
       );
-    } catch {
-      setError("Impossible de contacter le serveur");
     } finally {
       setBusyId(null);
     }
@@ -306,7 +306,7 @@ export function StudentBookings({
 
   return (
     <div className="flex flex-col gap-6">
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      <FormFailure failure={error} />
       {notice ? <p className="text-sm text-muted">{notice}</p> : null}
 
       {groups.pending.length > 0 ? (

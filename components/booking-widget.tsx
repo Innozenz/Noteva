@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
+import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { postJson, type Failure } from "@/lib/http/failure";
 import { cn } from "@/lib/utils";
 
 type Slot = { startsAt: string; endsAt: string };
@@ -47,30 +49,33 @@ export function BookingWidget({
   const [isTrial, setIsTrial] = useState(false);
   const [message, setMessage] = useState("");
   const [isBooking, setIsBooking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
+  const [slotsFailed, setSlotsFailed] = useState(false);
   const [done, setDone] = useState(false);
 
   const loadSlots = useCallback(async () => {
     setSlots(null);
     setSelected(null);
+    setSlotsFailed(false);
 
     const from = weekStart.toISOString();
     const to = new Date(weekStart.getTime() + 7 * DAY_MS).toISOString();
 
-    try {
-      const response = await fetch(
-        `/api/teachers/${teacherSlug}/availability?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
-      );
+    const result = await postJson<{ slots: Slot[] }>(
+      `/api/teachers/${teacherSlug}/availability?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      { method: "GET" }
+    );
 
-      if (!response.ok) {
-        setSlots([]);
-        return;
-      }
-
-      setSlots((await response.json()).slots);
-    } catch {
+    // Un échec de chargement rendait une liste vide, donc « Aucun créneau
+    // disponible cette semaine » — un mensonge qui envoie l'élève chercher
+    // ailleurs alors que le prof est peut-être libre toute la semaine.
+    if (!result.ok) {
       setSlots([]);
+      setSlotsFailed(true);
+      return;
     }
+
+    setSlots(result.data.slots);
   }, [teacherSlug, weekStart]);
 
   useEffect(() => {
@@ -84,9 +89,8 @@ export function BookingWidget({
     setError(null);
 
     try {
-      const response = await fetch("/api/bookings", {
+      const result = await postJson("/api/bookings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           teacherSlug,
           instrumentSlug: instrument,
@@ -96,32 +100,28 @@ export function BookingWidget({
         }),
       });
 
-      if (response.status === 401) {
-        setError("Connectez-vous pour réserver un cours.");
-        return;
-      }
+      if (!result.ok) {
+        // Cette page est publique : un 401 signifie le plus souvent « pas
+        // encore de compte », pas « session expirée ». Le message générique
+        // parlerait d'une session que le visiteur n'a jamais ouverte.
+        setError(
+          result.failure.kind === "auth"
+            ? {
+                ...result.failure,
+                message:
+                  "Connectez-vous ou créez un compte pour réserver ce cours. Votre sélection reste à l'écran.",
+              }
+            : result.failure
+        );
 
-      const body = await response.json();
-
-      if (response.status === 403) {
-        // Compte sans profil élève : typiquement un prof, ou un onboarding
-        // jamais terminé.
-        setError(body?.error ?? "Un compte élève est nécessaire pour réserver.");
-        return;
-      }
-
-      if (!response.ok) {
-        setError(body?.error ?? "Réservation impossible");
-        // Le créneau vient probablement d'être pris : on recharge plutôt que
-        // de laisser une liste périmée à l'écran.
-        if (response.status === 409) loadSlots();
+        // Un conflit veut dire que le créneau vient d'être pris : on recharge
+        // plutôt que de laisser une liste périmée à l'écran.
+        if (result.failure.kind === "conflict") loadSlots();
         return;
       }
 
       setDone(true);
       router.refresh();
-    } catch {
-      setError("Impossible de contacter le serveur");
     } finally {
       setIsBooking(false);
     }
@@ -180,6 +180,16 @@ export function BookingWidget({
         {slots === null ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-subtle" />
+          </div>
+        ) : slotsFailed ? (
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <p className="text-sm text-muted">
+              Les créneaux n&apos;ont pas pu être chargés. Ce prof est
+              peut-être disponible.
+            </p>
+            <Button variant="outline" size="sm" onClick={loadSlots}>
+              Réessayer
+            </Button>
           </div>
         ) : byDay.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">
@@ -254,7 +264,7 @@ export function BookingWidget({
               onChange={(e) => setMessage(e.target.value)}
             />
 
-            {error ? <p className="text-sm text-danger">{error}</p> : null}
+            <FormFailure failure={error} onRetry={book} />
 
             <Button size="lg" disabled={isBooking} onClick={book}>
               {isBooking ? (

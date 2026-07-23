@@ -98,6 +98,22 @@ Real validation only happens server-side in API routes via `auth.api.getSession`
 
 This matters more now than it did for the boilerplate: the data is multi-tenant. Every handler touching a booking, a calendar or a profile must check *this user owns this resource*, not merely *this user is logged in* — otherwise any student can read another's lessons through `/api/bookings/[id]`.
 
+### Failures (`lib/http/failure.ts`, `app/error.tsx`)
+
+**Every client fetch goes through `postJson`.** The pattern it replaced ended in `catch { setError("Impossible de contacter le serveur") }` — but that `catch` also caught `response.json()` on a **non-JSON** response (a 500 error page, a failing proxy). The server had answered, and the app said the opposite. A false diagnosis sends the user to check their wifi while the fault is elsewhere.
+
+`describeFailure` is pure and unit-tested; `postJson` is the thin wrapper, tested against a closed port so the network branch is exercised for real. Three distinctions carry everything:
+
+- **Retryable** (network, 5xx) versus not (validation, permission). Offering "réessayer" on a typo makes the user loop.
+- **401 is the only case needing to leave the page**, so it gets a link — opening in a **new tab**, because redirecting would discard everything typed. The message says the input is still there, which is the first worry of anyone who just filled a long form. Never auto-redirect on 401 during a submit.
+- **The server's message wins when it has one** ("Ce créneau vient d'être réservé" beats any generic phrasing) — *except on 5xx*, where the body often carries an internal trace that helps nobody and informs an attacker.
+
+`localFailure()` gives client-side validation the same shape, so there is one render path (`FormFailure`).
+
+**Boundaries**: `app/error.tsx` (a runtime error used to show Next's default page — an unstyled English "Application error" with no way back), `app/not-found.tsx` (only the teacher-profile route had one), and `app/global-error.tsx` for a failure in the root layout — that one imports nothing and styles inline, because if the stylesheet never loaded a `className` would render nothing.
+
+Two silent failures were fixed along the way: deleting a time-off entry did nothing visible when it failed, and a failed slot load rendered "Aucun créneau disponible cette semaine" — a lie that sends a student away from an available teacher.
+
 ### Signed-in chrome
 
 `app/dashboard/layout.tsx` renders `AppHeader` — logo, link to the public search, account menu. It replaced an unstyled band reading "Compte prof" that carried no identity, no way back to the site and no sign-out; the teacher area then stacked a second bar under it, so the app looked like two products glued together. `UserNav` is now **the only** place to sign out: the red button on the old demo dashboard went with it, and an app you cannot leave is not an app.
@@ -351,7 +367,7 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 What is missing:
 
 - **Only the hosted Checkout page is untested**, because completing it requires entering a card. Everything around it now runs against real Stripe in test mode — see the Payments section.
-- The signed-in area and the empty states were reviewed on screen against a genuinely empty database — see *Signed-in chrome* and *Search* above. Still **not** reviewed: `/onboarding`, `/mot-de-passe-oublie`, `/reinitialiser-mot-de-passe`, and error states (failed save, expired session, network loss).
+- The signed-in area, the empty states and the failure paths were reviewed on screen — the last against a fabricated expired session, with the typed form content verified intact afterwards. Still **not** reviewed on screen: `/onboarding`, `/mot-de-passe-oublie`, `/reinitialiser-mot-de-passe`.
 - No dedicated instrument/city landing pages, but `/profs?instrument=…` is now linked from the home page and indexable, which covers the need for now.
 - `StudentProfile.preferredGenres` and `prefersOnline` are stored but never read; `postalCode` has no UI.
 - Email notifications fire on request/confirm/decline/cancel/review and 24h before a lesson. `RESEND_API_KEY` is set, but **the Resend account has no verified domain**, so delivery is restricted to the account owner's own address and every other recipient comes back 403. Verify a domain before this counts as working in production.

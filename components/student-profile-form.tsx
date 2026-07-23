@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertCircle, Check, Loader2 } from "lucide-react";
 
+import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { postJson, type Failure } from "@/lib/http/failure";
 import { cn } from "@/lib/utils";
 
 type Level = "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | "PROFESSIONAL";
@@ -71,7 +73,7 @@ export function StudentProfileForm({
   const [profile, setProfile] = useState(initial);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
 
   const set = <K extends keyof StudentProfileData>(
     key: K,
@@ -115,9 +117,8 @@ export function StudentProfileForm({
     setMessage(null);
 
     try {
-      const response = await fetch("/api/student/profile", {
+      const result = await postJson<StudentProfileData>("/api/student/profile", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           birthDate: profile.birthDate || null,
           guardianName: profile.guardianName,
@@ -138,17 +139,13 @@ export function StudentProfileForm({
         }),
       });
 
-      const body = await response.json();
-
-      if (!response.ok) {
-        setError(body?.error ?? "Enregistrement impossible");
+      if (!result.ok) {
+        setError(result.failure);
         return;
       }
 
-      setProfile(body);
+      setProfile(result.data);
       setMessage("Profil enregistré");
-    } catch {
-      setError("Impossible de contacter le serveur");
     } finally {
       setIsSaving(false);
     }
@@ -384,7 +381,7 @@ export function StudentProfileForm({
         </CardContent>
       </Card>
 
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      <FormFailure failure={error} onRetry={save} />
       {message ? <p className="text-sm text-success">{message}</p> : null}
 
       {/* Même barre que la fiche prof : un bouton collant sans fond passe

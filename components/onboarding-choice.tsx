@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { GraduationCap, Loader2, Music, Check } from "lucide-react";
 
+import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { postJson, type Failure } from "@/lib/http/failure";
 import { cn } from "@/lib/utils";
 
 type Role = "TEACHER" | "STUDENT";
@@ -51,7 +53,7 @@ export function OnboardingChoice() {
   const router = useRouter();
   const [selected, setSelected] = useState<Role | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
 
   const submit = async () => {
     if (!selected) return;
@@ -60,9 +62,8 @@ export function OnboardingChoice() {
     setError(null);
 
     try {
-      const response = await fetch("/api/onboarding", {
+      const result = await postJson<{ redirectTo?: string }>("/api/onboarding", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           role: selected,
           // Le fuseau du prof donne son sens à toute sa grille horaire, on le
@@ -71,17 +72,13 @@ export function OnboardingChoice() {
         }),
       });
 
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        setError(body?.error ?? "Une erreur est survenue");
+      if (!result.ok) {
+        setError(result.failure);
         return;
       }
 
-      const body = await response.json();
-      router.push(body.redirectTo ?? "/dashboard");
+      router.push(result.data.redirectTo ?? "/dashboard");
       router.refresh();
-    } catch {
-      setError("Impossible de contacter le serveur");
     } finally {
       setIsLoading(false);
     }
@@ -140,7 +137,7 @@ export function OnboardingChoice() {
         })}
       </div>
 
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      <FormFailure failure={error} />
 
       <div className="flex flex-col gap-2">
         <Button size="lg" disabled={!selected || isLoading} onClick={submit}>

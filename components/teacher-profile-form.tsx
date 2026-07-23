@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertCircle, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 
+import { FormFailure } from "@/components/form-failure";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { postJson, type Failure } from "@/lib/http/failure";
 import { cn } from "@/lib/utils";
 
 type Instrument = { slug: string; name: string };
@@ -58,7 +60,7 @@ export function TeacherProfileForm({
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
 
   const set = <K extends keyof TeacherProfileData>(
     key: K,
@@ -81,9 +83,8 @@ export function TeacherProfileForm({
     setMessage(null);
 
     try {
-      const response = await fetch("/api/teacher/profile", {
+      const result = await postJson<TeacherProfileData>("/api/teacher/profile", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           headline: profile.headline,
           bio: profile.bio,
@@ -103,17 +104,13 @@ export function TeacherProfileForm({
         }),
       });
 
-      const body = await response.json();
-
-      if (!response.ok) {
-        setError(body?.error ?? "Enregistrement impossible");
+      if (!result.ok) {
+        setError(result.failure);
         return;
       }
 
-      setProfile(body);
+      setProfile(result.data);
       setMessage("Fiche enregistrée");
-    } catch {
-      setError("Impossible de contacter le serveur");
     } finally {
       setIsSaving(false);
     }
@@ -125,25 +122,23 @@ export function TeacherProfileForm({
     setMessage(null);
 
     try {
-      const response = await fetch("/api/teacher/profile/publish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ publish: profile.status !== "PUBLISHED" }),
-      });
+      const result = await postJson<{ status: TeacherProfileData["status"] }>(
+        "/api/teacher/profile/publish",
+        {
+          method: "POST",
+          body: JSON.stringify({ publish: profile.status !== "PUBLISHED" }),
+        }
+      );
 
-      const body = await response.json();
-
-      if (!response.ok) {
-        setError(body?.error ?? "Publication impossible");
+      if (!result.ok) {
+        setError(result.failure);
         return;
       }
 
-      set("status", body.status);
+      set("status", result.data.status);
       setMessage(
-        body.status === "PUBLISHED" ? "Fiche publiée" : "Fiche dépubliée"
+        result.data.status === "PUBLISHED" ? "Fiche publiée" : "Fiche dépubliée"
       );
-    } catch {
-      setError("Impossible de contacter le serveur");
     } finally {
       setIsPublishing(false);
     }
@@ -399,7 +394,7 @@ export function TeacherProfileForm({
         </CardContent>
       </Card>
 
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      <FormFailure failure={error} onRetry={save} />
       {message ? <p className="text-sm text-success">{message}</p> : null}
 
       {/* Barre d'enregistrement collante. Le bouton flottait seul, sans fond :

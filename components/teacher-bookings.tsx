@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 
+import { FormFailure } from "@/components/form-failure";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { postJson, type Failure } from "@/lib/http/failure";
 import { groupBookings, isUrgent } from "@/lib/bookings/grouping";
 import { cn } from "@/lib/utils";
 
@@ -98,7 +100,7 @@ export function TeacherBookings({
 }) {
   const [rows, setRows] = useState(initial);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
 
   // `now` est figé au montage : recalculer à chaque rendu ferait sauter des
   // cours d'un groupe à l'autre pendant que le prof clique.
@@ -122,26 +124,21 @@ export function TeacherBookings({
     setError(null);
 
     try {
-      const response = await fetch(`/api/bookings/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
+      const result = await postJson<{ status: BookingRow["status"] }>(
+        `/api/bookings/${id}`,
+        { method: "PATCH", body: JSON.stringify({ action }) }
+      );
 
-      const body = await response.json();
-
-      if (!response.ok) {
-        setError(body?.error ?? "Action impossible");
+      if (!result.ok) {
+        setError(result.failure);
         return;
       }
 
       setRows((current) =>
         current.map((row) =>
-          row.id === id ? { ...row, status: body.status } : row
+          row.id === id ? { ...row, status: result.data.status } : row
         )
       );
-    } catch {
-      setError("Impossible de contacter le serveur");
     } finally {
       setBusyId(null);
     }
@@ -243,7 +240,7 @@ export function TeacherBookings({
 
   return (
     <div className="flex flex-col gap-6">
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      <FormFailure failure={error} />
 
       <Card>
         <CardHeader>

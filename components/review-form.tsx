@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { Loader2, Star } from "lucide-react";
 
+import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { postJson, type Failure } from "@/lib/http/failure";
 import { cn } from "@/lib/utils";
 
 /**
@@ -38,7 +40,7 @@ export function ReviewForm({
   const [hovered, setHovered] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
 
   const shown = hovered ?? rating;
 
@@ -51,26 +53,24 @@ export function ReviewForm({
     setError(null);
 
     try {
-      const response = await fetch("/api/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId,
-          rating,
-          comment: comment.trim() || undefined,
-        }),
-      });
+      const result = await postJson<{ rating: number; comment: string | null }>(
+        "/api/reviews",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            bookingId,
+            rating,
+            comment: comment.trim() || undefined,
+          }),
+        }
+      );
 
-      const body = await response.json();
-
-      if (!response.ok) {
-        setError(body?.error ?? "Impossible d'enregistrer l'avis");
+      if (!result.ok) {
+        setError(result.failure);
         return;
       }
 
-      onDone({ rating: body.rating, comment: body.comment });
-    } catch {
-      setError("Impossible de contacter le serveur");
+      onDone({ rating: result.data.rating, comment: result.data.comment });
     } finally {
       setBusy(false);
     }
@@ -141,7 +141,7 @@ export function ReviewForm({
         </p>
       </div>
 
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      <FormFailure failure={error} />
     </form>
   );
 }

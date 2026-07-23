@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CreditCard, ExternalLink, Loader2, ShieldCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { localFailure, postJson, type Failure } from "@/lib/http/failure";
 
 export function SubscriptionPanel({
   isActive,
@@ -30,26 +32,38 @@ export function SubscriptionPanel({
   flash: "success" | "canceled" | null;
 }) {
   const [busy, setBusy] = useState<"checkout" | "portal" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
 
   const go = async (kind: "checkout" | "portal") => {
     setBusy(kind);
     setError(null);
 
-    try {
-      const response = await fetch(`/api/stripe/${kind}`, { method: "POST" });
-      const body = await response.json();
+    const result = await postJson<{ url?: string }>(`/api/stripe/${kind}`, {
+      method: "POST",
+    });
 
-      if (!response.ok || !body.url) {
-        setError(body?.error ?? "Une erreur est survenue");
-        return;
-      }
-
-      window.location.href = body.url;
-    } catch {
-      setError("Impossible de contacter le serveur");
+    if (!result.ok) {
+      setError(result.failure);
       setBusy(null);
+      return;
     }
+
+    if (!result.data.url) {
+      // Réponse 200 sans URL : Stripe n'a rien renvoyé d'exploitable. Le cas
+      // ne devrait pas arriver, mais rediriger vers `undefined` sortirait le
+      // prof du site sans explication.
+      setError(
+        localFailure(
+          "Stripe n'a pas renvoyé de page de paiement. Réessayez dans un instant."
+        )
+      );
+      setBusy(null);
+      return;
+    }
+
+    // Pas de `setBusy(null)` : la page est en train de partir vers Stripe, et
+    // réactiver le bouton inviterait à un second clic pendant la navigation.
+    window.location.href = result.data.url;
   };
 
   return (
@@ -147,7 +161,7 @@ export function SubscriptionPanel({
             </>
           )}
 
-          {error ? <p className="text-sm text-danger">{error}</p> : null}
+          <FormFailure failure={error} />
         </CardContent>
       </Card>
     </div>

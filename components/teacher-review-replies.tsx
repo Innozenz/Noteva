@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { Loader2, MessageSquare } from "lucide-react";
 
+import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Stars } from "@/components/ui/stars";
+import { postJson, type Failure } from "@/lib/http/failure";
 
 /**
  * Avis reçus par le prof, avec droit de réponse.
@@ -37,7 +39,7 @@ export function TeacherReviewReplies({
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
 
   const open = (row: TeacherReviewRow) => {
     setEditing(row.id);
@@ -50,25 +52,22 @@ export function TeacherReviewReplies({
     setError(null);
 
     try {
-      const response = await fetch(`/api/reviews/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reply: draft }),
-      });
+      const result = await postJson<{ reply: string | null }>(
+        `/api/reviews/${id}`,
+        { method: "PATCH", body: JSON.stringify({ reply: draft }) }
+      );
 
-      const body = await response.json();
-
-      if (!response.ok) {
-        setError(body?.error ?? "Impossible d'enregistrer la réponse");
+      if (!result.ok) {
+        setError(result.failure);
         return;
       }
 
       setRows((current) =>
-        current.map((row) => (row.id === id ? { ...row, reply: body.reply } : row))
+        current.map((row) =>
+          row.id === id ? { ...row, reply: result.data.reply } : row
+        )
       );
       setEditing(null);
-    } catch {
-      setError("Impossible de contacter le serveur");
     } finally {
       setBusy(false);
     }
@@ -85,7 +84,7 @@ export function TeacherReviewReplies({
 
   return (
     <div className="flex flex-col gap-4">
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      <FormFailure failure={error} />
 
       {rows.map((row) => (
         <article
