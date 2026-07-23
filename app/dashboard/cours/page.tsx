@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search, UserCog } from "lucide-react";
 
 import {
   StudentBookings,
@@ -74,12 +74,20 @@ export default async function StudentBookingsPage() {
     <main className="mx-auto max-w-4xl px-4 py-8">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Mes cours</h1>
-        <Button variant="outline" asChild>
-          <Link href="/profs">
-            <Search className="mr-2 h-4 w-4" />
-            Trouver un prof
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/cours/profil">
+              <UserCog className="mr-2 h-4 w-4" />
+              Mon profil
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/profs">
+              <Search className="mr-2 h-4 w-4" />
+              Trouver un prof
+            </Link>
+          </Button>
+        </div>
       </header>
 
       <StudentBookings initial={rows} timezone={user.timezone} />

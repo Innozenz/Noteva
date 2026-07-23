@@ -7,6 +7,7 @@ import {
 } from "@/components/teacher-bookings";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { guardianSummary } from "@/lib/student/profile";
 
 /**
  * Boîte de réception du prof.
@@ -40,23 +41,64 @@ export default async function TeacherBookingsPage() {
       isTrial: true,
       priceCents: true,
       studentMessage: true,
-      instrument: { select: { name: true } },
-      student: { select: { user: { select: { name: true } } } },
+      instrument: { select: { id: true, name: true } },
+      student: {
+        select: {
+          user: { select: { name: true } },
+          // Ce qui aide le prof à décider : niveau réel sur l'instrument
+          // demandé, projet de l'élève, et contact du responsable s'il est
+          // mineur.
+          birthDate: true,
+          guardianName: true,
+          guardianEmail: true,
+          guardianPhone: true,
+          goals: true,
+          readsSheetMusic: true,
+          instruments: {
+            select: {
+              instrumentId: true,
+              level: true,
+              yearsPracticed: true,
+              ownsInstrument: true,
+            },
+          },
+        },
+      },
     },
   });
 
-  const rows: BookingRow[] = bookings.map((booking) => ({
-    id: booking.id,
-    status: booking.status,
-    startsAt: booking.startsAt.toISOString(),
-    endsAt: booking.endsAt.toISOString(),
-    mode: booking.mode,
-    isTrial: booking.isTrial,
-    priceCents: booking.priceCents,
-    studentMessage: booking.studentMessage,
-    instrumentName: booking.instrument.name,
-    studentName: booking.student.user.name,
-  }));
+  const now = new Date();
+
+  const rows: BookingRow[] = bookings.map((booking) => {
+    const student = booking.student;
+    // Niveau sur l'instrument demandé, pas sur les autres : un élève avancé au
+    // piano peut être débutant au chant.
+    const practice = student.instruments.find(
+      (entry) => entry.instrumentId === booking.instrument.id
+    );
+    const guardian = guardianSummary(student, now);
+
+    return {
+      id: booking.id,
+      status: booking.status,
+      startsAt: booking.startsAt.toISOString(),
+      endsAt: booking.endsAt.toISOString(),
+      mode: booking.mode,
+      isTrial: booking.isTrial,
+      priceCents: booking.priceCents,
+      studentMessage: booking.studentMessage,
+      instrumentName: booking.instrument.name,
+      studentName: student.user.name,
+      studentLevel: practice?.level ?? null,
+      studentYears: practice?.yearsPracticed ?? null,
+      studentOwnsInstrument: practice?.ownsInstrument ?? null,
+      studentReadsSheetMusic: student.readsSheetMusic,
+      studentGoals: student.goals,
+      studentAge: guardian.age,
+      guardianContact: guardian.contact,
+      studentIsMinor: guardian.isMinor,
+    };
+  });
 
   return <TeacherBookings initial={rows} timezone={user.timezone} />;
 }

@@ -6,9 +6,11 @@ import {
   CalendarX,
   Check,
   Clock,
+  GraduationCap,
   Inbox,
   Loader2,
   MessageSquare,
+  ShieldAlert,
   Sparkles,
   X,
 } from "lucide-react";
@@ -42,6 +44,26 @@ export type BookingRow = {
   studentMessage: string | null;
   instrumentName: string;
   studentName: string | null;
+
+  // Profil de l'élève, sur l'instrument demandé uniquement.
+  studentLevel: "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | "PROFESSIONAL" | null;
+  studentYears: number | null;
+  studentOwnsInstrument: boolean | null;
+  studentReadsSheetMusic: boolean;
+  studentGoals: string | null;
+  studentAge: number | null;
+  guardianContact: string | null;
+  studentIsMinor: boolean;
+};
+
+const LEVEL_LABELS: Record<
+  NonNullable<BookingRow["studentLevel"]>,
+  string
+> = {
+  BEGINNER: "Débutant",
+  INTERMEDIATE: "Intermédiaire",
+  ADVANCED: "Avancé",
+  PROFESSIONAL: "Professionnel",
 };
 
 type Action = "confirm" | "decline" | "cancel" | "complete" | "no_show";
@@ -184,6 +206,10 @@ export function TeacherBookings({
           </div>
         </div>
 
+        {/* Profil de l'élève : sans lui, une demande arrive nue et le prof
+            accepte à l'aveugle. */}
+        <StudentSummary row={row} />
+
         {row.studentMessage ? (
           <p className="flex gap-2 rounded-md bg-zinc-50 p-3 text-sm text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
             <MessageSquare className="mt-0.5 h-4 w-4 shrink-0" />
@@ -311,6 +337,60 @@ export function TeacherBookings({
             {groups.past.slice(0, 20).map((booking) => renderCard(booking, []))}
           </CardContent>
         </Card>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Résumé de l'élève, tel qu'il aide à décider.
+ *
+ * Uniquement ce qui sert au choix : niveau sur l'instrument demandé, projet, et
+ * contact du responsable si l'élève est mineur. Le reste du profil ne regarde
+ * pas le prof.
+ */
+function StudentSummary({ row }: { row: Enriched }) {
+  const facts = [
+    row.studentLevel ? LEVEL_LABELS[row.studentLevel] : null,
+    row.studentYears !== null
+      ? `${row.studentYears} an${row.studentYears > 1 ? "s" : ""} de pratique`
+      : null,
+    row.studentReadsSheetMusic ? "lit le solfège" : null,
+    row.studentOwnsInstrument === false ? "n'a pas l'instrument" : null,
+    row.studentAge !== null ? `${row.studentAge} ans` : null,
+  ].filter(Boolean) as string[];
+
+  if (facts.length === 0 && !row.studentGoals && !row.studentIsMinor) {
+    return (
+      <p className="text-sm text-zinc-400">
+        Cet élève n&apos;a pas renseigné son profil.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 text-sm">
+      {facts.length > 0 ? (
+        <p className="flex flex-wrap items-center gap-2 text-zinc-600 dark:text-zinc-400">
+          <GraduationCap className="h-4 w-4 shrink-0 text-zinc-400" />
+          {facts.join(" · ")}
+        </p>
+      ) : null}
+
+      {row.studentGoals ? (
+        <p className="text-zinc-600 dark:text-zinc-400">
+          <span className="text-zinc-400">Objectif : </span>
+          {row.studentGoals}
+        </p>
+      ) : null}
+
+      {row.studentIsMinor ? (
+        <p className="flex items-start gap-2 rounded-md bg-blue-50 p-2 text-blue-800 dark:bg-blue-950/30 dark:text-blue-300">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          {row.guardianContact
+            ? `Élève mineur — responsable : ${row.guardianContact}`
+            : "Élève mineur — aucun contact de responsable renseigné."}
+        </p>
       ) : null}
     </div>
   );

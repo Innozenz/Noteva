@@ -101,6 +101,14 @@ The mirror of the teacher inbox, sharing `groupBookings()` — the groups are th
 
 A cancellation inside the teacher's `cancellationWindowHours` comes back with `lateCancellation: true`. Nothing is charged (no online payment), so it's surfaced as a notice, not a block.
 
+`/dashboard/cours/profil` edits the student profile, and `lib/student/profile.ts` holds the one rule that matters: **a minor must have a guardian contact**. `checkStudentProfile` feeds both the form's "what's missing" list and the API — same implementation, no drift. Details:
+
+- Age is computed with `getUTC*` because `birthDate` is `@db.Date` (UTC midnight); reading it in server-local time would shift the date a day and flip the age for anyone born on their birthday.
+- A missing `birthDate` does **not** presume a minor — defaulting to blocked would stop every adult who skipped the field.
+- One contact suffices (email *or* phone): demanding both is excessive for a parent who doesn't read email, demanding neither makes the name useless.
+
+The teacher's inbox shows the level **for the requested instrument only** (`StudentInstrument` is per pair — advanced at piano, beginner at singing), plus goals and, for a minor, the guardian contact. Anything else in the profile is not the teacher's business.
+
 `/dashboard` routes each role to its own area from a single banner. Adding a role-specific area means adding it there too, or it stays URL-only.
 
 ### Public pages must be Server Components
@@ -258,7 +266,7 @@ What is missing:
 - **Stripe needs real test keys.** The subscription flow is built and wired (`/dashboard/prof/abonnement`), but `.env` holds placeholders (and at one point a *live* key — never test against that), so no real payment has ever been made. See the Payments section. Biggest gap.
 - `app/dashboard/page.tsx` is still boilerplate demo code showing a generic subscription card. With `/dashboard/prof/*` and `/dashboard/cours` doing the real work, it's mostly redundant — its layout banner is what routes people onward.
 - No dedicated instrument/city landing pages, but `/profs?instrument=…` is now linked from the home page and indexable, which covers the need for now.
-- Students have no profile form: `StudentProfile` is created empty and nothing fills it — instruments, level, goals, guardian contacts are all unused.
+- `StudentProfile.preferredGenres` and `prefersOnline` are stored but never read; `postalCode` has no UI.
 - Email notifications fire on request/confirm/decline/cancel, but **no provider is configured** — they go to the console until `RESEND_API_KEY` is set. No reminders before a lesson.
 - Reviews are modelled (`Review`, gated on `COMPLETED`) but there is no route and no UI.
 - `npm run lint`, `npx tsc --noEmit`, `npm test` and `npm run build` are all clean. Keep them that way.
