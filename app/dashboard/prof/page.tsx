@@ -45,6 +45,13 @@ export default async function TeacherProfilePage() {
       instruments: {
         select: { instrument: { select: { slug: true, name: true } } },
       },
+      // Première ouverture de la semaine, pour l'aperçu des départs sous le
+      // champ de pas. Une seule suffit : l'aperçu illustre, il n'énumère pas.
+      rules: {
+        orderBy: [{ weekday: "asc" }, { startMinute: "asc" }],
+        take: 1,
+        select: { weekday: true, startMinute: true, endMinute: true },
+      },
       _count: { select: { rules: true } },
     },
   });
@@ -93,6 +100,7 @@ export default async function TeacherProfilePage() {
       profile.stripeCurrentPeriodEnd,
       now
     ),
+    firstOpening: profile.rules[0] ?? null,
   };
 
   return <TeacherProfileForm initial={initial} catalogue={catalogue} />;

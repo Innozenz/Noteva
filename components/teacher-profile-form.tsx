@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { postJson, type Failure } from "@/lib/http/failure";
+import { formatMinute, previewStarts } from "@/lib/teacher/slot-preview";
+import { WEEKDAY_LABELS } from "@/lib/teacher/weekly-grid";
 import { cn } from "@/lib/utils";
 
 type Instrument = { slug: string; name: string };
@@ -48,6 +50,12 @@ export type TeacherProfileData = {
   instruments: Instrument[];
   publishCheck: PublishCheck;
   subscriptionActive: boolean;
+  /** Première ouverture de la semaine type, pour l'aperçu des départs. */
+  firstOpening: {
+    weekday: number;
+    startMinute: number;
+    endMinute: number;
+  } | null;
 };
 
 export function TeacherProfileForm({
@@ -321,26 +329,37 @@ export function TeacherProfileForm({
           <Separator />
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <NumberField
-              id="rate"
-              label="Tarif horaire (€)"
-              value={
-                profile.hourlyRateCents === null
-                  ? ""
-                  : String(profile.hourlyRateCents / 100)
-              }
-              onChange={(v) =>
-                set(
- "hourlyRateCents",
-                  v === "" ? null : Math.round(Number(v) * 100)
-                )
-              }
-            />
+            {/* Le tarif est le seul champ qui peut rester vide — une fiche sans
+                tarif est un brouillon légitime — et il est saisi en euros
+                quand la base stocke des centimes. D'où son traitement à part. */}
+            <div className="space-y-1">
+              <Label htmlFor="rate">Tarif horaire (€)</Label>
+              <Input
+                id="rate"
+                type="number"
+                min={0}
+                value={
+                  profile.hourlyRateCents === null
+                    ? ""
+                    : String(profile.hourlyRateCents / 100)
+                }
+                onChange={(e) =>
+                  set(
+                    "hourlyRateCents",
+                    e.target.value === ""
+                      ? null
+                      : Math.round(Number(e.target.value) * 100)
+                  )
+                }
+              />
+            </div>
             <NumberField
               id="duration"
               label="Durée d'un cours (min)"
-              value={String(profile.defaultDurationMin)}
-              onChange={(v) => set("defaultDurationMin", Number(v) || 60)}
+              min={15}
+              max={480}
+              value={profile.defaultDurationMin}
+              onChange={(v) => set("defaultDurationMin", v)}
             />
           </div>
 
@@ -353,8 +372,10 @@ export function TeacherProfileForm({
             <NumberField
               id="trial"
               label="Durée du cours d'essai (min)"
-              value={String(profile.trialLessonMinutes ?? 30)}
-              onChange={(v) => set("trialLessonMinutes", Number(v) || 30)}
+              min={10}
+              max={120}
+              value={profile.trialLessonMinutes ?? 30}
+              onChange={(v) => set("trialLessonMinutes", v)}
             />
           ) : null}
         </CardContent>
@@ -368,37 +389,55 @@ export function TeacherProfileForm({
             Elles filtrent les créneaux proposés aux élèves.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <NumberField
-            id="buffer"
-            label="Battement entre deux cours (min)"
-            value={String(profile.bufferMin)}
-            onChange={(v) => set("bufferMin", Number(v) || 0)}
-          />
-          <NumberField
-            id="granularity"
-            label="Départs de cours toutes les (min)"
-            value={String(profile.slotGranularityMin)}
-            onChange={(v) => set("slotGranularityMin", Number(v) || 30)}
-            hint="Indépendant de la durée du cours. Avec 30, les départs proposés restent sur les heures et demi-heures même après une réservation."
-          />
-          <NumberField
-            id="notice"
-            label="Préavis minimum (h)"
-            value={String(profile.minNoticeHours)}
-            onChange={(v) => set("minNoticeHours", Number(v) || 0)}
-          />
-          <NumberField
-            id="horizon"
-            label="Réservable jusqu'à (jours)"
-            value={String(profile.bookingHorizonDays)}
-            onChange={(v) => set("bookingHorizonDays", Number(v) || 60)}
-          />
-          <NumberField
-            id="cancel"
-            label="Préavis d'annulation (h)"
-            value={String(profile.cancellationWindowHours)}
-            onChange={(v) => set("cancellationWindowHours", Number(v) || 24)}
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <NumberField
+              id="buffer"
+              label="Battement entre deux cours (min)"
+              min={0}
+              max={120}
+              value={profile.bufferMin}
+              onChange={(v) => set("bufferMin", v)}
+            />
+            <NumberField
+              id="granularity"
+              label="Départs de cours toutes les (min)"
+              min={5}
+              max={240}
+              value={profile.slotGranularityMin}
+              onChange={(v) => set("slotGranularityMin", v)}
+              hint="Indépendant de la durée du cours : c'est la fréquence à laquelle un cours peut commencer."
+            />
+            <NumberField
+              id="notice"
+              label="Préavis minimum (h)"
+              min={0}
+              max={720}
+              value={profile.minNoticeHours}
+              onChange={(v) => set("minNoticeHours", v)}
+            />
+            <NumberField
+              id="horizon"
+              label="Réservable jusqu'à (jours)"
+              min={1}
+              max={365}
+              value={profile.bookingHorizonDays}
+              onChange={(v) => set("bookingHorizonDays", v)}
+            />
+            <NumberField
+              id="cancel"
+              label="Préavis d'annulation (h)"
+              min={0}
+              max={720}
+              value={profile.cancellationWindowHours}
+              onChange={(v) => set("cancellationWindowHours", v)}
+            />
+          </div>
+
+          <SlotPreviewNotice
+            opening={profile.firstOpening}
+            durationMin={profile.defaultDurationMin}
+            stepMin={profile.slotGranularityMin}
           />
         </CardContent>
       </Card>
@@ -447,17 +486,34 @@ function Checkbox({
   );
 }
 
+/**
+ * Champ numérique borné.
+ *
+ * Les bornes sont posées sur l'`input` **et** écrites sous le champ : le
+ * navigateur décourage la valeur absurde, et le prof sait ce qui est admis
+ * avant d'essayer.
+ *
+ * `onChange` rend le nombre saisi tel quel, sans repli silencieux. La version
+ * précédente faisait `Number(v) || 30` : taper `0` — qui est falsy — devenait
+ * 30 sans un mot, et le prof voyait sa valeur changer toute seule après
+ * enregistrement. Mieux vaut transmettre 0 et laisser le serveur répondre
+ * « 5 au minimum ».
+ */
 function NumberField({
   id,
   label,
   value,
   onChange,
+  min,
+  max,
   hint,
 }: {
   id: string;
   label: string;
-  value: string;
-  onChange: (value: string) => void;
+  value: number;
+  onChange: (value: number) => void;
+  min: number;
+  max: number;
   /** Précision affichée sous le champ, quand l'intitulé ne suffit pas. */
   hint?: string;
 }) {
@@ -467,16 +523,77 @@ function NumberField({
       <Input
         id={id}
         type="number"
-        min={0}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-describedby={hint ? `${id}-hint` : undefined}
+        min={min}
+        max={max}
+        value={String(value)}
+        onChange={(e) => {
+          const parsed = Number(e.target.value);
+          onChange(Number.isFinite(parsed) ? parsed : min);
+        }}
+        aria-describedby={`${id}-hint`}
       />
-      {hint ? (
-        <p id={`${id}-hint`} className="text-xs text-subtle">
-          {hint}
-        </p>
-      ) : null}
+      <p id={`${id}-hint`} className="text-xs text-subtle">
+        {hint ? `${hint} ` : ""}
+        {`Entre ${min} et ${max}.`}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Aperçu des départs de cours.
+ *
+ * Un pas de 33 minutes est accepté et produit 9:00, 9:33, 10:06… Personne ne
+ * peut le deviner en tapant un nombre : montrer le résultat vaut mieux que
+ * fermer la saisie à une liste, qui exclurait au passage des pas légitimes
+ * comme 20 ou 45.
+ *
+ * Se met à jour à la frappe, avant enregistrement — c'est tout l'intérêt.
+ */
+function SlotPreviewNotice({
+  opening,
+  durationMin,
+  stepMin,
+}: {
+  opening: { weekday: number; startMinute: number; endMinute: number } | null;
+  durationMin: number;
+  stepMin: number;
+}) {
+  const preview = previewStarts({ opening, durationMin, stepMin });
+
+  if (preview.kind === "no_opening") {
+    return (
+      <p className="rounded-md bg-surface px-3 py-2 text-sm text-muted">
+        Définissez une plage dans <strong>Disponibilités</strong> pour voir les
+        départs que ces règles produiront.
+      </p>
+    );
+  }
+
+  const day = opening ? WEEKDAY_LABELS[opening.weekday] : "";
+  const range = opening
+    ? `${formatMinute(opening.startMinute)}–${formatMinute(opening.endMinute)}`
+    : "";
+
+  if (preview.kind === "too_short") {
+    return (
+      <p className="rounded-md bg-warning-soft px-3 py-2 text-sm">
+        {`Aucun cours ne tient dans votre plage du ${day.toLowerCase()} (${range}) : elle dure ${preview.openingMinutes} min et un cours en dure ${durationMin}. Aucun créneau ne sera proposé.`}
+      </p>
+    );
+  }
+
+  return (
+    <div className="rounded-md bg-surface px-3 py-2 text-sm">
+      <p className="text-muted">
+        {`Sur votre plage du ${day.toLowerCase()} (${range}), les élèves verront :`}
+      </p>
+      <p className="mt-1 font-medium">
+        {preview.starts.join("  ·  ")}
+        {preview.total > preview.starts.length
+          ? `  …  (${preview.total} départs)`
+          : ""}
+      </p>
     </div>
   );
 }

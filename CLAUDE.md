@@ -112,6 +112,8 @@ This matters more now than it did for the boilerplate: the data is multi-tenant.
 
 `localFailure()` gives client-side validation the same shape, so there is one render path (`FormFailure`).
 
+**Validation errors name the field and the bound.** `describeIssues` (`lib/http/validation.ts`) turns Zod issues into a French sentence using the **labels shown on screen** — "Départs de cours toutes les (min) : 240 au maximum." A teacher who typed 1000 used to read "Paramètres invalides" and had ten fields to guess between, while the server knew exactly which one. Zod's own wording is never reused: it is English and speaks of types. A field missing from the route's label map falls back to the generic sentence rather than exposing a column name.
+
 **Boundaries**: `app/error.tsx` (a runtime error used to show Next's default page — an unstyled English "Application error" with no way back), `app/not-found.tsx` (only the teacher-profile route had one), and `app/global-error.tsx` for a failure in the root layout — that one imports nothing and styles inline, because if the stylesheet never loaded a `className` would render nothing.
 
 Two silent failures were fixed along the way: deleting a time-off entry did nothing visible when it failed, and a failed slot load rendered "Aucun créneau disponible cette semaine" — a lie that sends a student away from an available teacher.
@@ -132,7 +134,11 @@ Sticky save bars (`teacher-profile-form`, `student-profile-form`) are full-width
 
 Self-service profile editing and availability, behind a second Server Component gate (`app/dashboard/prof/layout.tsx`) that checks for a `TeacherProfile`. Every `/api/teacher/*` route acts on **"my" profile** via `requireTeacher()` and accepts no profile id — there is no other profile to reach by mistake, so authorization stays trivial.
 
-- `checkPublishable()` in `lib/teacher/publishable.ts` is the **single** publish rule, feeding both the form's "what's missing" list and the `POST /api/teacher/profile/publish` guard. Duplicating it guarantees drift. It only covers completeness — visibility adds the subscription on top.
+- **The booking-rule fields are free numbers, not a dropdown, and that is deliberate.** A 33-minute step works — the engine steps by 33 and yields 9:00, 9:33, 10:06 — it is simply unreadable for a student. But 20 (children's lessons) and 45 are legitimate, and a fixed list would exclude them to prevent a mistake nobody makes on purpose. So the fields stay open and are *accompanied*: bounds written under each one and set on the input, and `previewStarts` (`lib/teacher/slot-preview.ts`) renders the resulting departure times live, before saving. Showing the consequence beats closing the input. The preview works in minutes-since-midnight and ignores DST, which only changes slot counts two days a year — it illustrates, it does not enumerate.
+
+The preview also surfaces a silence found while checking: a lesson longer than the opening yields zero slots, and nothing said why.
+
+`checkPublishable()` in `lib/teacher/publishable.ts` is the **single** publish rule, feeding both the form's "what's missing" list and the `POST /api/teacher/profile/publish` guard. Duplicating it guarantees drift. It only covers completeness — visibility adds the subscription on top.
 - `PUT /api/teacher/availability` **replaces the whole weekly grid** rather than exposing per-slot CRUD: the editor manipulates a week as a unit, and an atomic replace avoids incoherent intermediate states.
 - Overlapping ranges are **merged, not rejected** (`normalizeWeeklyGrid`). "9am–12pm" then "11am–2pm" is a clear intention; a form that refuses it is just annoying. The editor re-renders what the server kept, not what was typed.
 - Exceptions take a bare civil date (`AAAA-MM-JJ`), never an instant — `@db.Date` is stored at UTC midnight, so an instant would shift a teacher west of Greenwich onto the wrong day.

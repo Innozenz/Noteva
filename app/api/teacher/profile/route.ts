@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { describeIssues, type FieldLabels } from "@/lib/http/validation";
 import prisma from "@/lib/prisma";
 import { checkPublishable } from "@/lib/teacher/publishable";
 import { requireTeacher } from "@/lib/teacher/session";
@@ -13,6 +14,28 @@ import { isSubscriptionActive } from "@/lib/teacher/visibility";
  * Toujours « ma » fiche : aucun identifiant n'est accepté en paramètre, donc
  * aucune fiche d'autrui n'est atteignable.
  */
+
+/**
+ * Libellés tels qu'ils apparaissent dans le formulaire.
+ *
+ * Reprendre exactement les mots de l'écran est le seul moyen pour le prof de
+ * relier le message au champ à corriger. Un champ absent d'ici retombe sur la
+ * formulation générique, ce qui vaut mieux qu'une phrase bâtie sur un nom de
+ * colonne.
+ */
+const FIELD_LABELS: FieldLabels = {
+  headline: "Accroche",
+  bio: "Votre approche",
+  city: "Ville",
+  hourlyRateCents: "Tarif horaire (€)",
+  trialLessonMinutes: "Durée du cours d'essai (min)",
+  defaultDurationMin: "Durée d'un cours (min)",
+  slotGranularityMin: "Départs de cours toutes les (min)",
+  bufferMin: "Battement entre deux cours (min)",
+  minNoticeHours: "Préavis minimum (h)",
+  bookingHorizonDays: "Réservable jusqu'à (jours)",
+  cancellationWindowHours: "Préavis d'annulation (h)",
+};
 
 const profileSchema = z.object({
   headline: z.string().max(120).nullable().optional(),
@@ -105,8 +128,14 @@ export async function PATCH(request: Request) {
     const parsed = profileSchema.safeParse(await request.json());
 
     if (!parsed.success) {
+      // Le message nomme le champ et la borne : « Paramètres invalides »
+      // laissait le prof chercher lequel des dix champs posait problème,
+      // alors que le serveur le savait.
       return NextResponse.json(
-        { error: "Paramètres invalides", issues: parsed.error.issues },
+        {
+          error: describeIssues(parsed.error.issues, FIELD_LABELS),
+          issues: parsed.error.issues,
+        },
         { status: 400 }
       );
     }
