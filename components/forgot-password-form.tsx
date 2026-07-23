@@ -5,10 +5,13 @@ import Link from "next/link";
 import { Loader2, MailCheck } from "lucide-react";
 import { z } from "zod";
 
+import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { authFailure } from "@/lib/auth-errors";
+import { localFailure, type Failure } from "@/lib/http/failure";
 
 const emailSchema = z.string().email("Adresse e-mail invalide");
 
@@ -22,35 +25,42 @@ const emailSchema = z.string().email("Adresse e-mail invalide");
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
   const [sent, setSent] = useState(false);
 
   const submit = async () => {
     const parsed = emailSchema.safeParse(email);
 
     if (!parsed.success) {
-      setError(parsed.error.issues[0].message);
+      setError(localFailure(parsed.error.issues[0].message));
       return;
     }
 
     setIsLoading(true);
     setError(null);
 
-    const { error: authError } = await authClient.requestPasswordReset({
-      email: parsed.data,
-      redirectTo: "/reinitialiser-mot-de-passe",
-    });
+    try {
+      const { error: authError } = await authClient.requestPasswordReset({
+        email: parsed.data,
+        redirectTo: "/reinitialiser-mot-de-passe",
+      });
 
-    setIsLoading(false);
+      // Une erreur ici est technique (service indisponible), pas « adresse
+      // inconnue » : Better Auth répond succès dans tous les cas.
+      if (authError) {
+        setError(authFailure({ error: authError }));
+        return;
+      }
 
-    // Une erreur ici est technique (service indisponible), pas « adresse
-    // inconnue » : Better Auth répond succès dans tous les cas.
-    if (authError) {
-      setError("Envoi impossible pour le moment. Réessayez dans un instant.");
-      return;
+      setSent(true);
+    } catch (caught) {
+      // `authClient` **rejette** quand le réseau lâche. Sans ce catch, le
+      // `setIsLoading(false)` placé après l'await n'était jamais atteint et le
+      // bouton restait en chargement indéfiniment, sans message.
+      setError(authFailure({ caught }));
+    } finally {
+      setIsLoading(false);
     }
-
-    setSent(true);
   };
 
   if (sent) {
@@ -90,8 +100,9 @@ export function ForgotPasswordForm() {
           onChange={(event) => setEmail(event.target.value)}
           aria-invalid={!!error}
         />
-        {error ? <p className="text-sm text-danger">{error}</p> : null}
       </div>
+
+      <FormFailure failure={error} />
 
       <Button type="submit" disabled={isLoading}>
         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

@@ -90,6 +90,8 @@ Tokens are single-use and expire after an hour (`resetPasswordTokenExpiresIn`). 
 
 **The role gate is in `app/dashboard/layout.tsx`, not the middleware** — and it has to be. The middleware runs on the edge, sees only the session cookie, and has no Prisma access, so it cannot read a role. Any new signed-in area needs its own Server Component layout doing the same check, or it will be reachable with `role === null`.
 
+`/onboarding` carries the logo and a sign-out link, and both are load-bearing. Every signed-in route redirects here while `role` is null, so without an exit someone who created a Google account by mistake was trapped with no way back.
+
 Choosing a role is **one-way**: `/api/onboarding` answers 409 once `role` is set. A teacher profile carries a public slug, availability and lesson history that a switch to "student" would orphan. Teacher slugs come from `lib/slug.ts` (accent-stripped, reserved words avoided, `-2`/`-3` on collision) and are unit-tested — they end up in indexed public URLs, so they're painful to change later.
 
 **Route gating is two-layer and both layers are shallow:**
@@ -111,6 +113,8 @@ This matters more now than it did for the boilerplate: the data is multi-tenant.
 - **The server's message wins when it has one** ("Ce créneau vient d'être réservé" beats any generic phrasing) — *except on 5xx*, where the body often carries an internal trace that helps nobody and informs an attacker.
 
 `localFailure()` gives client-side validation the same shape, so there is one render path (`FormFailure`).
+
+**`authClient` rejects on network failure** — verified against a closed port, it throws `TypeError: fetch failed`. The password screens had no `try/catch`, so the `setIsLoading(false)` placed after the `await` was never reached and the button span forever with no message; the sign-in screen had a `finally` but no `catch`, so it unblocked and said nothing. `authFailure` (`lib/auth-errors.ts`) maps both a thrown error and Better Auth's `{ status, code }` onto the same `Failure` shape. It keys on the **`code`**, which is stable, never the message, which is English — users were reading "Invalid email or password". And a 401 there means *wrong credentials*, not an expired session: it must not offer "se reconnecter" to someone who is trying to.
 
 **Validation errors name the field and the bound.** `describeIssues` (`lib/http/validation.ts`) turns Zod issues into a French sentence using the **labels shown on screen** — "Départs de cours toutes les (min) : 240 au maximum." A teacher who typed 1000 used to read "Paramètres invalides" and had ten fields to guess between, while the server knew exactly which one. Zod's own wording is never reused: it is English and speaks of types. A field missing from the route's label map falls back to the generic sentence rather than exposing a column name.
 
@@ -379,7 +383,7 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 What is missing:
 
 - **Only the hosted Checkout page is untested**, because completing it requires entering a card. Everything around it now runs against real Stripe in test mode — see the Payments section.
-- The signed-in area, the empty states and the failure paths were reviewed on screen — the last against a fabricated expired session, with the typed form content verified intact afterwards. Still **not** reviewed on screen: `/onboarding`, `/mot-de-passe-oublie`, `/reinitialiser-mot-de-passe`.
+- The signed-in area, the empty states and the failure paths were reviewed on screen — the last against a fabricated expired session, with the typed form content verified intact afterwards. `/onboarding` and the two password screens were reviewed **from the code and the served HTML only**, the browser being unavailable: content and states are verified, layout is not.
 - No dedicated instrument/city landing pages, but `/profs?instrument=…` is now linked from the home page and indexable, which covers the need for now.
 - `StudentProfile.preferredGenres` and `prefersOnline` are stored but never read; `postalCode` has no UI.
 - Email notifications fire on request/confirm/decline/cancel/review and 24h before a lesson. `RESEND_API_KEY` is set, but **the Resend account has no verified domain**, so delivery is restricted to the account owner's own address and every other recipient comes back 403. Verify a domain before this counts as working in production.

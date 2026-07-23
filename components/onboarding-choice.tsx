@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { authClient } from "@/lib/auth-client";
 import { postJson, type Failure } from "@/lib/http/failure";
 import { cn } from "@/lib/utils";
 
@@ -148,6 +149,21 @@ export function OnboardingChoice() {
           Ce choix est définitif : une fiche prof porte une adresse publique et
           un historique de cours.
         </p>
+
+        {/* Seule sortie de cet écran. Sans elle, quelqu'un qui vient de créer
+            un compte Google par erreur n'a aucun moyen de faire marche
+            arrière : tout l'espace connecté le renvoie ici. */}
+        <button
+          type="button"
+          className="text-center text-xs text-subtle hover:underline"
+          onClick={async () => {
+            await authClient.signOut();
+            router.push("/");
+            router.refresh();
+          }}
+        >
+          Ce n&apos;est pas vous ? Se déconnecter
+        </button>
       </div>
     </div>
   );

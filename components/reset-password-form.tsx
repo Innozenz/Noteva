@@ -6,10 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { z } from "zod";
 
+import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { authFailure } from "@/lib/auth-errors";
+import { localFailure, type Failure } from "@/lib/http/failure";
 
 /** Même exigence qu'à l'inscription : un seuil différent ici serait incohérent. */
 const passwordSchema = z
@@ -32,7 +35,7 @@ export function ResetPasswordForm() {
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
   const [done, setDone] = useState(false);
 
   // Lien invalide, périmé, ou déjà consommé : inutile d'afficher le formulaire.
@@ -68,34 +71,39 @@ export function ResetPasswordForm() {
     const parsed = passwordSchema.safeParse(password);
 
     if (!parsed.success) {
-      setError(parsed.error.issues[0].message);
+      setError(localFailure(parsed.error.issues[0].message));
       return;
     }
 
     if (password !== confirmation) {
-      setError("Les deux mots de passe ne correspondent pas.");
+      setError(localFailure("Les deux mots de passe ne correspondent pas."));
       return;
     }
 
     setIsLoading(true);
     setError(null);
 
-    const { error: authError } = await authClient.resetPassword({
-      newPassword: parsed.data,
-      token,
-    });
+    try {
+      const { error: authError } = await authClient.resetPassword({
+        newPassword: parsed.data,
+        token,
+      });
 
-    setIsLoading(false);
+      if (authError) {
+        setError(authFailure({ error: authError }));
+        return;
+      }
 
-    if (authError) {
-      setError(
- "Ce lien n'est plus valable. Demandez-en un nouveau depuis la page de connexion."
-      );
-      return;
+      setDone(true);
+      router.refresh();
+    } catch (caught) {
+      // Sans ce catch, une coupure réseau laissait le bouton en chargement
+      // pour toujours : `authClient` rejette, et le `setIsLoading(false)` qui
+      // suivait l'await n'était jamais atteint.
+      setError(authFailure({ caught }));
+    } finally {
+      setIsLoading(false);
     }
-
-    setDone(true);
-    router.refresh();
   };
 
   return (
@@ -130,7 +138,7 @@ export function ResetPasswordForm() {
         />
       </div>
 
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      <FormFailure failure={error} />
 
       <Button type="submit" disabled={isLoading}>
         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

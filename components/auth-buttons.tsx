@@ -5,10 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { z } from "zod";
+import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { authFailure } from "@/lib/auth-errors";
+import { type Failure } from "@/lib/http/failure";
 import { LogOut, Loader2 } from "lucide-react";
 
 const authSchema = z.object({
@@ -32,6 +35,7 @@ export function AuthButtons() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [failure, setFailure] = useState<Failure | null>(null);
 
   if (session.isPending) {
     return (
@@ -92,25 +96,32 @@ export function AuthButtons() {
     }
 
     setErrors({});
+    setFailure(null);
     setIsLoading(true);
+
+    // Le message de Better Auth est en anglais (« Invalid email or password »)
+    // et c'est ce que lisait l'utilisateur. On passe par le `code`, stable, que
+    // `authFailure` traduit.
+    const onError = (ctx: { error: { status?: number; code?: string } }) =>
+      setFailure(authFailure({ error: ctx.error }));
+
     try {
       if (isSignUp) {
         await authClient.signUp.email(
           { email, password, name: email.split("@")[0] },
-          {
-            onSuccess: () => router.refresh(),
-            onError: (ctx) => setErrors({ form: ctx.error.message }),
-          }
+          { onSuccess: () => router.refresh(), onError }
         );
       } else {
         await authClient.signIn.email(
           { email, password },
-          {
-            onSuccess: () => router.refresh(),
-            onError: (ctx) => setErrors({ form: ctx.error.message }),
-          }
+          { onSuccess: () => router.refresh(), onError }
         );
       }
+    } catch (caught) {
+      // Il y avait un `finally` mais pas de `catch` : sur coupure réseau le
+      // bouton se débloquait et rien ne s'affichait. `authClient` rejette dans
+      // ce cas — vérifié contre un port fermé.
+      setFailure(authFailure({ caught }));
     } finally {
       setIsLoading(false);
     }
@@ -121,8 +132,21 @@ export function AuthButtons() {
       <Button
         variant="outline"
         className="w-full"
+        disabled={isLoading}
         onClick={async () => {
-          await authClient.signIn.social({ provider: "google" });
+          setFailure(null);
+          setIsLoading(true);
+          try {
+            await authClient.signIn.social({ provider: "google" });
+            // En cas de succès la page part vers Google : on ne rend pas la
+            // main, sinon le bouton redeviendrait cliquable pendant la
+            // navigation.
+          } catch (caught) {
+            // Le bouton n'avait ni état de chargement ni gestion d'erreur :
+            // un clic hors ligne ne produisait strictement rien.
+            setFailure(authFailure({ caught }));
+            setIsLoading(false);
+          }
         }}
       >
         <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -188,9 +212,7 @@ export function AuthButtons() {
             <p className="text-sm text-danger">{errors.password}</p>
           ) : null}
         </div>
-        {errors.form ? (
-          <p className="text-sm text-danger">{errors.form}</p>
-        ) : null}
+        <FormFailure failure={failure} />
         <Button onClick={handleEmailAuth} disabled={isLoading}>
           {isLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
