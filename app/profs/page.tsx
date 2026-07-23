@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { RatingBadge } from "@/components/ui/stars";
 import {
   buildQueryString,
   isIndexableSearch,
@@ -132,6 +133,11 @@ export default async function SearchPage({
                         <p className="font-medium">
                           {teacher.name ?? "Prof de musique"}
                         </p>
+                        <RatingBadge
+                          average={teacher.rating.average}
+                          count={teacher.rating.count}
+                          className="my-0.5"
+                        />
                         {teacher.headline ? (
                           <p className="line-clamp-2 text-sm text-muted">
                             {teacher.headline}

@@ -1,6 +1,8 @@
 import type { Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
+import { getRatingSummaries } from "@/lib/reviews/queries";
+import { EMPTY_SUMMARY, type RatingSummary } from "@/lib/reviews/summary";
 import { visibleTeacherWhere } from "@/lib/teacher/visibility";
 import {
   normalizeTerm,
@@ -29,6 +31,7 @@ export type SearchResult = {
   teachesAtHome: boolean;
   trialLessonOffered: boolean;
   instruments: { slug: string; name: string }[];
+  rating: RatingSummary;
 };
 
 export type SearchResponse = {
@@ -109,10 +112,16 @@ export async function searchTeachers(
       where,
       // Les fiches publiées récemment d'abord : à défaut de signal de qualité,
       // c'est ce qui donne leur chance aux nouveaux inscrits.
+      // Les fiches publiées récemment d'abord. Trier par note serait tentant
+      // maintenant qu'elle existe, mais un seul avis à 5 passerait devant
+      // quarante avis à 4,8 : il faudrait une moyenne bayésienne (tirer chaque
+      // prof vers la moyenne du site proportionnellement à son peu d'avis)
+      // avant de changer ce classement.
       orderBy: [{ publishedAt: "desc" }],
       skip: pageOffset(filters.page),
       take: SEARCH_PAGE_SIZE,
       select: {
+        id: true,
         slug: true,
         headline: true,
         city: true,
@@ -129,6 +138,10 @@ export async function searchTeachers(
     }),
     prisma.teacherProfile.count({ where }),
   ]);
+
+  // Une seule requête pour toute la page : un agrégat par prof affiché en
+  // ferait vingt.
+  const ratings = await getRatingSummaries(rows.map((row) => row.id));
 
   return {
     total,
@@ -147,6 +160,7 @@ export async function searchTeachers(
       teachesAtHome: row.teachesAtHome,
       trialLessonOffered: row.trialLessonOffered,
       instruments: row.instruments.map((i) => i.instrument),
+      rating: ratings.get(row.id) ?? EMPTY_SUMMARY,
     })),
   };
 }

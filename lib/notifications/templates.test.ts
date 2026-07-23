@@ -23,6 +23,7 @@ const ALL_EVENTS: NotificationEvent[] = [
   "booking_confirmed",
   "booking_declined",
   "booking_cancelled",
+  "review_received",
 ];
 
 describe("buildNotification — destinataires", () => {
@@ -73,6 +74,33 @@ describe("buildNotification — destinataires", () => {
     expect(buildNotification("booking_requested", CONTEXT, "teacher")).toBeNull();
     expect(buildNotification("booking_confirmed", CONTEXT, "student")).toBeNull();
     expect(buildNotification("booking_declined", CONTEXT, "student")).toBeNull();
+    // Un prof ne se note pas lui-même.
+    expect(buildNotification("review_received", CONTEXT, "teacher")).toBeNull();
+  });
+
+  it("prévient le prof d'un avis reçu", () => {
+    const mail = buildNotification(
+      "review_received",
+      { ...CONTEXT, rating: 5, reviewComment: "Très pédagogue." },
+      "student"
+    );
+
+    expect(mail?.to).toBe("prof@example.com");
+    expect(mail?.subject).toContain("5/5");
+    expect(mail?.text).toContain("Très pédagogue.");
+    // Le lien vers le droit de réponse est le seul intérêt de cet e-mail.
+    expect(mail?.text).toContain("/dashboard/prof/avis");
+  });
+
+  it("reste lisible pour un avis sans commentaire", () => {
+    const mail = buildNotification(
+      "review_received",
+      { ...CONTEXT, rating: 3 },
+      "student"
+    );
+
+    expect(mail?.text).toContain("Note : 3/5");
+    expect(mail?.text).not.toContain("« »");
   });
 });
 

@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, CreditCard, Inbox, UserCog } from "lucide-react";
+import { CalendarDays, CreditCard, Inbox, Star, UserCog } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -59,6 +59,7 @@ export default async function TeacherLayout({
             label="Demandes"
             badge={pendingCount || undefined}
           />
+          <TabLink href="/dashboard/prof/avis" icon={Star} label="Avis" />
           <TabLink
             href="/dashboard/prof/abonnement"
             icon={CreditCard}

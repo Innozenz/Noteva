@@ -13,6 +13,7 @@ import {
 
 import { BookingWidget } from "@/components/booking-widget";
 import { SiteHeader } from "@/components/site-header";
+import { TeacherReviews } from "@/components/teacher-reviews";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -21,6 +22,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { RatingBadge } from "@/components/ui/stars";
+import {
+  getPublicReviews,
+  getRatingCounts,
+} from "@/lib/reviews/queries";
+import { summarizeFromCounts } from "@/lib/reviews/summary";
 import { getPublicTeacher } from "@/lib/teacher/public-profile";
 
 /**
@@ -92,6 +99,12 @@ export default async function TeacherPublicPage({
   // l'extérieur, et c'est voulu.
   if (!teacher) notFound();
 
+  const [counts, reviews] = await Promise.all([
+    getRatingCounts(teacher.id),
+    getPublicReviews(teacher.id),
+  ]);
+  const summary = summarizeFromCounts(counts);
+
   const name = teacher.user.name ?? "Prof de musique";
   const instruments = teacher.instruments.map((i) => i.instrument);
   const rate =
@@ -146,6 +159,21 @@ export default async function TeacherPublicPage({
                   },
                 }
               : {}),
+            // Les étoiles affichées par les moteurs dans leurs résultats
+            // viennent de là. Ne l'émettre qu'avec de vrais avis : un
+            // aggregateRating sans avis est un motif de pénalité, pas un
+            // détail cosmétique.
+            ...(summary.average !== null && summary.count > 0
+              ? {
+                  aggregateRating: {
+ "@type": "AggregateRating",
+                    ratingValue: summary.average,
+                    reviewCount: summary.count,
+                    bestRating: 5,
+                    worstRating: 1,
+                  },
+                }
+              : {}),
           }),
         }}
       />
@@ -170,6 +198,14 @@ export default async function TeacherPublicPage({
                 </Badge>
               ) : null}
             </div>
+
+            {/* La note juste sous le nom : c'est le premier élément que
+                cherche un élève qui hésite entre deux fiches. */}
+            <RatingBadge
+              average={summary.average}
+              count={summary.count}
+              size="md"
+            />
 
             {teacher.headline ? (
               <p className="text-lg text-muted">
@@ -213,6 +249,16 @@ export default async function TeacherPublicPage({
               </li>
             </ul>
           </section>
+
+          <Separator />
+
+          <TeacherReviews
+            reviews={reviews}
+            average={summary.average}
+            count={summary.count}
+            counts={counts}
+            timezone={teacher.user.timezone}
+          />
         </div>
 
         {/* Colonne de réservation */}

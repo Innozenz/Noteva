@@ -10,9 +10,11 @@ import {
   MapPin,
   Search,
   Sparkles,
+  Star,
   Video,
 } from "lucide-react";
 
+import { ReviewForm } from "@/components/review-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +24,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Stars } from "@/components/ui/stars";
 import { groupBookings } from "@/lib/bookings/grouping";
+import { checkReviewable } from "@/lib/reviews/eligibility";
 
 export type StudentBookingRow = {
   id: string;
@@ -44,6 +48,8 @@ export type StudentBookingRow = {
   instrumentName: string;
   teacherName: string | null;
   teacherSlug: string;
+  /** Avis déjà déposé sur ce cours, s'il y en a un. */
+  review: { rating: number; comment: string | null } | null;
 };
 
 type Enriched = Omit<StudentBookingRow, "startsAt" | "endsAt"> & {
@@ -77,6 +83,8 @@ export function StudentBookings({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** Cours dont le formulaire d'avis est ouvert. */
+  const [reviewing, setReviewing] = useState<string | null>(null);
 
   // Figé au montage : sans ça, un cours changerait de section pendant que
   // l'élève est sur la page.
@@ -93,6 +101,33 @@ export function StudentBookings({
         now
       ),
     [rows, now]
+  );
+
+  /**
+   * Cours en attente d'avis, remontés dans leur propre section.
+   *
+   * Ils vivent sinon dans l'historique, tronqué à vingt lignes : la
+   * sollicitation la plus utile — juste après un cours qui s'est bien passé —
+   * y serait invisible. Même règle que côté serveur, via `checkReviewable`.
+   */
+  const awaitingReview = useMemo(
+    () =>
+      groups.past.filter(
+        (row) =>
+          checkReviewable(
+            {
+              status: row.status,
+              endsAt: row.endsAt,
+              // L'appartenance est déjà acquise : ces cours sont ceux de
+              // l'élève connecté. On neutralise ce volet de la règle.
+              studentId: "self",
+              hasReview: row.review !== null,
+            },
+            "self",
+            now
+          ).ok
+      ),
+    [groups.past, now]
   );
 
   const cancel = async (id: string) => {
@@ -216,6 +251,21 @@ export function StudentBookings({
         </p>
       ) : null}
 
+      {/* L'avis déjà déposé reste visible : sans lui, l'élève ne saurait plus
+          ce qu'il a écrit, et le bouton « donner mon avis » aurait disparu
+          sans explication. */}
+      {row.review ? (
+        <div className="rounded-md bg-surface p-3">
+          <div className="flex items-center gap-2">
+            <Stars value={row.review.rating} />
+            <span className="text-sm text-muted">Votre avis</span>
+          </div>
+          {row.review.comment ? (
+            <p className="mt-1 text-sm text-muted">{row.review.comment}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       {canCancel(row) ? (
         <div>
           <Button
@@ -273,6 +323,65 @@ export function StudentBookings({
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {groups.pending.map(renderCard)}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {awaitingReview.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-warning" />
+              <CardTitle>Donnez votre avis</CardTitle>
+            </div>
+            <CardDescription>
+              Votre retour aide les prochains élèves à choisir. Il apparaîtra
+              sur la fiche du prof avec votre prénom.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {awaitingReview.map((row) => (
+              <div
+                key={row.id}
+                className="flex flex-col gap-3 rounded-lg border border-border p-4"
+              >
+                <div>
+                  <p className="font-medium">
+                    <Link
+                      href={`/profs/${row.teacherSlug}`}
+                      className="hover:underline"
+                    >
+                      {row.teacherName ?? "Prof"}
+                    </Link>
+                    {" — "}
+                    {row.instrumentName}
+                  </p>
+                  <p className="text-sm text-muted">{format(row.startsAt)}</p>
+                </div>
+
+                {reviewing === row.id ? (
+                  <ReviewForm
+                    bookingId={row.id}
+                    onDone={(review) => {
+                      setRows((current) =>
+                        current.map((item) =>
+                          item.id === row.id ? { ...item, review } : item
+                        )
+                      );
+                      setReviewing(null);
+                      setNotice("Merci, votre avis est publié.");
+                    }}
+                  />
+                ) : (
+                  <div>
+                    <Button size="sm" onClick={() => setReviewing(row.id)}>
+                      <Star className="mr-2 h-3 w-3" />
+                      Donner mon avis
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
           </CardContent>
         </Card>
       ) : null}

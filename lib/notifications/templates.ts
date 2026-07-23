@@ -14,7 +14,8 @@ export type NotificationEvent =
   | "booking_requested"
   | "booking_confirmed"
   | "booking_declined"
-  | "booking_cancelled";
+  | "booking_cancelled"
+  | "review_received";
 
 export type Actor = "teacher" | "student";
 
@@ -30,6 +31,9 @@ export type BookingContext = {
   isTrial: boolean;
   studentMessage?: string | null;
   cancellationReason?: string | null;
+  /** Note déposée, pour `review_received`. */
+  rating?: number;
+  reviewComment?: string | null;
   /** Racine absolue pour construire les liens. */
   appUrl: string;
 };
@@ -135,6 +139,28 @@ export function buildNotification(
             ? `Trouver un autre créneau : ${context.appUrl}/profs`
             : `Le créneau est de nouveau ouvert à la réservation.`,
           toStudent ? null : `Votre agenda : ${context.appUrl}/dashboard/prof/demandes`,
+        ]),
+      };
+    }
+
+    case "review_received": {
+      // Toujours déposé par l'élève : c'est le prof qu'on prévient.
+      if (actor !== "student") return null;
+
+      const stars = context.rating ? `${context.rating}/5` : "";
+
+      return {
+        to: context.teacherEmail,
+        subject: `Nouvel avis sur votre profil${stars ? ` — ${stars}` : ""}`,
+        text: lines([
+          `${student} a laissé un avis sur son cours de ${context.instrumentName} du ${when.long}.`,
+          stars ? `` : null,
+          stars ? `Note : ${stars}` : null,
+          context.reviewComment ? `« ${context.reviewComment} »` : null,
+          ``,
+          // Le droit de réponse n'a de valeur que si le prof apprend l'avis :
+          // sans cet e-mail, il ne le découvrirait qu'en visitant sa page.
+          `Vous pouvez y répondre publiquement : ${context.appUrl}/dashboard/prof/avis`,
         ]),
       };
     }

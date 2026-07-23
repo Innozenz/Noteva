@@ -47,6 +47,10 @@ export default async function StudentBookingsPage() {
       meetingUrl: true,
       address: true,
       cancellationReason: true,
+      // Sert à savoir si l'avis reste à donner : la règle de
+      // lib/reviews/eligibility.ts s'applique ensuite côté client, comme sur
+      // le serveur.
+      review: { select: { rating: true, comment: true } },
       instrument: { select: { name: true } },
       teacher: {
         select: { slug: true, user: { select: { name: true } } },
@@ -68,6 +72,7 @@ export default async function StudentBookingsPage() {
     instrumentName: booking.instrument.name,
     teacherName: booking.teacher.user.name,
     teacherSlug: booking.teacher.slug,
+    review: booking.review,
   }));
 
   return (

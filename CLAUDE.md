@@ -221,14 +221,31 @@ Two conventions the handler establishes:
 
 `PATCH` also accepts `teacherNote`/`meetingUrl` **without** an `action`. Don't remove that path: when those fields could only ride along with a transition, a rejected transition silently discarded them.
 
+### Reviews (`lib/reviews`)
+
+**A review hangs off a booking, never off a teacher.** `Review.bookingId` is unique, so a review can only exist where a lesson was booked, confirmed, and closed by the teacher. A free-form rating on a profile could be bought or fabricated; this one cannot. That single foreign key is the whole trust model — don't add a path that creates a review without one.
+
+`checkReviewable` in `lib/reviews/eligibility.ts` is the **single** rule, feeding the student's screen and `POST /api/reviews` alike. Pure, `now` injected. Order matters and is asserted by a test: **ownership is checked first**, because answering "that lesson isn't finished" to a stranger already confirms the id exists. The route turns `not_participant` into 404, everything else into 409.
+
+- `COMPLETED` only. `NO_SHOW` is excluded on purpose — rating a lesson nobody attended measures nothing.
+- **Reviews close 60 days after the lesson** (`REVIEW_WINDOW_DAYS`). Not a technical limit: a year-old review says little about today's teacher, and a window that never shuts turns history into permanent leverage.
+- The unique constraint on `bookingId` is what actually arbitrates two simultaneous submissions; the application check has a race window, exactly like the booking overlap constraint. `isUniqueViolation()` matches on the message for the same reason `overlapConflict()` does — the driver adapter exposes no usable error code.
+
+**Averages are derived, never stored**, by the same reasoning as teacher visibility: a denormalised column must be resynchronised on every write, and the day one resync is missed a profile shows a wrong rating with nothing to signal it. `lib/reviews/queries.ts` filters on `publishedAt: { not: null }` everywhere — a pending review that still counted toward the average would make moderation look active while being inert. `getRatingSummaries` takes a page of teacher ids in **one** `groupBy`; per-teacher aggregates in search would be twenty queries.
+
+**The teacher can reply, never edit or delete.** `PATCH /api/reviews/[id]` writes `teacherRepl` only, through a `updateMany` conditioned on ownership so that "not yours" and "doesn't exist" are the same 404. A platform where the rated party can erase the rating is worthless to the student reading it; the public reply is the honest counterweight, and the `review_received` email is what makes it usable — without it a teacher would discover the review by chance.
+
+`aggregateRating` is emitted in the profile's JSON-LD **only when reviews exist**. An `aggregateRating` with no reviews is a manual-action risk with search engines, not a cosmetic detail.
+
 ### Notifications (`lib/notifications`)
 
-All the logic — who gets told, of what, in what words — lives in `templates.ts` as pure functions, so it's tested without a provider (16 tests). `send.ts` is a thin adapter: one hand-rolled `fetch` to Resend, no SDK for a single call.
+All the logic — who gets told, of what, in what words — lives in `templates.ts` as pure functions, so it's tested without a provider. `send.ts` is a thin adapter: one hand-rolled `fetch` to Resend, no SDK for a single call.
 
 - **Never notify the actor.** `buildNotification` takes who performed the action and returns `null` when the only candidate recipient is that same person. A test asserts this across every event × actor combination.
 - **Times are always the teacher's timezone**, for both recipients. A lesson happens at one hour; showing each party a different one produces missed lessons.
 - `notifyInBackground` is deliberately **not awaited** and never throws: a booking is valid whether or not the email goes out, and an HTTP response shouldn't wait on a third party. Failures are logged, not propagated.
 - `complete`/`no_show` send nothing — both parties were at the lesson.
+- `review_received` goes to the teacher. It is the one notification whose absence would break a feature rather than merely inconvenience: the right of reply is worthless if the teacher never learns a review exists.
 - Without `RESEND_API_KEY` + `NOTIFICATIONS_FROM`, messages go to the console. Dev works with no provider account, and you see exactly what would have been sent.
 - Links are built from `NEXT_PUBLIC_APP_URL`; in production it must be the real public URL or every email links to localhost.
 
@@ -304,7 +321,8 @@ What is missing:
 - No dedicated instrument/city landing pages, but `/profs?instrument=…` is now linked from the home page and indexable, which covers the need for now.
 - `StudentProfile.preferredGenres` and `prefersOnline` are stored but never read; `postalCode` has no UI.
 - Email notifications fire on request/confirm/decline/cancel, but **no provider is configured** — they go to the console until `RESEND_API_KEY` is set. No reminders before a lesson.
-- Reviews are modelled (`Review`, gated on `COMPLETED`) but there is no route and no UI.
+- Reviews are **published without moderation**: `publishedAt` is set at creation. The column stays as the hook for a future queue, but until a moderation screen exists, being born `null` would mean no review ever appears. See the Reviews section.
+- **Search is still ranked by `publishedAt`, not by rating.** Now that a quality signal exists it is tempting, but a lone 5★ would outrank forty averaging 4.8 — it needs a Bayesian prior first (pull each teacher toward the site mean in inverse proportion to their review count).
 - `npm run lint`, `npx tsc --noEmit`, `npm test` and `npm run build` are all clean. Keep them that way.
 
 ## Docker
