@@ -66,7 +66,21 @@ Tests cover `lib/availability` only, and that's deliberate: it's the one piece o
 
 Sign-in lives at **`/connexion`** (`AuthButtons`: Zod-validated email/password plus a Google button). It redirects an already-signed-in user to their own area, which needs the role — so that check is in the page, not the middleware. `authRoutes` in `middleware.ts` is consequently empty; unauthenticated hits on protected routes redirect to `/connexion?callbackUrl=…` (nothing consumes `callbackUrl` yet).
 
-`AuthButtons` is a client component reading the session via `authClient.useSession()`, so `/connexion` server-renders a spinner and fills in after hydration. Fine for a `noindex` page, but don't copy the pattern onto anything public.
+`AuthButtons` is a client component reading the session via `authClient.useSession()`, so `/connexion` server-renders a spinner and fills in after hydration. Fine for a `noindex` page, but don't copy the pattern onto anything public. (Consequence: the "mot de passe oublié" link only exists in the client bundle, not the server HTML.)
+
+**Password reset** is Better Auth's built-in flow, configured in `lib/auth.ts`:
+
+- `POST /api/auth/request-password-reset` → `sendResetPassword` → `/mot-de-passe-oublie`
+- the emailed link hits `/api/auth/reset-password/:token`, which validates and redirects to `/reinitialiser-mot-de-passe?token=…` (or `?error=INVALID_TOKEN`)
+- `POST /api/auth/reset-password` with `{ newPassword, token }`
+
+Three things to preserve:
+
+- **Better Auth answers `status: true` whether or not the address exists**, and the UI must show the same message either way. Saying "unknown account" would turn the form into a way to learn who has signed up.
+- `revokeSessionsOnPasswordReset: true` — a reset often means a compromised account, so sessions open elsewhere must fall. The UI tells the user this, so don't disable it without changing that text. Verified: a session opened before the reset is invalid after.
+- `sendResetPassword` is **awaited**, unlike booking notifications. There the email is a side effect; here it *is* the feature — a user who never gets the link is stuck with no way to know.
+
+Tokens are single-use and expire after an hour (`resetPasswordTokenExpiresIn`). Verified: replaying a token, inventing one, or posting a password under 8 characters all return 400.
 
 **`User.role` is nullable on purpose.** With Google OAuth the account is created before the user can say whether they're a teacher or a student, so `POST /api/onboarding` fills it in and creates the matching profile in one transaction. Treat `role === null` as "onboarding incomplete"; don't assume a role is present.
 

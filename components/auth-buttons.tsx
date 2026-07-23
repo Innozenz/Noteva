@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient } from "@/lib/auth-client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { z } from "zod";
@@ -205,6 +206,16 @@ export function AuthButtons() {
             ? "Déjà un compte ? Se connecter"
             : "Pas de compte ? S'inscrire"}
         </Button>
+        {/* Sans ce lien, la réinitialisation n'est atteignable qu'en
+            connaissant son URL. */}
+        {!isSignUp ? (
+          <Link
+            href="/mot-de-passe-oublie"
+            className="text-center text-sm text-zinc-500 hover:underline"
+          >
+            Mot de passe oublié ?
+          </Link>
+        ) : null}
       </div>
     </div>
   );
