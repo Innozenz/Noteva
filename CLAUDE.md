@@ -254,9 +254,9 @@ Publishing and being visible are **separate**: a teacher without a subscription 
 - `lib/stripe.ts` — the client, keyed on **`STRIPE_SECRET_KEY`**. The boilerplate read `STRIPE_API_KEY`, a name present in no `.env`; the `new Stripe(undefined!)` then threw *at module evaluation*, i.e. before the `try` in every route, so `/api/stripe/*` answered a 500 HTML error page instead of their JSON. Nothing caught it because no Stripe call had ever run. The module now fails fast with a message naming the variable.
 - `lib/stripe-client.ts` (`loadStripe`) and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are **unused** boilerplate leftovers — checkout is a plain redirect to the URL the server returns.
 
-**Verified against Stripe in test mode:** `checkout.sessions.create` returns a real `cs_test_…` session for a signed-in teacher, `/api/stripe/portal` 409s while no customer exists, and the webhook chain applies to the database — `checkout.session.completed` attaches the customer, `subscription.created` (active) writes the period end, `past_due` keeps it, `deleted` nulls it, and a forged signature is rejected with 400.
+**Verified against real Stripe in test mode**, with `stripe listen` relaying genuine events — not hand-written payloads, which is what makes it worth something: a payload I shape myself has the shape I expect by construction, so it cannot catch a mapping error. A real subscription on a real customer produced `stripeCurrentPeriodEnd` exactly one month out, confirming the `items.data[0].current_period_end` reading against an actual API v20 response. Also verified: `checkout.sessions.create` returns a real `cs_test_…` session, `billingPortal.sessions.create` a real portal URL, `/api/stripe/portal` 409s while no customer exists, a published+subscribed profile answers 200 and **the same profile answers 404 within seconds of the subscription being cancelled** — the derived-visibility rule closing the loop. Fifteen live webhook deliveries, all 200, none unmatched. A forged signature is rejected with 400.
 
-**Still unexercised: the hosted Checkout page itself** — completing it requires entering a card, so no subscription has ever been paid for end to end. Local webhooks also need `stripe listen --forward-to localhost:3000/api/webhooks/stripe`, whose `whsec_` differs from a Dashboard endpoint's; `STRIPE_WEBHOOK_SECRET` must match whichever one is actually delivering.
+**Still unexercised: the hosted Checkout page itself** — completing it requires entering a card, so the only simulated step is `checkout.session.completed` attaching `stripeCustomerId` (locally-signed events cover that handler). Local webhooks need `stripe listen --forward-to localhost:3000/api/webhooks/stripe`, whose `whsec_` differs from a Dashboard endpoint's; `STRIPE_WEBHOOK_SECRET` must match whichever one is actually delivering, and the dev server must be restarted after changing it.
 
 ### State management convention
 
@@ -299,7 +299,7 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 
 What is missing:
 
-- **No subscription has ever been paid for.** Test keys are in place and the API calls are verified (see the Payments section), but the hosted Checkout page needs a card to complete, so the loop *paiement → webhook → fiche visible* has only been proven with locally signed events, never by a real payment.
+- **Only the hosted Checkout page is untested**, because completing it requires entering a card. Everything around it now runs against real Stripe in test mode — see the Payments section.
 - `app/dashboard/page.tsx` is still boilerplate demo code showing a generic subscription card. With `/dashboard/prof/*` and `/dashboard/cours` doing the real work, it's mostly redundant — its layout banner is what routes people onward.
 - No dedicated instrument/city landing pages, but `/profs?instrument=…` is now linked from the home page and indexable, which covers the need for now.
 - `StudentProfile.preferredGenres` and `prefersOnline` are stored but never read; `postalCode` has no UI.
