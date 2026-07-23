@@ -84,6 +84,8 @@ Three things to preserve:
 - `revokeSessionsOnPasswordReset: true` — a reset often means a compromised account, so sessions open elsewhere must fall. The UI tells the user this, so don't disable it without changing that text. Verified: a session opened before the reset is invalid after.
 - `sendResetPassword` is **awaited**, unlike booking notifications. There the email is a side effect; here it *is* the feature — a user who never gets the link is stuck with no way to know.
 
+Better Auth's rate limiter is explicitly enabled in `lib/auth.ts`, including in development: 100 auth requests/minute/IP globally, 5 email sign-in attempts/minute/IP, 3 password-reset requests/hour/IP and 5 reset submissions/hour/IP. Its current storage is in memory, which is suitable for one application instance only; move it to shared database or Redis storage before scaling horizontally, or every replica will enforce an independent quota.
+
 Tokens are single-use and expire after an hour (`resetPasswordTokenExpiresIn`). Verified: replaying a token, inventing one, or posting a password under 8 characters all return 400.
 
 **`User.role` is nullable on purpose.** With Google OAuth the account is created before the user can say whether they're a teacher or a student, so `POST /api/onboarding` fills it in and creates the matching profile in one transaction. Treat `role === null` as "onboarding incomplete"; don't assume a role is present.
@@ -101,6 +103,14 @@ Choosing a role is **one-way**: `/api/onboarding` answers 409 once `role` is set
 Real validation only happens server-side in API routes via `auth.api.getSession`. When adding a protected page, update `protectedRoutes` **and** the `matcher` in `middleware.ts`, and don't rely on either layer for authorization of data — guard in the route handler.
 
 This matters more now than it did for the boilerplate: the data is multi-tenant. Every handler touching a booking, a calendar or a profile must check *this user owns this resource*, not merely *this user is logged in* — otherwise any student can read another's lessons through `/api/bookings/[id]`.
+
+### Security hardening
+
+`next.config.ts` applies `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and a restrictive `Permissions-Policy` to every response. There is deliberately no Content Security Policy yet: a useful CSP for Next needs per-request nonces in the middleware and an inventory of required origins; do not add an untested static policy that breaks hydration.
+
+Security-sensitive routes fail closed. `/api/webhooks/stripe` returns 503 when `STRIPE_WEBHOOK_SECRET` is missing instead of crashing through a non-null assertion. `/api/cron/reminders` already did the same for `CRON_SECRET` and now compares a supplied secret with `crypto.timingSafeEqual`; preserve the equal-length check before calling it because Node throws when buffer lengths differ.
+
+`meetingUrl` in `PATCH /api/bookings/[id]` accepts only `http:` and `https:` URLs. `z.string().url()` alone also accepts schemes such as `javascript:`, which becomes an XSS vector when the value is rendered as a student-facing link.
 
 ### Failures (`lib/http/failure.ts`, `app/error.tsx`)
 

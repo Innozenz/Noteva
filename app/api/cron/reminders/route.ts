@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -55,7 +57,7 @@ async function handle() {
 
   const received = await readSecret();
 
-  if (received !== secret) {
+  if (!received || !secretsMatch(received, secret)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -75,6 +77,18 @@ async function handle() {
     // puisque le traitement est idempotent.
     return NextResponse.json({ error: "Échec des rappels" }, { status: 500 });
   }
+}
+
+/**
+ * Comparaison en temps constant : `!==` court-circuite au premier octet
+ * différent, ce qui laisse fuiter la longueur du préfixe correct à qui mesure
+ * les temps de réponse.
+ */
+function secretsMatch(received: string, expected: string): boolean {
+  const a = Buffer.from(received);
+  const b = Buffer.from(expected);
+
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 async function readSecret(): Promise<string | null> {

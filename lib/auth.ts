@@ -52,4 +52,31 @@ export const auth = betterAuth({
             clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
         },
     },
+    /**
+     * Limitation par IP des routes d'authentification. Sans elle, la
+     * connexion s'essaie en boucle (force brute) et le reset de mot de passe
+     * devient un canon à e-mails vers n'importe quelle adresse.
+     *
+     * `enabled: true` force la limite aussi en développement : une protection
+     * qu'on ne voit jamais fonctionner localement finit par casser en
+     * production sans qu'on le remarque. Stockage en mémoire — suffisant tant
+     * que l'application tourne sur une seule instance ; passer à un stockage
+     * partagé (base ou Redis) le jour où elle est répliquée.
+     */
+    rateLimit: {
+        enabled: true,
+        window: 60,
+        max: 100,
+        customRules: {
+            // 5 tentatives de connexion par minute et par IP.
+            "/sign-in/email": { window: 60, max: 5 },
+            // 3 e-mails de réinitialisation par heure et par IP. Le chemin
+            // doit être exactement celui de l'endpoint (comparaison stricte
+            // côté Better Auth) : c'est /request-password-reset, pas
+            // /forget-password, sinon la règle ne s'applique jamais et la
+            // route retombe sur la limite globale (100/min).
+            "/request-password-reset": { window: 3600, max: 3 },
+            "/reset-password": { window: 3600, max: 5 },
+        },
+    },
 });

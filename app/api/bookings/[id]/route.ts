@@ -37,7 +37,16 @@ const patchSchema = z
       .optional(),
     reason: z.string().max(1000).optional(),
     teacherNote: z.string().max(2000).optional(),
-    meetingUrl: z.string().url().max(500).optional(),
+    // http(s) uniquement : `z.string().url()` seul accepterait `javascript:`,
+    // qui deviendrait un vecteur XSS une fois rendu en lien chez l'élève.
+    meetingUrl: z
+      .string()
+      .url()
+      .max(500)
+      .refine((u) => /^https?:\/\//i.test(u), {
+        message: "URL http(s) requise",
+      })
+      .optional(),
   })
   .refine(
     (b) =>

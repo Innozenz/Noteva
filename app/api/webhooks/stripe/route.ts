@@ -23,6 +23,17 @@ import { mapSubscription } from "@/lib/stripe/subscription";
  */
 
 export async function POST(request: Request) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  // Même réflexe que la route cron : sans secret, refuser explicitement
+  // plutôt que de laisser une assertion non-nulle planter à la vérification.
+  if (!webhookSecret) {
+    console.error(
+      "[STRIPE_WEBHOOK] STRIPE_WEBHOOK_SECRET non défini : webhook désactivé"
+    );
+    return new NextResponse("Webhook non configuré", { status: 503 });
+  }
+
   const body = await request.text();
   const signature = (await headers()).get("Stripe-Signature");
 
@@ -33,11 +44,7 @@ export async function POST(request: Request) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (error) {
     // Signature invalide : la requête ne vient pas de Stripe.
     const message = error instanceof Error ? error.message : "signature invalide";
