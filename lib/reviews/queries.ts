@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { DEFAULT_SITE_MEAN } from "./ranking";
 import {
   EMPTY_SUMMARY,
   summarizeFromCounts,
@@ -80,6 +81,23 @@ export async function getRatingSummaries(
   }
 
   return summaries;
+}
+
+/**
+ * Moyenne de tous les avis publiés, l'a priori du classement bayésien.
+ *
+ * Une seule agrégation, quel que soit le nombre de profs. Sans aucun avis, on
+ * rend la valeur par défaut : elle n'a alors aucun effet, puisque tous les
+ * profs obtiennent le même score et sont départagés par leur date de
+ * publication.
+ */
+export async function getSiteMeanRating(): Promise<number> {
+  const aggregate = await prisma.review.aggregate({
+    where: publishedOnly,
+    _avg: { rating: true },
+  });
+
+  return aggregate._avg.rating ?? DEFAULT_SITE_MEAN;
 }
 
 export type PublicReview = {

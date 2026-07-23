@@ -187,6 +187,10 @@ Server-rendered results with a client island (`SearchFilters`) that holds **no r
 
 - `visibleTeacherWhere()` sits next to `isTeacherVisible()` in `lib/teacher/visibility.ts` on purpose: search filters in SQL, the profile page checks in JS, and a search returning profiles that then 404 would be worse than no search. Change one, change the other. Verified: expiring a subscription or unpublishing removes the teacher from both at once.
 - `buildQueryString` omits defaults so one search has exactly one URL.
+
+**Results are ranked by a Bayesian mean** (`lib/reviews/ranking.ts`), never by the raw average: one 5★ review would otherwise outrank forty averaging 4.8. Each teacher is pulled toward the site mean in inverse proportion to their review count — `(n·avg + m·siteMean) / (n + m)`, with `m = PRIOR_WEIGHT = 5` phantom reviews. Consequence worth knowing: **a teacher with no reviews scores exactly the site mean**, so they land mid-pack — neither promoted nor buried, which is the only honest treatment while nothing is known about them. The previous ordering put them first. Ties break on `publishedAt`, then on id: without a total order, teachers sharing a score (every newcomer) could appear twice across pages and others never.
+
+**This is why the page can no longer paginate in SQL.** The ranking depends on an aggregate the `where` clause knows nothing about, and it must apply to the whole result set — ranking only the current page would give a different order depending on which page you open. So `searchTeachers` loads the ids of every matching teacher (a two-column projection), ranks and slices in memory, then fetches the full rows for that page alone. Fine into the thousands; beyond that it needs ranking in SQL, at the cost of duplicating the filters that today live in one `where`.
 - `isIndexableSearch` decides `robots`: instrument and city are indexed (`cours de chant à Lyon` is a real query and there are few such pages), while mode/price/trial/pagination are `noindex` — they multiply near-identical pages.
 - An unrecognised instrument term returns **no results** rather than silently dropping the filter, which would bury the student in irrelevant teachers. The page says so explicitly — the term wasn't understood — instead of implying the offer is missing.
 
@@ -389,7 +393,7 @@ What is missing:
 - Email notifications fire on request/confirm/decline/cancel/review and 24h before a lesson. `RESEND_API_KEY` is set, but **the Resend account has no verified domain**, so delivery is restricted to the account owner's own address and every other recipient comes back 403. Verify a domain before this counts as working in production.
 - **Nothing schedules `/api/cron/reminders` yet.** The endpoint, the claim table and the retry path are built and verified; wiring an actual scheduler to it is a deployment step, not a code one.
 - Reviews are **published without moderation**: `publishedAt` is set at creation. The column stays as the hook for a future queue, but until a moderation screen exists, being born `null` would mean no review ever appears. See the Reviews section.
-- **Search is still ranked by `publishedAt`, not by rating.** Now that a quality signal exists it is tempting, but a lone 5★ would outrank forty averaging 4.8 — it needs a Bayesian prior first (pull each teacher toward the site mean in inverse proportion to their review count).
+- Search ranking is Bayesian (see *Search* above). `PRIOR_WEIGHT = 5` is an editorial setting, not a mathematical constant: raising it makes the ranking more conservative.
 - `npm run lint`, `npx tsc --noEmit`, `npm test` and `npm run build` are all clean. Keep them that way.
 
 ## Docker

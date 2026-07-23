@@ -1,7 +1,8 @@
 import type { Prisma } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
-import { getRatingSummaries } from "@/lib/reviews/queries";
+import { getRatingSummaries, getSiteMeanRating } from "@/lib/reviews/queries";
+import { rankTeachers } from "@/lib/reviews/ranking";
 import { EMPTY_SUMMARY, type RatingSummary } from "@/lib/reviews/summary";
 import { visibleTeacherWhere } from "@/lib/teacher/visibility";
 import {
@@ -107,41 +108,73 @@ export async function searchTeachers(
     ...(filters.trialOnly ? { trialLessonOffered: true } : {}),
   };
 
-  const [rows, total] = await Promise.all([
-    prisma.teacherProfile.findMany({
-      where,
-      // Les fiches publiées récemment d'abord : à défaut de signal de qualité,
-      // c'est ce qui donne leur chance aux nouveaux inscrits.
-      // Les fiches publiées récemment d'abord. Trier par note serait tentant
-      // maintenant qu'elle existe, mais un seul avis à 5 passerait devant
-      // quarante avis à 4,8 : il faudrait une moyenne bayésienne (tirer chaque
-      // prof vers la moyenne du site proportionnellement à son peu d'avis)
-      // avant de changer ce classement.
-      orderBy: [{ publishedAt: "desc" }],
-      skip: pageOffset(filters.page),
-      take: SEARCH_PAGE_SIZE,
-      select: {
-        id: true,
-        slug: true,
-        headline: true,
-        city: true,
-        hourlyRateCents: true,
-        teachesOnline: true,
-        teachesInPerson: true,
-        teachesAtHome: true,
-        trialLessonOffered: true,
-        user: { select: { name: true, image: true } },
-        instruments: {
-          select: { instrument: { select: { slug: true, name: true } } },
-        },
-      },
-    }),
-    prisma.teacherProfile.count({ where }),
+  /**
+   * Le classement est bayésien (cf. lib/reviews/ranking.ts), donc il dépend
+   * d'un agrégat que SQL ne calcule pas ici. Il doit s'appliquer à **tout**
+   * l'ensemble de résultats avant d'être découpé en pages : classer seulement
+   * la page courante donnerait un ordre différent selon la page consultée.
+   *
+   * On charge donc les identifiants de tous les profs correspondants — une
+   * projection à deux colonnes — puis on classe et on pagine en mémoire, avant
+   * d'aller chercher les lignes complètes de la seule page demandée.
+   *
+   * La contrepartie est assumée : ce chargement croît avec le nombre de profs
+   * *visibles et correspondants*. À quelques milliers c'est négligeable ; au-delà
+   * il faudra un classement en SQL, au prix de dupliquer les filtres qui vivent
+   * aujourd'hui dans `where` — et donc du risque de dérive que cette
+   * implémentation unique évite.
+   */
+  const candidates = await prisma.teacherProfile.findMany({
+    where,
+    select: { id: true, publishedAt: true },
+  });
+
+  const total = candidates.length;
+
+  if (total === 0) {
+    return {
+      results: [],
+      total: 0,
+      matchedInstrument: matched
+        ? { slug: matched.slug, name: matched.name }
+        : null,
+    };
+  }
+
+  const [ratings, siteMean] = await Promise.all([
+    getRatingSummaries(candidates.map((c) => c.id)),
+    getSiteMeanRating(),
   ]);
 
-  // Une seule requête pour toute la page : un agrégat par prof affiché en
-  // ferait vingt.
-  const ratings = await getRatingSummaries(rows.map((row) => row.id));
+  const offset = pageOffset(filters.page);
+  const pageIds = rankTeachers(candidates, ratings, siteMean)
+    .slice(offset, offset + SEARCH_PAGE_SIZE)
+    .map((c) => c.id);
+
+  const page = await prisma.teacherProfile.findMany({
+    where: { id: { in: pageIds } },
+    select: {
+      id: true,
+      slug: true,
+      headline: true,
+      city: true,
+      hourlyRateCents: true,
+      teachesOnline: true,
+      teachesInPerson: true,
+      teachesAtHome: true,
+      trialLessonOffered: true,
+      user: { select: { name: true, image: true } },
+      instruments: {
+        select: { instrument: { select: { slug: true, name: true } } },
+      },
+    },
+  });
+
+  // `IN` ne préserve aucun ordre : on réapplique celui du classement.
+  const byId = new Map(page.map((row) => [row.id, row]));
+  const rows = pageIds
+    .map((id) => byId.get(id))
+    .filter((row): row is (typeof page)[number] => row !== undefined);
 
   return {
     total,
