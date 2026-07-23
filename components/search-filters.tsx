@@ -90,7 +90,7 @@ export function SearchFilters({ instruments }: { instruments: Instrument[] }) {
                 className={cn(
  "rounded-full border px-3 py-1.5 text-sm transition-colors",
                   active
-                    ? "border-primary bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+                    ? "border-primary bg-primary-soft text-primary"
                     : "border-border text-muted hover:border-border-strong"
                 )}
               >
@@ -160,7 +160,7 @@ function Toggle({
       className={cn(
  "rounded-full border px-3 py-1.5 text-sm transition-colors",
         active
-          ? "border-primary bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+          ? "border-primary bg-primary-soft text-primary"
           : "border-border text-muted hover:border-border-strong"
       )}
     >

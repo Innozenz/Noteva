@@ -187,7 +187,7 @@ export function TeacherProfileForm({
         {!canPublish || !profile.subscriptionActive ? (
           <CardContent className="flex flex-col gap-3">
             {!canPublish ? (
-              <div className="rounded-lg bg-amber-50 p-4 dark:bg-amber-950/30">
+              <div className="rounded-lg bg-warning-soft p-4">
                 <p className="mb-2 flex items-center gap-2 text-sm font-medium">
                   <AlertCircle className="h-4 w-4 text-warning" />
                   Il reste à compléter
@@ -267,7 +267,7 @@ export function TeacherProfileForm({
                   className={cn(
  "rounded-full border px-3 py-1.5 text-sm transition-colors",
                     selected
-                      ? "border-primary bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+                      ? "border-primary bg-primary-soft text-primary"
                       : "border-border text-muted hover:border-border-strong"
                   )}
                 >
@@ -427,7 +427,7 @@ function Checkbox({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-border accent-primary dark:border-border"
+        className="h-4 w-4 rounded border-border accent-primary"
       />
       {label}
     </label>

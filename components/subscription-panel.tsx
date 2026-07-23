@@ -57,7 +57,7 @@ export function SubscriptionPanel({
       {/* Le retour de Stripe passe par l'URL : l'état réel, lui, arrive par
           webhook et peut avoir quelques secondes de retard. */}
       {flash === "success" && !isActive ? (
-        <p className="rounded-lg bg-blue-50 p-4 text-sm dark:bg-blue-950/30">
+        <p className="rounded-lg bg-primary-soft p-4 text-sm">
           Paiement enregistré. L&apos;activation peut prendre quelques
           secondes — rechargez la page si rien ne change.
         </p>
@@ -110,7 +110,7 @@ export function SubscriptionPanel({
               </div>
 
               {!isPublished ? (
-                <p className="rounded-lg bg-amber-50 p-4 text-sm dark:bg-amber-950/30">
+                <p className="rounded-lg bg-warning-soft p-4 text-sm">
                   Votre abonnement est actif mais votre fiche est en brouillon :
                   elle reste invisible tant que vous ne l&apos;avez pas publiée.
                 </p>

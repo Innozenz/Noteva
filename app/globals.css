@@ -4,12 +4,17 @@
  * Système de design Noteva — « encre & accent vif ».
  *
  * Tout passe par des jetons sémantiques : un composant dit `bg-surface`, pas
- * `bg-zinc-50`. C'est ce qui permet de faire évoluer l'identité en un endroit
- * plutôt qu'en cent, et ce qui rend le mode sombre possible sans retoucher les
- * composants.
+ * `bg-zinc-50`. L'identité se règle donc en un endroit plutôt qu'en cent.
+ *
+ * Thème clair uniquement, par choix. `color-scheme: light` ci-dessous est
+ * indispensable : sans lui, un navigateur réglé en sombre continue de teinter
+ * les contrôles natifs — champs de date, listes déroulantes, cases à cocher —
+ * qui jureraient avec le reste de la page.
  */
 
 :root {
+  color-scheme: light;
+
   /* Fonds, du plus profond au plus élevé. */
   --background: #ffffff;
   --surface: #f6f6f8;
@@ -49,37 +54,6 @@
   --shadow-sm: 0 1px 2px 0 rgb(15 15 18 / 0.04);
   --shadow: 0 1px 3px 0 rgb(15 15 18 / 0.06), 0 1px 2px -1px rgb(15 15 18 / 0.04);
   --shadow-lg: 0 12px 32px -12px rgb(15 15 18 / 0.18);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b0b0e;
-    --surface: #131318;
-    --surface-strong: #1c1c23;
-    --elevated: #16161c;
-
-    --foreground: #f4f4f6;
-    --muted: #a1a1ad;
-    --subtle: #71717f;
-
-    --border: #26262e;
-    --border-strong: #33333d;
-
-    --primary: #818cf8;
-    --primary-hover: #a5b4fc;
-    --primary-soft: #1e1b4b;
-    --primary-foreground: #0b0b0e;
-
-    --accent: #f472b6;
-    --accent-soft: #3b0a26;
-
-    --success: #34d399;
-    --success-soft: #052e26;
-    --warning: #fbbf24;
-    --warning-soft: #3a2606;
-    --danger: #f87171;
-    --danger-soft: #3f1212;
-  }
 }
 
 @theme inline {

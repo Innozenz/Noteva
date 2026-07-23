@@ -110,7 +110,7 @@ export function OnboardingChoice() {
               className={cn(
  "cursor-pointer transition-all hover:border-border-strong",
                 isSelected &&
- "border-primary ring-2 ring-primary/20 dark:border-blue-500"
+ "border-primary ring-2 ring-primary/20"
               )}
             >
               <CardHeader>

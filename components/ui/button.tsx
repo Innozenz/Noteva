@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Les variantes n'utilisent que des jetons sémantiques : l'identité se règle
- * dans globals.css, pas ici. Le mode sombre en découle sans variante `dark:`.
+ * dans globals.css, pas ici.
  */
 const buttonVariants = cva(
  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-sm)] text-sm font-medium transition-all duration-150 disabled:pointer-events-none disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
@@ -21,7 +21,7 @@ const buttonVariants = cva(
         outline:
  "border border-border bg-elevated text-foreground hover:border-border-strong hover:bg-surface active:translate-y-px",
         secondary:
- "bg-surface-strong text-foreground hover:brightness-95 active:translate-y-px dark:hover:brightness-110",
+ "bg-surface-strong text-foreground hover:brightness-95 active:translate-y-px",
         ghost: "text-muted hover:bg-surface hover:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         success:

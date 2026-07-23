@@ -262,10 +262,9 @@ Publishing and being visible are **separate**: a teacher without a subscription 
 
 ### Design system
 
-`app/globals.css` holds every colour, radius and shadow as a **semantic token** (`--surface`, `--primary`, `--muted`…), exposed to Tailwind through `@theme inline`. Components say `bg-surface`, never `bg-zinc-50`. Two consequences to respect:
+`app/globals.css` holds every colour, radius and shadow as a **semantic token** (`--surface`, `--primary`, `--muted`…), exposed to Tailwind through `@theme inline`. Components say `bg-surface`, never `bg-zinc-50` — changing the identity means editing the tokens, not the components.
 
-- **Dark mode needs no `dark:` variants.** The tokens flip in a `prefers-color-scheme` block, so `dark:` on a token class is a no-op that only suggests a false intention.
-- Changing the identity means editing the tokens, not the components.
+**Light theme only, by decision.** There is no `prefers-color-scheme` block and there are **no `dark:` variants anywhere** — adding one would be dead code. `:root` sets `color-scheme: light`, which is what stops a browser in dark mode from tinting native controls (date pickers, selects, checkboxes) into something that clashes with the page.
 
 Typography: Geist for body, **Bricolage Grotesque for `h1`–`h3` only**, wired through `--font-sans-custom` / `--font-display`. Note the boilerplate had a bug worth not reintroducing — `globals.css` hardcoded `font-family: Arial` on `body`, silently overriding the font `next/font` had loaded.
 

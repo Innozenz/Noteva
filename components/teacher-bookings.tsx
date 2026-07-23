@@ -171,7 +171,7 @@ export function TeacherBookings({
         className={cn(
  "flex flex-col gap-3 rounded-lg border p-4",
           urgent
-            ? "border-amber-300 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20"
+            ? "border-warning/40 bg-warning-soft"
             : "border-border"
         )}
       >
@@ -385,7 +385,7 @@ function StudentSummary({ row }: { row: Enriched }) {
       ) : null}
 
       {row.studentIsMinor ? (
-        <p className="flex items-start gap-2 rounded-md bg-blue-50 p-2 text-blue-800 dark:bg-blue-950/30 dark:text-blue-300">
+        <p className="flex items-start gap-2 rounded-md bg-primary-soft p-2 text-primary">
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
           {row.guardianContact
             ? `Élève mineur — responsable : ${row.guardianContact}`
