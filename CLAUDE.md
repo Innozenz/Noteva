@@ -52,6 +52,8 @@ Tests cover `lib/availability` only, and that's deliberate: it's the one piece o
 
 `DATABASE_URL` must point at a PostgreSQL instance — currently a hosted **Neon** database; `docker-compose.yml` also provides a local `postgres:16-alpine`. After changing `prisma/schema.prisma`, run `npx prisma generate` before TypeScript picks up the new client types, then `npx prisma migrate dev`.
 
+Use **`sslmode=verify-full`**, not `sslmode=require`. With `require`, `pg` prints a security warning on every connection, and Next 16's dev overlay surfaces it as a "Console Error" on whatever page happened to open the connection — alarming and unrelated to the page. The warning is real: `pg` currently treats `require` as `verify-full` but will adopt libpq's weaker semantics in v9. Writing the intended mode pins today's behaviour, which is the strict one.
+
 **Prisma 7 has two traps, both already worked around — don't undo them:**
 
 1. **The datasource URL is not in `schema.prisma`.** `prisma.config.ts` is the CLI entrypoint: it declares the schema path, the migrations path, the datasource URL, and does the `import "dotenv/config"` that loads `.env` (Prisma 7 no longer auto-loads it). `datasource db` deliberately has no `url` field; don't "fix" it by adding one. Any script hitting the DB outside the CLI must load dotenv itself.
