@@ -88,10 +88,10 @@ export function SearchFilters({ instruments }: { instruments: Instrument[] }) {
                   navigate({ instrument: active ? null : instrument.slug })
                 }
                 className={cn(
-                  "rounded-full border px-3 py-1.5 text-sm transition-colors",
+ "rounded-full border px-3 py-1.5 text-sm transition-colors",
                   active
-                    ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-                    : "border-zinc-200 text-zinc-600 hover:border-zinc-400 dark:border-zinc-800 dark:text-zinc-400"
+                    ? "border-primary bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+                    : "border-border text-muted hover:border-border-strong"
                 )}
               >
                 {instrument.name}
@@ -132,7 +132,7 @@ export function SearchFilters({ instruments }: { instruments: Instrument[] }) {
               setCity("");
               router.push("/profs");
             }}
-            className="flex items-center gap-1 px-2 text-sm text-zinc-500 hover:underline"
+            className="flex items-center gap-1 px-2 text-sm text-muted hover:underline"
           >
             <X className="h-3 w-3" />
             Tout effacer
@@ -158,10 +158,10 @@ function Toggle({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-1.5 text-sm transition-colors",
+ "rounded-full border px-3 py-1.5 text-sm transition-colors",
         active
-          ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-          : "border-zinc-200 text-zinc-600 hover:border-zinc-400 dark:border-zinc-800 dark:text-zinc-400"
+          ? "border-primary bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+          : "border-border text-muted hover:border-border-strong"
       )}
     >
       {children}

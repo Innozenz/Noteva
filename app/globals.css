@@ -1,26 +1,153 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/**
+ * Système de design Noteva — « encre & accent vif ».
+ *
+ * Tout passe par des jetons sémantiques : un composant dit `bg-surface`, pas
+ * `bg-zinc-50`. C'est ce qui permet de faire évoluer l'identité en un endroit
+ * plutôt qu'en cent, et ce qui rend le mode sombre possible sans retoucher les
+ * composants.
+ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  /* Fonds, du plus profond au plus élevé. */
+  --background: #ffffff;
+  --surface: #f6f6f8;
+  --surface-strong: #ececf0;
+  --elevated: #ffffff;
+
+  /* Texte. */
+  --foreground: #0f0f12;
+  --muted: #6b6b76;
+  --subtle: #9a9aa5;
+
+  --border: #e6e6ea;
+  --border-strong: #d3d3da;
+
+  /* Indigo : actions, liens, tout ce qui se clique. */
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-soft: #eef2ff;
+  --primary-foreground: #ffffff;
+
+  /* Rose : réservé aux mises en avant. Rare, donc efficace. */
+  --accent: #ec4899;
+  --accent-soft: #fdf2f8;
+
+  --success: #059669;
+  --success-soft: #ecfdf5;
+  --warning: #b45309;
+  --warning-soft: #fffbeb;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-lg: 1.25rem;
+
+  /* Ombres discrètes : la hiérarchie vient du trait, pas du flou. */
+  --shadow-sm: 0 1px 2px 0 rgb(15 15 18 / 0.04);
+  --shadow: 0 1px 3px 0 rgb(15 15 18 / 0.06), 0 1px 2px -1px rgb(15 15 18 / 0.04);
+  --shadow-lg: 0 12px 32px -12px rgb(15 15 18 / 0.18);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0b0b0e;
+    --surface: #131318;
+    --surface-strong: #1c1c23;
+    --elevated: #16161c;
+
+    --foreground: #f4f4f6;
+    --muted: #a1a1ad;
+    --subtle: #71717f;
+
+    --border: #26262e;
+    --border-strong: #33333d;
+
+    --primary: #818cf8;
+    --primary-hover: #a5b4fc;
+    --primary-soft: #1e1b4b;
+    --primary-foreground: #0b0b0e;
+
+    --accent: #f472b6;
+    --accent-soft: #3b0a26;
+
+    --success: #34d399;
+    --success-soft: #052e26;
+    --warning: #fbbf24;
+    --warning-soft: #3a2606;
+    --danger: #f87171;
+    --danger-soft: #3f1212;
   }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-elevated: var(--elevated);
+
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --font-sans: var(--font-sans-custom);
+  --font-display: var(--font-display);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* La police vient du thème. L'ancienne feuille forçait Arial ici, ce qui
+     annulait silencieusement la police chargée par next/font. */
+  font-family: var(--font-sans-custom), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Titres : la voix de la marque. Grotesque serrée, poids fort. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display), var(--font-sans-custom), sans-serif;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+
+/* Anneau de focus visible et cohérent : l'accessibilité ne doit pas dépendre
+   du composant qui a pensé à le styler. */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+@media (pointer: fine) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
 }

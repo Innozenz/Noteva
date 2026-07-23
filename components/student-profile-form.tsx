@@ -82,7 +82,7 @@ export function StudentProfileForm({
     const has = profile.instruments.some((i) => i.slug === item.slug);
 
     set(
-      "instruments",
+ "instruments",
       has
         ? profile.instruments.filter((i) => i.slug !== item.slug)
         : [
@@ -102,7 +102,7 @@ export function StudentProfileForm({
     patch: Partial<StudentInstrumentRow>
   ) =>
     set(
-      "instruments",
+ "instruments",
       profile.instruments.map((i) => (i.slug === slug ? { ...i, ...patch } : i))
     );
 
@@ -159,10 +159,10 @@ export function StudentProfileForm({
       {profile.issues.length > 0 ? (
         <div className="rounded-lg bg-amber-50 p-4 dark:bg-amber-950/30">
           <p className="mb-2 flex items-center gap-2 text-sm font-medium">
-            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertCircle className="h-4 w-4 text-warning" />
             Il reste à compléter
           </p>
-          <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <ul className="space-y-1 text-sm text-muted">
             {profile.issues.map((issue) => (
               <li key={issue.field}>— {issue.message}</li>
             ))}
@@ -191,10 +191,10 @@ export function StudentProfileForm({
                   aria-pressed={selected}
                   onClick={() => toggleInstrument(item)}
                   className={cn(
-                    "rounded-full border px-3 py-1.5 text-sm transition-colors",
+ "rounded-full border px-3 py-1.5 text-sm transition-colors",
                     selected
-                      ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-                      : "border-zinc-200 text-zinc-600 hover:border-zinc-400 dark:border-zinc-800 dark:text-zinc-400"
+                      ? "border-primary bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+                      : "border-border text-muted hover:border-border-strong"
                   )}
                 >
                   {selected ? <Check className="mr-1 inline h-3 w-3" /> : null}
@@ -207,7 +207,7 @@ export function StudentProfileForm({
           {profile.instruments.map((entry) => (
             <div
               key={entry.slug}
-              className="flex flex-wrap items-end gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+              className="flex flex-wrap items-end gap-3 rounded-lg border border-border p-3"
             >
               <p className="w-full font-medium sm:w-auto sm:flex-1">
                 {entry.name}
@@ -223,7 +223,7 @@ export function StudentProfileForm({
                       level: e.target.value as Level,
                     })
                   }
-                  className="h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+                  className="h-10 rounded-md border border-border bg-white px-3 text-sm"
                 >
                   {Object.entries(LEVEL_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
@@ -260,7 +260,7 @@ export function StudentProfileForm({
                       ownsInstrument: e.target.checked,
                     })
                   }
-                  className="h-4 w-4 accent-blue-600"
+                  className="h-4 w-4 accent-[var(--primary)]"
                 />
                 J&apos;ai l&apos;instrument
               </label>
@@ -274,7 +274,7 @@ export function StudentProfileForm({
                 id="voiceType"
                 value={profile.voiceType ?? "UNKNOWN"}
                 onChange={(e) => set("voiceType", e.target.value)}
-                className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-800 dark:bg-zinc-950 sm:w-64"
+                className="h-10 w-full rounded-md border border-border bg-white px-3 text-sm sm:w-64"
               >
                 {Object.entries(VOICE_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -290,7 +290,7 @@ export function StudentProfileForm({
               type="checkbox"
               checked={profile.readsSheetMusic}
               onChange={(e) => set("readsSheetMusic", e.target.checked)}
-              className="h-4 w-4 accent-blue-600"
+              className="h-4 w-4 accent-[var(--primary)]"
             />
             Je lis le solfège
           </label>
@@ -384,8 +384,8 @@ export function StudentProfileForm({
         </CardContent>
       </Card>
 
-      {error ? <p className="text-sm text-red-500">{error}</p> : null}
-      {message ? <p className="text-sm text-green-600">{message}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {message ? <p className="text-sm text-success">{message}</p> : null}
 
       <div className="sticky bottom-4 flex justify-end">
         <Button size="lg" disabled={isSaving} onClick={save}>

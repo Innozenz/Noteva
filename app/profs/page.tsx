@@ -61,7 +61,7 @@ function PageLink({
 }) {
   if (!enabled) {
     return (
-      <span className="cursor-not-allowed rounded-md border border-zinc-200 px-3 py-1.5 text-sm text-zinc-300 dark:border-zinc-800 dark:text-zinc-700">
+      <span className="cursor-not-allowed rounded-md border border-border px-3 py-1.5 text-sm text-subtle">
         {children}
       </span>
     );
@@ -98,7 +98,7 @@ export default async function SearchPage({
             : "Trouvez votre prof"}
           {filters.city ? ` à ${filters.city}` : ""}
         </h1>
-        <p className="text-zinc-500">
+        <p className="text-muted">
           {total === 0
             ? "Aucun prof ne correspond à cette recherche."
             : `${total} prof${total > 1 ? "s" : ""} disponible${total > 1 ? "s" : ""}.`}
@@ -114,7 +114,7 @@ export default async function SearchPage({
       {results.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center">
-            <p className="text-zinc-500">
+            <p className="text-muted">
               Essayez d&apos;élargir votre recherche : un autre instrument, une
               autre ville, ou les cours en visio.
             </p>
@@ -125,7 +125,7 @@ export default async function SearchPage({
           {results.map((teacher) => (
             <li key={teacher.slug}>
               <Link href={`/profs/${teacher.slug}`} className="block h-full">
-                <Card className="h-full transition-colors hover:border-zinc-400 dark:hover:border-zinc-600">
+                <Card className="h-full transition-colors hover:border-border-strong">
                   <CardContent className="flex flex-col gap-3 pt-6">
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -133,7 +133,7 @@ export default async function SearchPage({
                           {teacher.name ?? "Prof de musique"}
                         </p>
                         {teacher.headline ? (
-                          <p className="line-clamp-2 text-sm text-zinc-500">
+                          <p className="line-clamp-2 text-sm text-muted">
                             {teacher.headline}
                           </p>
                         ) : null}
@@ -160,7 +160,7 @@ export default async function SearchPage({
                       ) : null}
                     </div>
 
-                    <div className="flex flex-wrap gap-3 text-xs text-zinc-500">
+                    <div className="flex flex-wrap gap-3 text-xs text-muted">
                       {teacher.teachesOnline ? (
                         <span className="flex items-center gap-1">
                           <Globe className="h-3 w-3" />
@@ -192,7 +192,7 @@ export default async function SearchPage({
           >
             Précédent
           </PageLink>
-          <span className="text-sm text-zinc-500">
+          <span className="text-sm text-muted">
             Page {filters.page} sur {lastPage}
           </span>
           <PageLink

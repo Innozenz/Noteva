@@ -63,7 +63,7 @@ export function SubscriptionPanel({
         </p>
       ) : null}
       {flash === "canceled" ? (
-        <p className="rounded-lg bg-zinc-50 p-4 text-sm dark:bg-zinc-900">
+        <p className="rounded-lg bg-surface p-4 text-sm">
           Paiement abandonné. Rien n&apos;a été prélevé.
         </p>
       ) : null}
@@ -102,8 +102,8 @@ export function SubscriptionPanel({
         <CardContent className="flex flex-col gap-4">
           {isActive ? (
             <>
-              <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-                <ShieldCheck className="h-4 w-4 text-green-600" />
+              <div className="flex items-center gap-2 text-sm text-muted">
+                <ShieldCheck className="h-4 w-4 text-success" />
                 {currentPeriodEnd
                   ? `Prochain renouvellement le ${new Date(currentPeriodEnd).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: timezone })}`
                   : "Abonnement en cours"}
@@ -118,14 +118,14 @@ export function SubscriptionPanel({
             </>
           ) : (
             <>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-muted">
                 Sans abonnement, votre fiche n&apos;apparaît ni dans la
                 recherche ni à son adresse publique, même publiée.
               </p>
 
               <Separator />
 
-              <ul className="flex flex-col gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+              <ul className="flex flex-col gap-2 text-sm text-muted">
                 <li>— Fiche visible dans la recherche</li>
                 <li>— Réservations en ligne sur vos disponibilités</li>
                 <li>— Agenda et gestion des demandes</li>
@@ -147,7 +147,7 @@ export function SubscriptionPanel({
             </>
           )}
 
-          {error ? <p className="text-sm text-red-500">{error}</p> : null}
+          {error ? <p className="text-sm text-danger">{error}</p> : null}
         </CardContent>
       </Card>
     </div>

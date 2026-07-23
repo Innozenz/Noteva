@@ -36,7 +36,7 @@ export function AuthButtons() {
   if (session.isPending) {
     return (
       <div className="flex items-center justify-center py-4">
-        <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
+        <Loader2 className="h-5 w-5 animate-spin text-muted" />
       </div>
     );
   }
@@ -45,7 +45,7 @@ export function AuthButtons() {
     return (
       <div className="flex flex-col gap-4">
         <div className="flex flex-col">
-          <p className="text-sm text-zinc-500">Connecté en tant que</p>
+          <p className="text-sm text-muted">Connecté en tant que</p>
           <p className="font-medium">{session.data.user.email}</p>
         </div>
         <div className="flex gap-2">
@@ -151,7 +151,7 @@ export function AuthButtons() {
           <Separator />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white px-2 text-zinc-500 dark:bg-zinc-950">
+          <span className="bg-white px-2 text-muted">
             Ou avec email
           </span>
         </div>
@@ -170,7 +170,7 @@ export function AuthButtons() {
             aria-invalid={!!errors.email}
           />
           {errors.email ? (
-            <p className="text-sm text-red-500">{errors.email}</p>
+            <p className="text-sm text-danger">{errors.email}</p>
           ) : null}
         </div>
         <div className="space-y-1">
@@ -185,11 +185,11 @@ export function AuthButtons() {
             aria-invalid={!!errors.password}
           />
           {errors.password ? (
-            <p className="text-sm text-red-500">{errors.password}</p>
+            <p className="text-sm text-danger">{errors.password}</p>
           ) : null}
         </div>
         {errors.form ? (
-          <p className="text-sm text-red-500">{errors.form}</p>
+          <p className="text-sm text-danger">{errors.form}</p>
         ) : null}
         <Button onClick={handleEmailAuth} disabled={isLoading}>
           {isLoading ? (
@@ -211,7 +211,7 @@ export function AuthButtons() {
         {!isSignUp ? (
           <Link
             href="/mot-de-passe-oublie"
-            className="text-center text-sm text-zinc-500 hover:underline"
+            className="text-center text-sm text-muted hover:underline"
           >
             Mot de passe oublié ?
           </Link>

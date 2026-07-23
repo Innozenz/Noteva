@@ -43,7 +43,7 @@ export default async function OnboardingPage() {
         <h1 className="text-2xl font-semibold">
           {firstName ? `Bienvenue ${firstName}` : "Bienvenue"}
         </h1>
-        <p className="text-zinc-500">
+        <p className="text-muted">
           Dernière étape : dites-nous ce que vous venez faire sur Noteva.
         </p>
       </div>

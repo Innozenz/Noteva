@@ -46,7 +46,7 @@ export function UserNav() {
             {user.name && (
               <p className="text-sm font-medium leading-none">{user.name}</p>
             )}
-            <p className="text-xs leading-none text-zinc-500">{user.email}</p>
+            <p className="text-xs leading-none text-muted">{user.email}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

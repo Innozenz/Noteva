@@ -53,7 +53,7 @@ export function SubscriptionButton() {
         )}
         S&apos;abonner maintenant
       </Button>
-      {error ? <p className="text-sm text-red-500">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
     </div>
   );
 }

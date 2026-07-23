@@ -153,7 +153,7 @@ export function StudentBookings({
   const renderCard = (row: Enriched) => (
     <div
       key={row.id}
-      className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
+      className="flex flex-col gap-3 rounded-lg border border-border p-4"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
@@ -167,7 +167,7 @@ export function StudentBookings({
             {" — "}
             {row.instrumentName}
           </p>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted">
             {format(row.startsAt)} · {MODE_LABELS[row.mode]}
             {row.priceCents !== null
               ? ` · ${(row.priceCents / 100).toFixed(2)} €`
@@ -196,7 +196,7 @@ export function StudentBookings({
           href={row.meetingUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex w-fit items-center gap-1 text-sm text-blue-600 hover:underline"
+          className="flex w-fit items-center gap-1 text-sm text-primary hover:underline"
         >
           <Video className="h-3 w-3" />
           Rejoindre le cours
@@ -204,14 +204,14 @@ export function StudentBookings({
       ) : null}
 
       {row.status === "CONFIRMED" && row.address ? (
-        <p className="flex items-center gap-1 text-sm text-zinc-500">
+        <p className="flex items-center gap-1 text-sm text-muted">
           <MapPin className="h-3 w-3" />
           {row.address}
         </p>
       ) : null}
 
       {row.cancellationReason ? (
-        <p className="rounded-md bg-zinc-50 p-3 text-sm text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+        <p className="rounded-md bg-surface p-3 text-sm text-muted">
           Motif : {row.cancellationReason}
         </p>
       ) : null}
@@ -240,7 +240,7 @@ export function StudentBookings({
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-          <p className="text-zinc-500">
+          <p className="text-muted">
             Vous n&apos;avez encore réservé aucun cours.
           </p>
           <Button asChild>
@@ -256,14 +256,14 @@ export function StudentBookings({
 
   return (
     <div className="flex flex-col gap-6">
-      {error ? <p className="text-sm text-red-500">{error}</p> : null}
-      {notice ? <p className="text-sm text-zinc-600">{notice}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {notice ? <p className="text-sm text-muted">{notice}</p> : null}
 
       {groups.pending.length > 0 ? (
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Hourglass className="h-5 w-5 text-amber-600" />
+              <Hourglass className="h-5 w-5 text-warning" />
               <CardTitle>En attente de confirmation</CardTitle>
             </div>
             <CardDescription>
@@ -280,13 +280,13 @@ export function StudentBookings({
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-green-600" />
+            <Clock className="h-5 w-5 text-success" />
             <CardTitle>Cours à venir</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {groups.upcoming.length === 0 ? (
-            <p className="text-sm text-zinc-400">Aucun cours confirmé à venir.</p>
+            <p className="text-sm text-subtle">Aucun cours confirmé à venir.</p>
           ) : (
             groups.upcoming.map(renderCard)
           )}

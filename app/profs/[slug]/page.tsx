@@ -121,16 +121,16 @@ export default async function TeacherPublicPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Service",
+ "@context": "https://schema.org",
+ "@type": "Service",
             serviceType: `Cours de ${instruments.map((i) => i.name).join(", ")}`,
             provider: {
-              "@type": "Person",
+ "@type": "Person",
               name,
               ...(teacher.city
                 ? {
                     address: {
-                      "@type": "PostalAddress",
+ "@type": "PostalAddress",
                       addressLocality: teacher.city,
                       addressCountry: teacher.country,
                     },
@@ -140,7 +140,7 @@ export default async function TeacherPublicPage({
             ...(rate
               ? {
                   offers: {
-                    "@type": "Offer",
+ "@type": "Offer",
                     price: rate,
                     priceCurrency: "EUR",
                   },
@@ -154,7 +154,7 @@ export default async function TeacherPublicPage({
         <div className="flex flex-col gap-6">
           <Link
             href="/profs"
-            className="flex w-fit items-center gap-1 text-sm text-zinc-500 hover:underline"
+            className="flex w-fit items-center gap-1 text-sm text-muted hover:underline"
           >
             <ChevronLeft className="h-3 w-3" />
             Tous les profs
@@ -172,7 +172,7 @@ export default async function TeacherPublicPage({
             </div>
 
             {teacher.headline ? (
-              <p className="text-lg text-zinc-600 dark:text-zinc-400">
+              <p className="text-lg text-muted">
                 {teacher.headline}
               </p>
             ) : null}
@@ -192,7 +192,7 @@ export default async function TeacherPublicPage({
           {teacher.bio ? (
             <section className="flex flex-col gap-2">
               <h2 className="text-lg font-medium">À propos</h2>
-              <p className="whitespace-pre-line text-zinc-600 dark:text-zinc-400">
+              <p className="whitespace-pre-line text-muted">
                 {teacher.bio}
               </p>
             </section>
@@ -200,15 +200,15 @@ export default async function TeacherPublicPage({
 
           <section className="flex flex-col gap-3">
             <h2 className="text-lg font-medium">Modalités</h2>
-            <ul className="flex flex-col gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+            <ul className="flex flex-col gap-2 text-sm text-muted">
               {modes.map(({ icon: Icon, label }) => (
                 <li key={label} className="flex items-center gap-2">
-                  <Icon className="h-4 w-4 text-zinc-400" />
+                  <Icon className="h-4 w-4 text-subtle" />
                   {label}
                 </li>
               ))}
               <li className="flex items-center gap-2">
-                <BadgeCheck className="h-4 w-4 text-zinc-400" />
+                <BadgeCheck className="h-4 w-4 text-subtle" />
                 Cours de {teacher.defaultDurationMin} minutes
               </li>
             </ul>
@@ -222,13 +222,13 @@ export default async function TeacherPublicPage({
               <CardHeader className="pb-3">
                 <CardTitle className="text-2xl">
                   {`${rate} €`}
-                  <span className="text-base font-normal text-zinc-500">
+                  <span className="text-base font-normal text-muted">
                     {" / heure"}
                   </span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-muted">
                   Réglé directement au prof, hors plateforme.
                 </p>
               </CardContent>

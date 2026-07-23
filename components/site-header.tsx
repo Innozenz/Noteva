@@ -34,10 +34,10 @@ export async function SiteHeader() {
         : "/onboarding";
 
   return (
-    <header className="border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-black/80">
+    <header className="border-b border-border bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <Music4 className="h-5 w-5 text-blue-600" />
+          <Music4 className="h-5 w-5 text-primary" />
           Noteva
         </Link>
 

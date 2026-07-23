@@ -66,14 +66,14 @@ export default async function StudentProfilePage() {
     <main className="mx-auto max-w-4xl px-4 py-8">
       <Link
         href="/dashboard/cours"
-        className="mb-6 flex w-fit items-center gap-1 text-sm text-zinc-500 hover:underline"
+        className="mb-6 flex w-fit items-center gap-1 text-sm text-muted hover:underline"
       >
         <ChevronLeft className="h-3 w-3" />
         Mes cours
       </Link>
 
       <h1 className="mb-2 text-2xl font-semibold">Mon profil</h1>
-      <p className="mb-8 text-zinc-500">
+      <p className="mb-8 text-muted">
         Ces informations sont transmises au prof avec vos demandes de cours.
       </p>
 

@@ -3,23 +3,36 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+/**
+ * Les variantes n'utilisent que des jetons sémantiques : l'identité se règle
+ * dans globals.css, pas ici. Le mode sombre en découle sans variante `dark:`.
+ */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+ "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-sm)] text-sm font-medium transition-all duration-150 disabled:pointer-events-none disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200",
-        destructive: "bg-red-500 text-white hover:bg-red-600 dark:bg-red-900 dark:text-red-50 dark:hover:bg-red-800",
-        outline: "border border-zinc-200 bg-white hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
-        secondary: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-700",
-        ghost: "hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
-        link: "text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-50",
-        success: "bg-green-600 text-white hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600",
+        // Léger enfoncement au clic : un retour physique vaut mieux qu'un
+        // changement de teinte seul.
+        default:
+ "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover active:translate-y-px",
+        destructive:
+ "bg-danger text-white shadow-sm hover:brightness-110 active:translate-y-px",
+        outline:
+ "border border-border bg-elevated text-foreground hover:border-border-strong hover:bg-surface active:translate-y-px",
+        secondary:
+ "bg-surface-strong text-foreground hover:brightness-95 active:translate-y-px dark:hover:brightness-110",
+        ghost: "text-muted hover:bg-surface hover:text-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+        success:
+ "bg-success text-white shadow-sm hover:brightness-110 active:translate-y-px",
+        accent:
+ "bg-accent text-white shadow-sm hover:brightness-110 active:translate-y-px",
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
+        sm: "h-9 px-3 text-[0.8125rem]",
+        lg: "h-12 px-6 text-base",
         icon: "h-10 w-10",
       },
     },

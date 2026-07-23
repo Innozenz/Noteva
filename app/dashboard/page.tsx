@@ -46,7 +46,7 @@ export default function DashboardPage() {
   if (session.isPending) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-pulse text-zinc-500">Chargement...</div>
+        <div className="animate-pulse text-muted">Chargement...</div>
       </div>
     );
   }
@@ -59,9 +59,9 @@ export default function DashboardPage() {
   const user = session.data.user;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
+    <div className="min-h-screen bg-surface">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-black/80">
+      <header className="sticky top-0 z-50 border-b border-border bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <Button
@@ -72,7 +72,7 @@ export default function DashboardPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
+              <LayoutDashboard className="h-5 w-5 text-muted" />
               <h1 className="text-lg font-semibold">Dashboard</h1>
             </div>
           </div>
@@ -92,24 +92,24 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-blue-600" />
+                  <Shield className="h-5 w-5 text-primary" />
                   <CardTitle>Profil</CardTitle>
                 </div>
                 <CardDescription>Vos informations de compte</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-sm text-zinc-500">Nom</p>
+                  <p className="text-sm text-muted">Nom</p>
                   <p className="font-medium">{user.name || "Non renseigné"}</p>
                 </div>
                 <Separator />
                 <div>
-                  <p className="text-sm text-zinc-500">Email</p>
+                  <p className="text-sm text-muted">Email</p>
                   <p className="font-medium">{user.email}</p>
                 </div>
                 <Separator />
                 <div>
-                  <p className="text-sm text-zinc-500">Membre depuis</p>
+                  <p className="text-sm text-muted">Membre depuis</p>
                   <p className="font-medium">
                     {new Date(user.createdAt).toLocaleDateString("fr-FR", {
                       year: "numeric",
@@ -128,7 +128,7 @@ export default function DashboardPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-green-600" />
+                    <CreditCard className="h-5 w-5 text-success" />
                     <CardTitle>Abonnement</CardTitle>
                   </div>
                   {subscription?.isActive ? (
@@ -144,12 +144,12 @@ export default function DashboardPage() {
               <CardContent className="space-y-4">
                 {subLoading ? (
                   <div className="animate-pulse space-y-3">
-                    <div className="h-4 w-3/4 rounded bg-zinc-200 dark:bg-zinc-800" />
-                    <div className="h-4 w-1/2 rounded bg-zinc-200 dark:bg-zinc-800" />
+                    <div className="h-4 w-3/4 rounded bg-surface-strong" />
+                    <div className="h-4 w-1/2 rounded bg-surface-strong" />
                   </div>
                 ) : subscription?.isActive ? (
                   <>
-                    <div className="flex items-center gap-2 text-sm text-zinc-500">
+                    <div className="flex items-center gap-2 text-sm text-muted">
                       <CalendarDays className="h-4 w-4" />
                       <span>
                         Renouvellement le{" "}
@@ -164,19 +164,19 @@ export default function DashboardPage() {
                     </div>
                     <Separator />
                     <div>
-                      <p className="text-sm text-zinc-500">ID abonnement</p>
-                      <p className="font-mono text-xs text-zinc-600 dark:text-zinc-400">
+                      <p className="text-sm text-muted">ID abonnement</p>
+                      <p className="font-mono text-xs text-muted">
                         {subscription.subscriptionId}
                       </p>
                     </div>
                   </>
                 ) : (
                   <div className="space-y-4">
-                    <div className="flex items-start gap-3 rounded-lg bg-zinc-50 p-4 dark:bg-zinc-900">
-                      <Sparkles className="mt-0.5 h-5 w-5 text-yellow-500" />
+                    <div className="flex items-start gap-3 rounded-lg bg-surface p-4">
+                      <Sparkles className="mt-0.5 h-5 w-5 text-warning" />
                       <div>
                         <p className="font-medium">Abonnement prof</p>
-                        <p className="text-sm text-zinc-500">
+                        <p className="text-sm text-muted">
                           Rendez votre fiche visible des élèves et recevez des
                           demandes de cours.
                         </p>
@@ -194,7 +194,7 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-purple-600" />
+                  <Sparkles className="h-5 w-5 text-accent" />
                   <CardTitle>Actions rapides</CardTitle>
                 </div>
                 <CardDescription>

@@ -56,12 +56,12 @@ export function ForgotPasswordForm() {
   if (sent) {
     return (
       <div className="flex flex-col gap-4 text-center">
-        <MailCheck className="mx-auto h-8 w-8 text-green-600" />
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <MailCheck className="mx-auto h-8 w-8 text-success" />
+        <p className="text-sm text-muted">
           Si un compte existe avec cette adresse, un lien de réinitialisation
           vient d&apos;y être envoyé. Il est valable une heure.
         </p>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted">
           Pensez à regarder vos indésirables.
         </p>
         <Button variant="outline" asChild>
@@ -90,7 +90,7 @@ export function ForgotPasswordForm() {
           onChange={(event) => setEmail(event.target.value)}
           aria-invalid={!!error}
         />
-        {error ? <p className="text-sm text-red-500">{error}</p> : null}
+        {error ? <p className="text-sm text-danger">{error}</p> : null}
       </div>
 
       <Button type="submit" disabled={isLoading}>
@@ -100,7 +100,7 @@ export function ForgotPasswordForm() {
 
       <Link
         href="/connexion"
-        className="text-center text-sm text-zinc-500 hover:underline"
+        className="text-center text-sm text-muted hover:underline"
       >
         Retour à la connexion
       </Link>

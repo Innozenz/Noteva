@@ -44,8 +44,8 @@ export default async function TeacherLayout({
   });
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+    <div className="min-h-screen bg-surface">
+      <header className="border-b border-border bg-white">
         <nav className="mx-auto flex max-w-4xl gap-1 px-4">
           <TabLink href="/dashboard/prof" icon={UserCog} label="Ma fiche" />
           <TabLink
@@ -85,12 +85,12 @@ function TabLink({
   return (
     <Link
       href={href}
-      className="flex items-center gap-2 border-b-2 border-transparent px-4 py-4 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+      className="flex items-center gap-2 border-b-2 border-transparent px-4 py-4 text-sm font-medium text-muted hover:border-border-strong hover:text-foreground hover:text-foreground"
     >
       <Icon className="h-4 w-4" />
       {label}
       {badge ? (
-        <span className="rounded-full bg-blue-600 px-1.5 text-xs font-semibold text-white">
+        <span className="rounded-full bg-primary px-1.5 text-xs font-semibold text-white">
           {badge}
         </span>
       ) : null}

@@ -147,7 +147,7 @@ export function BookingWidget({
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <CalendarDays className="h-5 w-5 text-blue-600" />
+          <CalendarDays className="h-5 w-5 text-primary" />
           <CardTitle>Réserver un cours</CardTitle>
         </div>
         <CardDescription>
@@ -179,10 +179,10 @@ export function BookingWidget({
 
         {slots === null ? (
           <div className="flex justify-center py-8">
-            <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
+            <Loader2 className="h-5 w-5 animate-spin text-subtle" />
           </div>
         ) : byDay.length === 0 ? (
-          <p className="py-6 text-center text-sm text-zinc-500">
+          <p className="py-6 text-center text-sm text-muted">
             Aucun créneau disponible cette semaine.
           </p>
         ) : (
@@ -198,10 +198,10 @@ export function BookingWidget({
                       aria-pressed={selected === slot.startsAt}
                       onClick={() => setSelected(slot.startsAt)}
                       className={cn(
-                        "rounded-md border px-3 py-1.5 text-sm transition-colors",
+ "rounded-md border px-3 py-1.5 text-sm transition-colors",
                         selected === slot.startsAt
-                          ? "border-blue-600 bg-blue-600 text-white"
-                          : "border-zinc-200 hover:border-blue-400 dark:border-zinc-800"
+                          ? "border-primary bg-primary text-white"
+                          : "border-border hover:border-primary"
                       )}
                     >
                       {formatHour(slot.startsAt, timezone)}
@@ -214,7 +214,7 @@ export function BookingWidget({
         )}
 
         {selected ? (
-          <div className="flex flex-col gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-900">
+          <div className="flex flex-col gap-3 border-t border-border pt-4">
             {instruments.length > 1 ? (
               <div className="flex flex-wrap gap-2">
                 {instruments.map((item) => (
@@ -223,10 +223,10 @@ export function BookingWidget({
                     type="button"
                     onClick={() => setInstrument(item.slug)}
                     className={cn(
-                      "rounded-full border px-3 py-1 text-sm",
+ "rounded-full border px-3 py-1 text-sm",
                       instrument === item.slug
-                        ? "border-blue-600 text-blue-700 dark:text-blue-300"
-                        : "border-zinc-200 text-zinc-600 dark:border-zinc-800"
+                        ? "border-primary text-primary"
+                        : "border-border text-muted"
                     )}
                   >
                     {item.name}
@@ -241,7 +241,7 @@ export function BookingWidget({
                   type="checkbox"
                   checked={isTrial}
                   onChange={(e) => setIsTrial(e.target.checked)}
-                  className="h-4 w-4 accent-blue-600"
+                  className="h-4 w-4 accent-[var(--primary)]"
                 />
                 Réserver le cours d&apos;essai
               </label>
@@ -254,7 +254,7 @@ export function BookingWidget({
               onChange={(e) => setMessage(e.target.value)}
             />
 
-            {error ? <p className="text-sm text-red-500">{error}</p> : null}
+            {error ? <p className="text-sm text-danger">{error}</p> : null}
 
             <Button size="lg" disabled={isBooking} onClick={book}>
               {isBooking ? (
@@ -262,7 +262,7 @@ export function BookingWidget({
               ) : null}
               Demander ce cours
             </Button>
-            <p className="text-center text-xs text-zinc-500">
+            <p className="text-center text-xs text-muted">
               Rien n&apos;est prélevé : vous réglez le prof directement.
             </p>
           </div>

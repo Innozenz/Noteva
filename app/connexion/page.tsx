@@ -53,7 +53,7 @@ export default async function LoginPage() {
         href="/"
         className="mb-8 flex items-center justify-center gap-2 text-lg font-semibold"
       >
-        <Music4 className="h-5 w-5 text-blue-600" />
+        <Music4 className="h-5 w-5 text-primary" />
         Noteva
       </Link>
 
@@ -70,7 +70,7 @@ export default async function LoginPage() {
         </CardContent>
       </Card>
 
-      <p className="mt-6 text-center text-sm text-zinc-500">
+      <p className="mt-6 text-center text-sm text-muted">
         <Link href="/profs" className="hover:underline">
           Parcourir les profs sans compte
         </Link>

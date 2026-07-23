@@ -169,10 +169,10 @@ export function TeacherBookings({
       <div
         key={row.id}
         className={cn(
-          "flex flex-col gap-3 rounded-lg border p-4",
+ "flex flex-col gap-3 rounded-lg border p-4",
           urgent
             ? "border-amber-300 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20"
-            : "border-zinc-200 dark:border-zinc-800"
+            : "border-border"
         )}
       >
         <div className="flex flex-wrap items-start justify-between gap-2">
@@ -180,7 +180,7 @@ export function TeacherBookings({
             <p className="font-medium">
               {row.studentName ?? "Élève"} — {row.instrumentName}
             </p>
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted">
               {format(row.startsAt)} · {MODE_LABELS[row.mode]}
               {row.priceCents !== null
                 ? ` · ${(row.priceCents / 100).toFixed(2)} €`
@@ -196,7 +196,7 @@ export function TeacherBookings({
             ) : null}
             {urgent ? (
               <Badge variant="secondary">
-                <AlertTriangle className="mr-1 h-3 w-3 text-amber-600" />
+                <AlertTriangle className="mr-1 h-3 w-3 text-warning" />
                 Bientôt
               </Badge>
             ) : null}
@@ -211,7 +211,7 @@ export function TeacherBookings({
         <StudentSummary row={row} />
 
         {row.studentMessage ? (
-          <p className="flex gap-2 rounded-md bg-zinc-50 p-3 text-sm text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+          <p className="flex gap-2 rounded-md bg-surface p-3 text-sm text-muted">
             <MessageSquare className="mt-0.5 h-4 w-4 shrink-0" />
             {row.studentMessage}
           </p>
@@ -243,12 +243,12 @@ export function TeacherBookings({
 
   return (
     <div className="flex flex-col gap-6">
-      {error ? <p className="text-sm text-red-500">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Inbox className="h-5 w-5 text-blue-600" />
+            <Inbox className="h-5 w-5 text-primary" />
             <CardTitle>Demandes en attente</CardTitle>
             {groups.pending.length > 0 ? (
               <Badge variant="secondary">{groups.pending.length}</Badge>
@@ -261,7 +261,7 @@ export function TeacherBookings({
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {groups.pending.length === 0 ? (
-            <p className="text-sm text-zinc-400">Aucune demande en attente.</p>
+            <p className="text-sm text-subtle">Aucune demande en attente.</p>
           ) : (
             groups.pending.map((booking) =>
               renderCard(booking, [
@@ -281,13 +281,13 @@ export function TeacherBookings({
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-green-600" />
+            <Clock className="h-5 w-5 text-success" />
             <CardTitle>Cours à venir</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {groups.upcoming.length === 0 ? (
-            <p className="text-sm text-zinc-400">Aucun cours confirmé à venir.</p>
+            <p className="text-sm text-subtle">Aucun cours confirmé à venir.</p>
           ) : (
             groups.upcoming.map((booking) =>
               renderCard(booking, [
@@ -362,7 +362,7 @@ function StudentSummary({ row }: { row: Enriched }) {
 
   if (facts.length === 0 && !row.studentGoals && !row.studentIsMinor) {
     return (
-      <p className="text-sm text-zinc-400">
+      <p className="text-sm text-subtle">
         Cet élève n&apos;a pas renseigné son profil.
       </p>
     );
@@ -371,15 +371,15 @@ function StudentSummary({ row }: { row: Enriched }) {
   return (
     <div className="flex flex-col gap-2 text-sm">
       {facts.length > 0 ? (
-        <p className="flex flex-wrap items-center gap-2 text-zinc-600 dark:text-zinc-400">
-          <GraduationCap className="h-4 w-4 shrink-0 text-zinc-400" />
+        <p className="flex flex-wrap items-center gap-2 text-muted">
+          <GraduationCap className="h-4 w-4 shrink-0 text-subtle" />
           {facts.join(" · ")}
         </p>
       ) : null}
 
       {row.studentGoals ? (
-        <p className="text-zinc-600 dark:text-zinc-400">
-          <span className="text-zinc-400">Objectif : </span>
+        <p className="text-muted">
+          <span className="text-subtle">Objectif : </span>
           {row.studentGoals}
         </p>
       ) : null}

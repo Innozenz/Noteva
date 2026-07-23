@@ -24,7 +24,7 @@ export default function ResetPasswordPage() {
         href="/"
         className="mb-8 flex items-center justify-center gap-2 text-lg font-semibold"
       >
-        <Music4 className="h-5 w-5 text-blue-600" />
+        <Music4 className="h-5 w-5 text-primary" />
         Noteva
       </Link>
 

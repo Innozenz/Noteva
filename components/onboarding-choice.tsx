@@ -28,9 +28,9 @@ const CHOICES: {
     title: "Je veux apprendre",
     description: "Trouvez un prof et réservez vos cours.",
     points: [
-      "Recherche par instrument et par niveau",
-      "Réservation sur les créneaux libres du prof",
-      "Suivi de vos cours à venir",
+ "Recherche par instrument et par niveau",
+ "Réservation sur les créneaux libres du prof",
+ "Suivi de vos cours à venir",
     ],
     icon: GraduationCap,
   },
@@ -39,9 +39,9 @@ const CHOICES: {
     title: "Je veux enseigner",
     description: "Publiez votre fiche et gérez votre planning.",
     points: [
-      "Agenda et disponibilités récurrentes",
-      "Demandes de cours à valider",
-      "Fiche publique visible par les élèves",
+ "Agenda et disponibilités récurrentes",
+ "Demandes de cours à valider",
+ "Fiche publique visible par les élèves",
     ],
     icon: Music,
   },
@@ -108,16 +108,16 @@ export function OnboardingChoice() {
                 }
               }}
               className={cn(
-                "cursor-pointer transition-all hover:border-zinc-400 dark:hover:border-zinc-600",
+ "cursor-pointer transition-all hover:border-border-strong",
                 isSelected &&
-                  "border-blue-600 ring-2 ring-blue-600/20 dark:border-blue-500"
+ "border-primary ring-2 ring-primary/20 dark:border-blue-500"
               )}
             >
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <Icon className="h-6 w-6 text-blue-600" />
+                  <Icon className="h-6 w-6 text-primary" />
                   {isSelected ? (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary">
                       <Check className="h-3 w-3 text-white" />
                     </span>
                   ) : null}
@@ -126,7 +126,7 @@ export function OnboardingChoice() {
                 <CardDescription>{choice.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2 text-sm text-zinc-500">
+                <ul className="space-y-2 text-sm text-muted">
                   {choice.points.map((point) => (
                     <li key={point} className="flex gap-2">
                       <span aria-hidden>—</span>
@@ -140,14 +140,14 @@ export function OnboardingChoice() {
         })}
       </div>
 
-      {error ? <p className="text-sm text-red-500">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       <div className="flex flex-col gap-2">
         <Button size="lg" disabled={!selected || isLoading} onClick={submit}>
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Continuer
         </Button>
-        <p className="text-center text-xs text-zinc-500">
+        <p className="text-center text-xs text-muted">
           Ce choix est définitif : une fiche prof porte une adresse publique et
           un historique de cours.
         </p>

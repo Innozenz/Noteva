@@ -260,9 +260,27 @@ Publishing and being visible are **separate**: a teacher without a subscription 
 - **Server state** (anything backed by an API/DB — subscription status, user data) → TanStack Query. `components/providers.tsx` creates one `QueryClient` (1 min `staleTime`, no refetch-on-focus) wrapping the app in `app/layout.tsx`.
 - **UI-only state** (not persisted, not fetched) → Zustand. `lib/store.ts` holds only sidebar-open state; keep it scoped to ephemeral UI concerns rather than mirroring server data.
 
+### Design system
+
+`app/globals.css` holds every colour, radius and shadow as a **semantic token** (`--surface`, `--primary`, `--muted`…), exposed to Tailwind through `@theme inline`. Components say `bg-surface`, never `bg-zinc-50`. Two consequences to respect:
+
+- **Dark mode needs no `dark:` variants.** The tokens flip in a `prefers-color-scheme` block, so `dark:` on a token class is a no-op that only suggests a false intention.
+- Changing the identity means editing the tokens, not the components.
+
+Typography: Geist for body, **Bricolage Grotesque for `h1`–`h3` only**, wired through `--font-sans-custom` / `--font-display`. Note the boilerplate had a bug worth not reintroducing — `globals.css` hardcoded `font-family: Arial` on `body`, silently overriding the font `next/font` had loaded.
+
+Two Tailwind 4 traps this codebase already hit:
+
+- **`rounded-[--radius]` is invalid.** It compiles to `border-radius: --radius` and silently yields square corners. Write `rounded-[var(--radius)]`.
+- **Never put a comma-bearing value in an arbitrary class.** `bg-[radial-gradient(circle,var(--accent-soft),…)]` makes the scanner split at commas and invent an `accent-…` utility, which then fails to parse. Use an inline `style` for gradients.
+
+`next.config.ts` reads `NEXT_DIST_DIR` so a second dev server can run alongside the first (`NEXT_DIST_DIR=.next-x npm run dev -- --port 3002`). `/.next-*/` **must stay in `.gitignore`**: Tailwind scans everything not ignored, so an un-ignored build directory makes it read its own compiled output, hallucinate class names from it, and emit invalid CSS.
+
 ### UI components
 
-`components/ui/*` are shadcn/ui-style primitives (Radix + `class-variance-authority` + `tailwind-merge`, composed via `cn()` in `lib/utils.ts`). Extend these rather than adding another component library. Note some carry **non-stock variants** added for this project — e.g. `variant="success"` on both `Button` and `Badge` — so check the `cva` config before assuming upstream shadcn defaults. Styling is Tailwind CSS 4 (`postcss.config.mjs`); animations use Framer Motion (`app/page.tsx`, `app/dashboard/page.tsx`).
+`components/ui/*` are shadcn/ui-style primitives (Radix + `class-variance-authority` + `tailwind-merge`, composed via `cn()` in `lib/utils.ts`). Extend these rather than adding another component library. They have been **rewritten onto the tokens** and carry non-stock variants — `success` and `accent` on `Button`, `success`/`warning`/`accent` on `Badge` — so read the `cva` config before assuming upstream shadcn behaviour. Badges are soft-tinted on purpose: they annotate, they don't compete with buttons.
+
+The pink `--accent` is deliberately **rare** — currently the hero underline alone. Spending it everywhere would make it stop meaning anything.
 
 ### Path aliases
 

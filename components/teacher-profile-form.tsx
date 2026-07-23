@@ -68,7 +68,7 @@ export function TeacherProfileForm({
   const toggleInstrument = (instrument: Instrument) => {
     const has = profile.instruments.some((i) => i.slug === instrument.slug);
     set(
-      "instruments",
+ "instruments",
       has
         ? profile.instruments.filter((i) => i.slug !== instrument.slug)
         : [...profile.instruments, instrument]
@@ -189,10 +189,10 @@ export function TeacherProfileForm({
             {!canPublish ? (
               <div className="rounded-lg bg-amber-50 p-4 dark:bg-amber-950/30">
                 <p className="mb-2 flex items-center gap-2 text-sm font-medium">
-                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertCircle className="h-4 w-4 text-warning" />
                   Il reste à compléter
                 </p>
-                <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
+                <ul className="space-y-1 text-sm text-muted">
                   {profile.publishCheck.missing.map((item) => (
                     <li key={item.field}>— {item.message}</li>
                   ))}
@@ -201,7 +201,7 @@ export function TeacherProfileForm({
             ) : null}
 
             {!profile.subscriptionActive ? (
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-muted">
                 Votre fiche restera invisible des élèves tant que votre
                 abonnement n&apos;est pas actif, même une fois publiée.
               </p>
@@ -236,7 +236,7 @@ export function TeacherProfileForm({
               placeholder="Votre parcours, votre méthode, le public que vous accompagnez…"
               onChange={(e) => set("bio", e.target.value)}
             />
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted">
               {(profile.bio ?? "").length} caractères — 80 minimum pour publier.
             </p>
           </div>
@@ -265,10 +265,10 @@ export function TeacherProfileForm({
                   aria-pressed={selected}
                   onClick={() => toggleInstrument(instrument)}
                   className={cn(
-                    "rounded-full border px-3 py-1.5 text-sm transition-colors",
+ "rounded-full border px-3 py-1.5 text-sm transition-colors",
                     selected
-                      ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-                      : "border-zinc-200 text-zinc-600 hover:border-zinc-400 dark:border-zinc-800 dark:text-zinc-400"
+                      ? "border-primary bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+                      : "border-border text-muted hover:border-border-strong"
                   )}
                 >
                   {selected ? <Check className="mr-1 inline h-3 w-3" /> : null}
@@ -334,7 +334,7 @@ export function TeacherProfileForm({
               }
               onChange={(v) =>
                 set(
-                  "hourlyRateCents",
+ "hourlyRateCents",
                   v === "" ? null : Math.round(Number(v) * 100)
                 )
               }
@@ -399,8 +399,8 @@ export function TeacherProfileForm({
         </CardContent>
       </Card>
 
-      {error ? <p className="text-sm text-red-500">{error}</p> : null}
-      {message ? <p className="text-sm text-green-600">{message}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {message ? <p className="text-sm text-success">{message}</p> : null}
 
       <div className="sticky bottom-4 flex justify-end">
         <Button size="lg" disabled={isSaving} onClick={save}>
@@ -427,7 +427,7 @@ function Checkbox({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-zinc-300 accent-blue-600 dark:border-zinc-700"
+        className="h-4 w-4 rounded border-border accent-[var(--primary)] dark:border-border"
       />
       {label}
     </label>

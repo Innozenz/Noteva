@@ -15,6 +15,10 @@
 
 # next.js
 /.next/
+# Répertoires de build alternatifs (NEXT_DIST_DIR). Sans cette ligne, Tailwind
+# les scanne comme du code source, relit ses propres artefacts compilés et
+# génère des règles CSS invalides à partir de faux noms de classes.
+/.next-*/
 /out/
 
 # production

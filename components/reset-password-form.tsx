@@ -39,7 +39,7 @@ export function ResetPasswordForm() {
   if (linkError || !token) {
     return (
       <div className="flex flex-col gap-4 text-center">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-muted">
           Ce lien n&apos;est plus valable. Les liens expirent au bout d&apos;une
           heure et ne servent qu&apos;une fois.
         </p>
@@ -53,8 +53,8 @@ export function ResetPasswordForm() {
   if (done) {
     return (
       <div className="flex flex-col gap-4 text-center">
-        <CheckCircle2 className="mx-auto h-8 w-8 text-green-600" />
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <CheckCircle2 className="mx-auto h-8 w-8 text-success" />
+        <p className="text-sm text-muted">
           Mot de passe modifié. Vos autres sessions ont été déconnectées.
         </p>
         <Button asChild>
@@ -89,7 +89,7 @@ export function ResetPasswordForm() {
 
     if (authError) {
       setError(
-        "Ce lien n'est plus valable. Demandez-en un nouveau depuis la page de connexion."
+ "Ce lien n'est plus valable. Demandez-en un nouveau depuis la page de connexion."
       );
       return;
     }
@@ -130,7 +130,7 @@ export function ResetPasswordForm() {
         />
       </div>
 
-      {error ? <p className="text-sm text-red-500">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       <Button type="submit" disabled={isLoading}>
         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

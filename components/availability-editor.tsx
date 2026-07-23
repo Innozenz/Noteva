@@ -143,7 +143,7 @@ export function AvailabilityEditor({
             return (
               <div
                 key={weekday}
-                className="flex flex-col gap-2 border-b border-zinc-100 pb-3 last:border-0 dark:border-zinc-900 sm:flex-row sm:items-start"
+                className="flex flex-col gap-2 border-b border-border pb-3 last:border-0 sm:flex-row sm:items-start"
               >
                 <div className="w-28 pt-2 text-sm font-medium">
                   {WEEKDAY_LABELS[weekday]}
@@ -151,7 +151,7 @@ export function AvailabilityEditor({
 
                 <div className="flex flex-1 flex-col gap-2">
                   {dayRows.length === 0 ? (
-                    <p className="py-2 text-sm text-zinc-400">Indisponible</p>
+                    <p className="py-2 text-sm text-subtle">Indisponible</p>
                   ) : (
                     dayRows.map(({ row, index }) => (
                       <div key={index} className="flex items-center gap-2">
@@ -164,7 +164,7 @@ export function AvailabilityEditor({
                             updateRow(index, { start: e.target.value })
                           }
                         />
-                        <span className="text-zinc-400">→</span>
+                        <span className="text-subtle">→</span>
                         <Input
                           aria-label={`Fin, ${WEEKDAY_LABELS[weekday]}`}
                           className="w-28"
@@ -189,7 +189,7 @@ export function AvailabilityEditor({
                   <button
                     type="button"
                     onClick={() => addRow(weekday)}
-                    className="flex w-fit items-center gap-1 text-sm text-blue-600 hover:underline"
+                    className="flex w-fit items-center gap-1 text-sm text-primary hover:underline"
                   >
                     <Plus className="h-3 w-3" />
                     Ajouter une plage
@@ -199,8 +199,8 @@ export function AvailabilityEditor({
             );
           })}
 
-          {error ? <p className="text-sm text-red-500">{error}</p> : null}
-          {message ? <p className="text-sm text-green-600">{message}</p> : null}
+          {error ? <p className="text-sm text-danger">{error}</p> : null}
+          {message ? <p className="text-sm text-success">{message}</p> : null}
 
           <div className="flex justify-end">
             <Button disabled={isSaving} onClick={save}>
@@ -297,20 +297,20 @@ function ExceptionsCard({
           </Button>
         </div>
 
-        {error ? <p className="text-sm text-red-500">{error}</p> : null}
+        {error ? <p className="text-sm text-danger">{error}</p> : null}
 
         {exceptions.length === 0 ? (
-          <p className="text-sm text-zinc-400">Aucune absence enregistrée.</p>
+          <p className="text-sm text-subtle">Aucune absence enregistrée.</p>
         ) : (
           <ul className="flex flex-col gap-1">
             {exceptions.map((exception) => (
               <li
                 key={exception.id}
-                className="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2 text-sm dark:bg-zinc-900"
+                className="flex items-center justify-between rounded-md bg-surface px-3 py-2 text-sm"
               >
                 <span>
                   {new Date(`${exception.date.slice(0, 10)}T00:00:00Z`).toLocaleDateString(
-                    "fr-FR",
+ "fr-FR",
                     { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }
                   )}
                   {exception.startMinute === null ? " — journée entière" : ""}

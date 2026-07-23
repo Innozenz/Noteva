@@ -80,82 +80,137 @@ export default async function HomePage() {
       <SiteHeader />
 
       <main>
-        {/* Accroche */}
-        <section className="mx-auto max-w-5xl px-4 py-20 text-center">
-          <h1 className="mx-auto max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
-            Apprenez la musique avec un prof qui vous correspond
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
-            Chant, piano, guitare, batterie… Consultez les disponibilités réelles
-            des profs et réservez votre cours en quelques clics. Vous réglez
-            votre prof directement : Noteva ne prend aucune commission.
-          </p>
+        {/* Accroche. Le halo indigo/rose donne un point d'ancrage chaud sans
+            image : rien à charger, et ça respire. */}
+        <section className="relative overflow-hidden">
+          {/* Dégradés posés en style inline : en classe arbitraire, Tailwind
+              découpe la valeur aux virgules et croit y voir des utilitaires. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 -top-40 h-[28rem] opacity-80"
+            style={{
+              background:
+                "radial-gradient(60% 60% at 50% 50%, var(--primary-soft), transparent 70%)",
+            }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-24 top-10 h-72 w-72 rounded-full"
+            style={{
+              background:
+                "radial-gradient(circle, var(--accent-soft), transparent 70%)",
+            }}
+          />
 
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button size="lg" asChild>
-              <Link href="/profs">
-                <Search className="mr-2 h-4 w-4" />
-                Trouver un prof
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="/connexion">Je suis professeur</Link>
-            </Button>
-          </div>
+          <div className="relative mx-auto max-w-4xl px-4 pb-16 pt-20 text-center sm:pt-28">
+            {teacherCount > 0 ? (
+              <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-elevated px-3 py-1 text-sm text-muted">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                </span>
+                {`${teacherCount} prof${teacherCount > 1 ? "s" : ""} ${teacherCount > 1 ? "disponibles" : "disponible"} en ce moment`}
+              </p>
+            ) : null}
 
-          {teacherCount > 0 ? (
-            <p className="mt-6 text-sm text-zinc-500">
-              {`${teacherCount} prof${teacherCount > 1 ? "s" : ""} ${teacherCount > 1 ? "disponibles" : "disponible"} en ce moment`}
+            <h1 className="text-balance text-4xl leading-[1.05] sm:text-6xl">
+              Apprenez la musique avec un prof{" "}
+              {/* Le rose n'apparaît qu'ici : rare, donc il porte. */}
+              <span className="relative whitespace-nowrap text-primary">
+                qui vous ressemble
+                <svg
+                  aria-hidden
+                  viewBox="0 0 300 12"
+                  className="absolute -bottom-1 left-0 h-3 w-full text-accent"
+                  preserveAspectRatio="none"
+                >
+                  <path
+                    d="M2 8c60-6 120-6 180-2s80 4 116-2"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+            </h1>
+
+            <p className="mx-auto mt-7 max-w-xl text-pretty text-lg leading-relaxed text-muted">
+              Chant, piano, guitare, batterie… Consultez les disponibilités
+              réelles des profs et réservez en quelques clics. Vous réglez votre
+              prof directement, sans commission.
             </p>
-          ) : null}
+
+            <div className="mt-9 flex flex-wrap justify-center gap-3">
+              <Button size="lg" asChild>
+                <Link href="/profs">
+                  <Search className="h-4 w-4" />
+                  Trouver un prof
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <Link href="/connexion">Je suis professeur</Link>
+              </Button>
+            </div>
+          </div>
         </section>
 
-        {/* Instruments — liens explorables vers les recherches filtrées */}
-        {instruments.length > 0 ? (
-          <section className="mx-auto max-w-5xl px-4 pb-16">
-            <h2 className="mb-6 text-xl font-medium">Par instrument</h2>
-            <ul className="flex flex-wrap gap-2">
-              {instruments.map((instrument) => (
-                <li key={instrument.slug}>
-                  <Link
-                    href={`/profs?instrument=${instrument.slug}`}
-                    className="flex items-center gap-2 rounded-full border border-zinc-200 px-4 py-2 text-sm transition-colors hover:border-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-600"
-                  >
-                    {instrument.name}
-                    <span className="text-xs text-zinc-400">
-                      {instrument._count.teachers}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
+        {/* Entrées de recherche. Regroupées : ce sont deux façons de faire la
+            même chose, les séparer en deux sections les diluait. */}
+        {instruments.length > 0 || cities.length > 0 ? (
+          <section className="mx-auto max-w-5xl px-4 pb-20">
+            <div className="grid gap-10 sm:grid-cols-[2fr_1fr]">
+              {instruments.length > 0 ? (
+                <div>
+                  <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-subtle">
+                    Par instrument
+                  </h2>
+                  <ul className="flex flex-wrap gap-2">
+                    {instruments.map((instrument) => (
+                      <li key={instrument.slug}>
+                        <Link
+                          href={`/profs?instrument=${instrument.slug}`}
+                          className="group flex items-center gap-2 rounded-full border border-border bg-elevated px-4 py-2 text-sm transition-all hover:border-primary hover:text-primary"
+                        >
+                          {instrument.name}
+                          <span className="rounded-full bg-surface px-1.5 text-xs text-subtle transition-colors group-hover:bg-primary-soft group-hover:text-primary">
+                            {instrument._count.teachers}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
-        {/* Villes */}
-        {cities.length > 0 ? (
-          <section className="mx-auto max-w-5xl px-4 pb-16">
-            <h2 className="mb-6 text-xl font-medium">Par ville</h2>
-            <ul className="flex flex-wrap gap-2">
-              {cities.map((row) => (
-                <li key={row.city}>
-                  <Link
-                    href={`/profs?ville=${encodeURIComponent(row.city!)}`}
-                    className="flex items-center gap-2 rounded-full border border-zinc-200 px-4 py-2 text-sm transition-colors hover:border-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-600"
-                  >
-                    {row.city}
-                    <span className="text-xs text-zinc-400">
-                      {row._count.city}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+              {cities.length > 0 ? (
+                <div>
+                  <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-subtle">
+                    Par ville
+                  </h2>
+                  <ul className="flex flex-wrap gap-2">
+                    {cities.map((row) => (
+                      <li key={row.city}>
+                        <Link
+                          href={`/profs?ville=${encodeURIComponent(row.city!)}`}
+                          className="group flex items-center gap-2 rounded-full border border-border bg-elevated px-4 py-2 text-sm transition-all hover:border-primary hover:text-primary"
+                        >
+                          {row.city}
+                          <span className="rounded-full bg-surface px-1.5 text-xs text-subtle transition-colors group-hover:bg-primary-soft group-hover:text-primary">
+                            {row._count.city}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
           </section>
         ) : null}
 
         {/* Fonctionnement */}
-        <section className="border-y border-zinc-200 bg-zinc-50 py-16 dark:border-zinc-800 dark:bg-zinc-950">
+        <section className="border-y border-border bg-surface py-16">
           <div className="mx-auto max-w-5xl px-4">
             <h2 className="mb-8 text-center text-2xl font-medium">
               Comment ça marche
@@ -169,15 +224,15 @@ export default async function HomePage() {
                     <Card className="h-full">
                       <CardHeader>
                         <div className="mb-2 flex items-center gap-3">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
                             {index + 1}
                           </span>
-                          <Icon className="h-5 w-5 text-zinc-400" />
+                          <Icon className="h-5 w-5 text-subtle" />
                         </div>
                         <CardTitle className="text-lg">{step.title}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        <p className="text-sm text-muted">
                           {step.text}
                         </p>
                       </CardContent>
@@ -187,7 +242,7 @@ export default async function HomePage() {
               })}
             </ol>
 
-            <p className="mx-auto mt-8 flex max-w-2xl items-center justify-center gap-2 text-center text-sm text-zinc-500">
+            <p className="mx-auto mt-8 flex max-w-2xl items-center justify-center gap-2 text-center text-sm text-muted">
               <Wallet className="h-4 w-4 shrink-0" />
               Le paiement des cours se fait directement entre vous et votre
               prof, hors plateforme.
@@ -220,8 +275,8 @@ export default async function HomePage() {
           </Card>
         </section>
 
-        <footer className="border-t border-zinc-200 py-8 dark:border-zinc-800">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-4 text-sm text-zinc-500">
+        <footer className="border-t border-border py-8">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-4 text-sm text-muted">
             <span>Noteva</span>
             {/* Pas de lien de connexion ici : l'en-tête l'affiche déjà, et
                 selon l'état de session. Le dupliquer proposerait « Se

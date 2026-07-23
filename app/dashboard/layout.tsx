@@ -38,14 +38,14 @@ export default async function DashboardLayout({
     <>
       {/* Le seul chemin vers les espaces dédiés : sans ce bandeau, les écrans
           construits jusqu'ici ne sont atteignables qu'en tapant l'URL. */}
-      <div className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+      <div className="border-b border-border bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-2">
-          <span className="text-sm text-zinc-500">
+          <span className="text-sm text-muted">
             {user.role === "TEACHER" ? "Compte prof" : "Compte élève"}
           </span>
           <Link
             href={user.role === "TEACHER" ? "/dashboard/prof" : "/dashboard/cours"}
-            className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
+            className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
           >
             {user.role === "TEACHER" ? "Espace prof" : "Mes cours"}
             <ArrowRight className="h-3 w-3" />

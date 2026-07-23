@@ -2,16 +2,22 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+/**
+ * Badges en teinte douce plutôt qu'en aplat saturé : ils accompagnent une
+ * information, ils ne doivent pas rivaliser avec les boutons.
+ */
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 dark:focus:ring-zinc-300",
+ "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
   {
     variants: {
       variant: {
-        default: "border-transparent bg-zinc-900 text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900",
-        secondary: "border-transparent bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50",
-        destructive: "border-transparent bg-red-500 text-zinc-50 dark:bg-red-900 dark:text-zinc-50",
-        outline: "text-zinc-950 dark:text-zinc-50",
-        success: "border-transparent bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
+        default: "bg-primary text-primary-foreground",
+        secondary: "bg-surface-strong text-muted",
+        outline: "border border-border text-muted",
+        success: "bg-success-soft text-success",
+        warning: "bg-warning-soft text-warning",
+        destructive: "bg-danger-soft text-danger",
+        accent: "bg-accent-soft text-accent",
       },
     },
     defaultVariants: {
