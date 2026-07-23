@@ -40,6 +40,7 @@ export type TeacherProfileData = {
   trialLessonOffered: boolean;
   trialLessonMinutes: number | null;
   defaultDurationMin: number;
+  slotGranularityMin: number;
   bufferMin: number;
   minNoticeHours: number;
   bookingHorizonDays: number;
@@ -96,6 +97,7 @@ export function TeacherProfileForm({
           trialLessonOffered: profile.trialLessonOffered,
           trialLessonMinutes: profile.trialLessonMinutes,
           defaultDurationMin: profile.defaultDurationMin,
+          slotGranularityMin: profile.slotGranularityMin,
           bufferMin: profile.bufferMin,
           minNoticeHours: profile.minNoticeHours,
           bookingHorizonDays: profile.bookingHorizonDays,
@@ -374,6 +376,13 @@ export function TeacherProfileForm({
             onChange={(v) => set("bufferMin", Number(v) || 0)}
           />
           <NumberField
+            id="granularity"
+            label="Départs de cours toutes les (min)"
+            value={String(profile.slotGranularityMin)}
+            onChange={(v) => set("slotGranularityMin", Number(v) || 30)}
+            hint="Indépendant de la durée du cours. Avec 30, les départs proposés restent sur les heures et demi-heures même après une réservation."
+          />
+          <NumberField
             id="notice"
             label="Préavis minimum (h)"
             value={String(profile.minNoticeHours)}
@@ -443,11 +452,14 @@ function NumberField({
   label,
   value,
   onChange,
+  hint,
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
+  /** Précision affichée sous le champ, quand l'intitulé ne suffit pas. */
+  hint?: string;
 }) {
   return (
     <div className="space-y-1">
@@ -458,7 +470,13 @@ function NumberField({
         min={0}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-describedby={hint ? `${id}-hint` : undefined}
       />
+      {hint ? (
+        <p id={`${id}-hint`} className="text-xs text-subtle">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }

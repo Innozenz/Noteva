@@ -214,6 +214,7 @@ Things that will bite you:
 
 - **`range` is in instants, not civil dates.** A `Date` built from `"2026-10-25T00:00:00Z"` is 2am in Paris and will silently clip the start of the local day. Pass real wall-clock boundaries.
 - **Slicing happens in instant space**, so a local 1am–4am window yields 2 slots on the spring-forward day and 4 on the fall-back day. That's correct: a lesson is a real duration, not a wall-clock one. Both cases are pinned by tests.
+- **The grid step is `TeacherProfile.slotGranularityMin`, not the lesson duration.** Slicing is anchored at the start of each *free* interval, so when the step equals the duration the whole day shifts by the buffer after the first booking: Monday 9–13, 60-min lessons, 30-min buffer, one booking at 9:00 → the free interval starts at 10:30 and the offered slots become 10:30, 11:30. 11:00 is free and never offered. A finer step keeps the round hours. Reported from real use; pinned by tests.
 - `@db.Date` columns come back from Prisma as **UTC-midnight** `Date`s. Rule validity bounds and exception dates are therefore read with `getUTC*` — reading them in server-local time shifts them a day for any zone behind UTC.
 - Intervals are half-open `[start, end)` throughout, matching the `tstzrange('[)')` in the DB constraint, so a lesson may start exactly when another ends.
 

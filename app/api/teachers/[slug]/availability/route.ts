@@ -69,6 +69,7 @@ export async function GET(
         status: true,
         stripeCurrentPeriodEnd: true,
         defaultDurationMin: true,
+        slotGranularityMin: true,
         bufferMin: true,
         minNoticeHours: true,
         bookingHorizonDays: true,
@@ -129,6 +130,12 @@ export async function GET(
       busy,
       range: { from, to },
       slotDurationMin,
+      // Pas de la grille, indépendant de la durée. Sans lui, le pas valait la
+      // durée du cours et les créneaux repartaient du début de chaque plage
+      // libre : après une réservation à 9h avec 30 min de battement, la
+      // journée basculait sur 10h30, 11h30… et 11h disparaissait alors qu'il
+      // était libre.
+      granularityMin: teacher.slotGranularityMin,
       bufferMin: teacher.bufferMin,
       minNoticeHours: teacher.minNoticeHours,
       bookingHorizonDays: teacher.bookingHorizonDays,

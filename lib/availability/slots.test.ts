@@ -451,3 +451,43 @@ describe("computeAvailableSlots", () => {
     expect(slots).toHaveLength(9);
   });
 });
+
+/**
+ * Le cas signalé en usage réel : un pas égal à la durée fait repartir la
+ * grille du début de chaque plage libre, donc toute la journée se décale du
+ * battement dès la première réservation.
+ */
+describe("pas de grille après une réservation", () => {
+  const monday9to13 = {
+    rules: [{ weekday: 1, startMinute: 9 * 60, endMinute: 13 * 60 }],
+    busy: [{ startsAt: wall("2026-01-12", "09:00"), endsAt: wall("2026-01-12", "10:00") }],
+    bufferMin: 30,
+  };
+
+  it("décale toute la journée quand le pas vaut la durée", () => {
+    const slots = computeAvailableSlots(baseInput(monday9to13));
+
+    // La plage libre commence à 10h30 (10h + 30 min de battement), et les
+    // créneaux jointifs enchaînent de là : 11h est libre mais jamais proposé.
+    expect(asWallClock(slots)).toEqual(["10:30", "11:30"]);
+  });
+
+  it("garde les heures rondes avec un pas de 30 min", () => {
+    const slots = computeAvailableSlots(
+      baseInput({ ...monday9to13, granularityMin: 30 })
+    );
+
+    expect(asWallClock(slots)).toEqual(["10:30", "11:00", "11:30", "12:00"]);
+  });
+
+  it("ne propose jamais un créneau qui empiète sur le battement", () => {
+    const slots = computeAvailableSlots(
+      baseInput({ ...monday9to13, granularityMin: 15 })
+    );
+
+    // 10h15 + 60 min chevaucherait la fin du battement à 10h30.
+    expect(asWallClock(slots)[0]).toBe("10:30");
+    // Et rien ne dépasse la fin de la plage.
+    expect(asWallClock(slots).at(-1)).toBe("12:00");
+  });
+});

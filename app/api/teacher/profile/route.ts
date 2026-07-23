@@ -33,6 +33,9 @@ const profileSchema = z.object({
   trialLessonMinutes: z.number().int().min(10).max(120).nullable().optional(),
 
   defaultDurationMin: z.number().int().min(15).max(480).optional(),
+  // Bornes larges : un pas de 5 min sert des cours courts, un pas de 120 min
+  // espace volontairement les départs. Rien n'oblige à le lier à la durée.
+  slotGranularityMin: z.number().int().min(5).max(240).optional(),
   bufferMin: z.number().int().min(0).max(120).optional(),
   minNoticeHours: z.number().int().min(0).max(720).optional(),
   bookingHorizonDays: z.number().int().min(1).max(365).optional(),

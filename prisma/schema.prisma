@@ -193,6 +193,11 @@ model TeacherProfile {
 
   // Règles de réservation, appliquées par le moteur de créneaux
   defaultDurationMin      Int @default(60)
+  // Pas de la grille de créneaux, indépendant de la durée du cours. Avec un
+  // pas égal à la durée, les créneaux sont jointifs et repartent du début de
+  // chaque plage libre : après une réservation, tous les départs suivants se
+  // décalent du battement. Un pas plus fin garde des heures rondes.
+  slotGranularityMin      Int @default(30)
   bufferMin               Int @default(0) // battement entre deux cours
   minNoticeHours          Int @default(24) // délai mini avant le début du cours
   bookingHorizonDays      Int @default(60) // jusqu'où on peut réserver à l'avance
