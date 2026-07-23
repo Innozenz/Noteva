@@ -453,30 +453,38 @@ describe("computeAvailableSlots", () => {
 });
 
 /**
- * Le cas signalé en usage réel : un pas égal à la durée fait repartir la
- * grille du début de chaque plage libre, donc toute la journée se décale du
- * battement dès la première réservation.
+ * Ancrage de la grille.
+ *
+ * Le cas signalé en usage réel : lundi 9h–13h, cours de 60 min, battement de
+ * 30, une réservation à 9h. Tant que la grille partait du début de chaque
+ * plage *libre*, elle repartait de 10h30 et toute la journée se décalait —
+ * 11h était libre mais jamais proposé.
+ *
+ * Ancrée sur l'ouverture déclarée par le prof, la grille ne bouge plus : les
+ * réservations retirent des créneaux, elles ne les déplacent pas.
  */
-describe("pas de grille après une réservation", () => {
+describe("ancrage de la grille sur les ouvertures", () => {
   const monday9to13 = {
     rules: [{ weekday: 1, startMinute: 9 * 60, endMinute: 13 * 60 }],
     busy: [{ startsAt: wall("2026-01-12", "09:00"), endsAt: wall("2026-01-12", "10:00") }],
     bufferMin: 30,
   };
 
-  it("décale toute la journée quand le pas vaut la durée", () => {
+  it("ne décale pas la journée après une réservation", () => {
     const slots = computeAvailableSlots(baseInput(monday9to13));
 
-    // La plage libre commence à 10h30 (10h + 30 min de battement), et les
-    // créneaux jointifs enchaînent de là : 11h est libre mais jamais proposé.
-    expect(asWallClock(slots)).toEqual(["10:30", "11:30"]);
+    // Grille du prof : 9h, 10h, 11h, 12h. 9h et 10h tombent dans le battement,
+    // il reste 11h et 12h — aux heures rondes, pas à 10h30 et 11h30.
+    expect(asWallClock(slots)).toEqual(["11:00", "12:00"]);
   });
 
-  it("garde les heures rondes avec un pas de 30 min", () => {
+  it("rend les mêmes départs avec un pas plus fin", () => {
     const slots = computeAvailableSlots(
       baseInput({ ...monday9to13, granularityMin: 30 })
     );
 
+    // 10h30 réapparaît ici parce qu'il est sur la grille du prof, pas parce
+    // qu'une réservation l'y a poussé.
     expect(asWallClock(slots)).toEqual(["10:30", "11:00", "11:30", "12:00"]);
   });
 
@@ -487,7 +495,47 @@ describe("pas de grille après une réservation", () => {
 
     // 10h15 + 60 min chevaucherait la fin du battement à 10h30.
     expect(asWallClock(slots)[0]).toBe("10:30");
-    // Et rien ne dépasse la fin de la plage.
     expect(asWallClock(slots).at(-1)).toBe("12:00");
+  });
+
+  /**
+   * La propriété qui rend la vérification côté serveur possible : la grille ne
+   * dépend ni des réservations ni de l'horloge. Sans elle, un créneau affiché
+   * pouvait devenir irréservable entre le clic de l'élève et l'arrivée de sa
+   * requête, le préavis minimum ayant déplacé l'ancrage entre-temps.
+   */
+  it("rend les mêmes départs quelle que soit l'heure d'appel", () => {
+    const departs = (now: Date) =>
+      asWallClock(
+        computeAvailableSlots(
+          baseInput({
+            rules: [{ weekday: 1, startMinute: 9 * 60, endMinute: 13 * 60 }],
+            granularityMin: 30,
+            minNoticeHours: 24,
+            now,
+          })
+        )
+      );
+
+    // Deux appels à 17 secondes d'écart, avec un préavis de 24 h qui tombe en
+    // plein milieu de la journée ouverte.
+    const a = departs(new Date("2026-01-11T10:17:03Z"));
+    const b = departs(new Date("2026-01-11T10:17:20Z"));
+
+    expect(a).toEqual(b);
+    // Et les départs restent sur la grille déclarée, pas sur l'instant du
+    // préavis (11h17 local).
+    expect(a).toEqual(["11:30", "12:00"]);
+  });
+
+  it("ne propose aucun départ hors grille", () => {
+    const slots = computeAvailableSlots(
+      baseInput({ ...monday9to13, granularityMin: 30 })
+    );
+
+    for (const time of asWallClock(slots)) {
+      const [, mm] = time.split(":").map(Number);
+      expect([0, 30]).toContain(mm);
+    }
   });
 });

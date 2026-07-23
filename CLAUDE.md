@@ -214,7 +214,8 @@ Things that will bite you:
 
 - **`range` is in instants, not civil dates.** A `Date` built from `"2026-10-25T00:00:00Z"` is 2am in Paris and will silently clip the start of the local day. Pass real wall-clock boundaries.
 - **Slicing happens in instant space**, so a local 1am–4am window yields 2 slots on the spring-forward day and 4 on the fall-back day. That's correct: a lesson is a real duration, not a wall-clock one. Both cases are pinned by tests.
-- **The grid step is `TeacherProfile.slotGranularityMin`, not the lesson duration.** Slicing is anchored at the start of each *free* interval, so when the step equals the duration the whole day shifts by the buffer after the first booking: Monday 9–13, 60-min lessons, 30-min buffer, one booking at 9:00 → the free interval starts at 10:30 and the offered slots become 10:30, 11:30. 11:00 is free and never offered. A finer step keeps the round hours. Reported from real use; pinned by tests.
+- **The grid is anchored on the teacher's *openings*, and stepped by `TeacherProfile.slotGranularityMin`** — never on the free intervals, and never on the lesson duration. Bookings, buffer, minimum notice and horizon *remove* candidates; they never move the grid. This is the load-bearing property, and it was learned from a real report: anchored on the free interval, Monday 9–13 with 60-min lessons, a 30-min buffer and one booking at 9:00 offered 10:30 and 11:30 — the whole day shifted, and 11:00 was free but never offered. Worse, the anchor depended on `now` through the minimum-notice clamp, so two calls seconds apart could return different start times and a slot could go stale between the student's click and their request landing.
+  Because the grid no longer moves, it is reproducible — which is what lets the **booking route enforce it**. `/api/bookings` re-derives with the same `granularityMin`, so a hand-crafted `POST` at 10:47 is refused with 409 even though that minute is free. Before, the re-derivation clamped the window to the requested slot exactly, so any free instant produced a slot and passed. Verified end to end: 10:47 and 9:30 refused, 10:00 accepted, 14:00 (outside the opening) refused.
 - `@db.Date` columns come back from Prisma as **UTC-midnight** `Date`s. Rule validity bounds and exception dates are therefore read with `getUTC*` — reading them in server-local time shifts them a day for any zone behind UTC.
 - Intervals are half-open `[start, end)` throughout, matching the `tstzrange('[)')` in the DB constraint, so a lesson may start exactly when another ends.
 
@@ -306,7 +307,9 @@ Reminders never say "demain": a lesson confirmed three hours ahead also falls in
 
 ### Two guards on writes
 
-Writing a booking needs **two** guards, and neither replaces the other: re-derive availability server-side (a client can POST any timestamp — the constraint stops overlaps, not 3am on a Sunday), then let the constraint arbitrate the race that re-derivation cannot see. Verified: six concurrent requests for one slot produce exactly one booking, one constraint-driven 409, and four re-validation 409s.
+Writing a booking needs **two** guards, and neither replaces the other: re-derive availability server-side (a client can POST any timestamp — the constraint stops overlaps, not 3am on a Sunday, and not 10:47 on a teacher who only teaches on the hour), then let the constraint arbitrate the race that re-derivation cannot see. Verified: six concurrent requests for one slot produce exactly one booking, one constraint-driven 409, and four re-validation 409s.
+
+The re-derivation only checks the grid because the grid is stable — see the slot engine above. Pass the teacher's `slotGranularityMin` here and in the public availability route, or the two disagree and the UI offers slots the API then refuses.
 
 ### Payments (Stripe) — teachers only
 

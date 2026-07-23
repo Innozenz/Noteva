@@ -86,16 +86,41 @@ export function computeAvailableSlots(input: SlotEngineInput): Slot[] {
     end: windowEnd,
   });
 
-  // 3. Découpage. Le pas s'applique en instants : sur un jour de changement
-  // d'heure, une plage locale de 3h peut ne durer que 2h réelles, et le nombre
-  // de créneaux suit.
+  // 3. Découpage.
+  //
+  // La grille est ancrée sur les **ouvertures** du prof, pas sur les plages
+  // libres. La différence n'est pas cosmétique :
+  //
+  // - Ancrée sur le libre, la grille dépend des réservations existantes et du
+  //   préavis minimum — donc de `now`. Deux appels à une seconde d'intervalle
+  //   peuvent rendre des départs différents, et un créneau affiché à l'élève
+  //   devient irréservable entre son clic et l'arrivée de sa requête. C'est
+  //   aussi ce qui décalait toute la journée du battement après la première
+  //   réservation.
+  // - Ancrée sur l'ouverture, la grille ne dépend que de ce que le prof a
+  //   déclaré. Elle est donc reproductible, et le serveur peut vérifier qu'un
+  //   départ demandé lui appartient — ce que la re-dérivation ne pouvait pas
+  //   faire tant que la grille se déplaçait.
+  //
+  // Le pas s'applique en instants : sur un jour de changement d'heure, une
+  // plage locale de 3h peut ne durer que 2h réelles, et le nombre de créneaux
+  // suit.
   const durationMs = slotDurationMin * MINUTE_MS;
   const stepMs = step * MINUTE_MS;
   const slots: Slot[] = [];
 
-  for (const interval of free) {
-    for (let t = interval.start; t + durationMs <= interval.end; t += stepMs) {
-      slots.push({ startsAt: new Date(t), endsAt: new Date(t + durationMs) });
+  for (const opening of open) {
+    for (let t = opening.start; t + durationMs <= opening.end; t += stepMs) {
+      // Le créneau doit tenir **entièrement** dans une plage encore libre :
+      // c'est là qu'interviennent les réservations, le battement, le préavis
+      // et l'horizon, sans jamais déplacer la grille.
+      const fits = free.some(
+        (interval) => t >= interval.start && t + durationMs <= interval.end
+      );
+
+      if (fits) {
+        slots.push({ startsAt: new Date(t), endsAt: new Date(t + durationMs) });
+      }
     }
   }
 

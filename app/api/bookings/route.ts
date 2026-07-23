@@ -181,6 +181,7 @@ export async function POST(request: Request) {
         status: true,
         stripeCurrentPeriodEnd: true,
         defaultDurationMin: true,
+        slotGranularityMin: true,
         bufferMin: true,
         minNoticeHours: true,
         bookingHorizonDays: true,
@@ -316,6 +317,12 @@ export async function POST(request: Request) {
       busy,
       range: { from: startsAt, to: endsAt },
       slotDurationMin: durationMin,
+      // Même pas que la route publique. Sans lui, la grille valait la durée du
+      // cours et — surtout — la fenêtre étant réduite au créneau demandé,
+      // n'importe quelle heure libre produisait un créneau : un client pouvait
+      // poster 10h47 et être accepté. La grille étant désormais ancrée sur les
+      // ouvertures du prof, seul un départ qui lui appartient survit ici.
+      granularityMin: teacher.slotGranularityMin,
       bufferMin: teacher.bufferMin,
       minNoticeHours: teacher.minNoticeHours,
       bookingHorizonDays: teacher.bookingHorizonDays,
