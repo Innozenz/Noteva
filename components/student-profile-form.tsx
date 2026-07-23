@@ -260,7 +260,7 @@ export function StudentProfileForm({
                       ownsInstrument: e.target.checked,
                     })
                   }
-                  className="h-4 w-4 accent-[var(--primary)]"
+                  className="h-4 w-4 accent-primary"
                 />
                 J&apos;ai l&apos;instrument
               </label>
@@ -290,7 +290,7 @@ export function StudentProfileForm({
               type="checkbox"
               checked={profile.readsSheetMusic}
               onChange={(e) => set("readsSheetMusic", e.target.checked)}
-              className="h-4 w-4 accent-[var(--primary)]"
+              className="h-4 w-4 accent-primary"
             />
             Je lis le solfège
           </label>

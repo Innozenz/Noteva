@@ -241,7 +241,7 @@ export function BookingWidget({
                   type="checkbox"
                   checked={isTrial}
                   onChange={(e) => setIsTrial(e.target.checked)}
-                  className="h-4 w-4 accent-[var(--primary)]"
+                  className="h-4 w-4 accent-primary"
                 />
                 Réserver le cours d&apos;essai
               </label>

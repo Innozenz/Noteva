@@ -145,6 +145,21 @@ h3 {
   color: var(--primary-foreground);
 }
 
+/**
+ * Cases à cocher et boutons radio natifs.
+ *
+ * Classe réelle plutôt qu'une valeur arbitraire contenant `var(...)` :
+ * l'analyseur de Tailwind produisait des noms de classes corrompus à partir de
+ * ce motif, et donc du CSS invalide. Une règle écrite à la main ne peut pas
+ * être mal analysée.
+ *
+ * Ne pas réintroduire le motif littéral, même en commentaire : le scanner lit
+ * ce fichier et régénérerait la règle fautive.
+ */
+.accent-primary {
+  accent-color: var(--primary);
+}
+
 @media (pointer: fine) {
   * {
     scrollbar-width: thin;

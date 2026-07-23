@@ -271,10 +271,12 @@ Typography: Geist for body, **Bricolage Grotesque for `h1`–`h3` only**, wired 
 
 Two Tailwind 4 traps this codebase already hit:
 
-- **`rounded-[--radius]` is invalid.** It compiles to `border-radius: --radius` and silently yields square corners. Write `rounded-[var(--radius)]`.
-- **Never put a comma-bearing value in an arbitrary class.** `bg-[radial-gradient(circle,var(--accent-soft),…)]` makes the scanner split at commas and invent an `accent-…` utility, which then fails to parse. Use an inline `style` for gradients.
+- **A bare custom property in an arbitrary value is invalid.** `rounded-` followed by `[--radius]` compiles to `border-radius: --radius` and silently yields square corners; wrap it in `var()`.
+- **Never put a comma-bearing value in an arbitrary class.** A `bg-` arbitrary value holding a `radial-gradient(...)` with commas makes the scanner split at the commas and invent a bogus utility from the fragment, which then emits unparseable CSS. Use an inline `style` for gradients.
+- **Tailwind scans this file too.** Writing one of those broken class names verbatim in any non-ignored file — source, comment, or Markdown — is enough for the scanner to pick it up and regenerate the invalid rule. That is why the examples above are described rather than quoted.
+- Native checkbox/radio tint uses the hand-written `.accent-primary` class in `globals.css` for the same reason.
 
-`next.config.ts` reads `NEXT_DIST_DIR` so a second dev server can run alongside the first (`NEXT_DIST_DIR=.next-x npm run dev -- --port 3002`). `/.next-*/` **must stay in `.gitignore`**: Tailwind scans everything not ignored, so an un-ignored build directory makes it read its own compiled output, hallucinate class names from it, and emit invalid CSS.
+**Don't add a configurable `distDir`.** It looks like an easy way to run a second dev server alongside the first, and it was tried: an alternate build directory is ignored by neither Tailwind's scanner nor eslint, so both start reading compiled artifacts — Tailwind emits invalid CSS from hallucinated class names, eslint reports hundreds of errors in generated chunks. To run a second server, stop the first. `/.next-*/` stays in `.gitignore` as a safety net.
 
 ### UI components
 

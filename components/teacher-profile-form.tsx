@@ -427,7 +427,7 @@ function Checkbox({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-border accent-[var(--primary)] dark:border-border"
+        className="h-4 w-4 rounded border-border accent-primary dark:border-border"
       />
       {label}
     </label>
