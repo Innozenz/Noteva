@@ -287,6 +287,12 @@ Two conventions the handler establishes:
 
 **The teacher can reply, never edit or delete.** `PATCH /api/reviews/[id]` writes `teacherRepl` only, through a `updateMany` conditioned on ownership so that "not yours" and "doesn't exist" are the same 404. A platform where the rated party can erase the rating is worthless to the student reading it; the public reply is the honest counterweight, and the `review_received` email is what makes it usable — without it a teacher would discover the review by chance.
 
+**Moderation is a posteriori** (`/admin/avis`): reviews are published on creation and the admin screen exists to *take one down*, not to let it through. A queue on a platform run by one person would mean no review appears while they sleep — and a student who writes into the void does not write twice. Switching to a-priori moderation is one line (the `publishedAt` set in `/api/reviews`) but commits someone to holding the queue.
+
+Hiding reuses `publishedAt: null`, so every public read already filters it out — no second state to keep consistent, hence none that can drift. Since reviews are born published, a null can only mean "taken down". A moderator can hide and restore, **never edit**: rewriting someone's words while leaving them signed with their first name would be worse than removing them. Hidden reviews stay listed in the queue — moderation whose decisions cannot be re-read is not moderation, it is disappearance. And the student is told on `/dashboard/cours`, otherwise they would believe a removed review is still online.
+
+**Admin is the third gate**, `lib/admin/session.ts`, same shape as `requireTeacher`. It answers **404, never 403** — and `app/admin/layout.tsx` calls `notFound()` — so the area does not exist for anyone else. Nothing in the app grants the role: `/api/onboarding` accepts only TEACHER and STUDENT, and promotion is a manual `UPDATE "user" SET role = 'ADMIN'`. An interface that hands out admin rights is a permanent attack surface for something that happens once.
+
 `aggregateRating` is emitted in the profile's JSON-LD **only when reviews exist**. An `aggregateRating` with no reviews is a manual-action risk with search engines, not a cosmetic detail.
 
 ### Notifications (`lib/notifications`)
@@ -392,7 +398,8 @@ What is missing:
 - `StudentProfile.preferredGenres` and `prefersOnline` are stored but never read; `postalCode` has no UI.
 - Email notifications fire on request/confirm/decline/cancel/review and 24h before a lesson. `RESEND_API_KEY` is set, but **the Resend account has no verified domain**, so delivery is restricted to the account owner's own address and every other recipient comes back 403. Verify a domain before this counts as working in production.
 - **Nothing schedules `/api/cron/reminders` yet.** The endpoint, the claim table and the retry path are built and verified; wiring an actual scheduler to it is a deployment step, not a code one.
-- Reviews are **published without moderation**: `publishedAt` is set at creation. The column stays as the hook for a future queue, but until a moderation screen exists, being born `null` would mean no review ever appears. See the Reviews section.
+- Reviews are moderated **a posteriori** at `/admin/avis`, and **nobody is an admin yet**: promotion is a manual `UPDATE "user" SET role = 'ADMIN' WHERE email = '…'`. Until you run it, the screen exists but nobody can open it. See the Reviews section.
+- **No reporting path.** A teacher who receives an abusive review can reply publicly but cannot flag it; someone has to notice it in the queue. That is the obvious next addition, and the reason the queue lists everything rather than only what needs attention.
 - Search ranking is Bayesian (see *Search* above). `PRIOR_WEIGHT = 5` is an editorial setting, not a mathematical constant: raising it makes the ranking more conservative.
 - `npm run lint`, `npx tsc --noEmit`, `npm test` and `npm run build` are all clean. Keep them that way.
 

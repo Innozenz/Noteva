@@ -44,7 +44,9 @@ export function UserNav({ role }: { role: "TEACHER" | "STUDENT" | "ADMIN" }) {
     : user.email.charAt(0).toUpperCase();
 
   const items =
-    role === "TEACHER"
+    role === "ADMIN"
+      ? [{ icon: Star, label: "Modération des avis", href: "/admin/avis" }]
+      : role === "TEACHER"
       ? [
           { icon: UserCog, label: "Ma fiche", href: "/dashboard/prof" },
           { icon: Star, label: "Mes avis", href: "/dashboard/prof/avis" },

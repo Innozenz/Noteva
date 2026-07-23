@@ -50,7 +50,7 @@ export default async function StudentBookingsPage() {
       // Sert à savoir si l'avis reste à donner : la règle de
       // lib/reviews/eligibility.ts s'applique ensuite côté client, comme sur
       // le serveur.
-      review: { select: { rating: true, comment: true } },
+      review: { select: { rating: true, comment: true, publishedAt: true } },
       instrument: { select: { name: true } },
       teacher: {
         select: { slug: true, user: { select: { name: true } } },
@@ -72,7 +72,13 @@ export default async function StudentBookingsPage() {
     instrumentName: booking.instrument.name,
     teacherName: booking.teacher.user.name,
     teacherSlug: booking.teacher.slug,
-    review: booking.review,
+    review: booking.review
+      ? {
+          rating: booking.review.rating,
+          comment: booking.review.comment,
+          published: booking.review.publishedAt !== null,
+        }
+      : null,
   }));
 
   return (

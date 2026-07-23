@@ -17,7 +17,12 @@ import { Button } from "@/components/ui/button";
  * le relire ici ferait une requête de plus par page.
  */
 export function AppHeader({ role }: { role: "TEACHER" | "STUDENT" | "ADMIN" }) {
-  const home = role === "TEACHER" ? "/dashboard/prof" : "/dashboard/cours";
+  const home =
+    role === "TEACHER"
+      ? "/dashboard/prof"
+      : role === "ADMIN"
+        ? "/admin/avis"
+        : "/dashboard/cours";
 
   return (
     <header className="border-b border-border bg-white">

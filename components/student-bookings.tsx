@@ -51,7 +51,12 @@ export type StudentBookingRow = {
   teacherName: string | null;
   teacherSlug: string;
   /** Avis déjà déposé sur ce cours, s'il y en a un. */
-  review: { rating: number; comment: string | null } | null;
+  review: {
+    rating: number;
+    comment: string | null;
+    /** Faux si la modération l'a retiré : l'élève doit le savoir. */
+    published: boolean;
+  } | null;
 };
 
 type Enriched = Omit<StudentBookingRow, "startsAt" | "endsAt"> & {
@@ -263,6 +268,15 @@ export function StudentBookings({
           {row.review.comment ? (
             <p className="mt-1 text-sm text-muted">{row.review.comment}</p>
           ) : null}
+
+          {/* Sans cette mention, l'élève croirait son avis en ligne alors
+              qu'il a été retiré. */}
+          {!row.review.published ? (
+            <p className="mt-2 text-sm text-warning">
+              Cet avis a été retiré par la modération : il n&apos;apparaît pas
+              sur la fiche du prof.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -365,7 +379,10 @@ export function StudentBookings({
                     onDone={(review) => {
                       setRows((current) =>
                         current.map((item) =>
-                          item.id === row.id ? { ...item, review } : item
+                          item.id === row.id
+                            ? // Un avis vient d'être déposé : il naît publié.
+                              { ...item, review: { ...review, published: true } }
+                            : item
                         )
                       );
                       setReviewing(null);
