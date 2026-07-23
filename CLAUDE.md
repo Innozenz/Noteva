@@ -108,6 +108,8 @@ Anything new behind the login wall goes under this layout. Do not add a second h
 
 Sticky save bars (`teacher-profile-form`, `student-profile-form`) are full-width bars with a border and an opaque background, not floating buttons. A bare sticky button sits on top of the content it overlaps and hides the last rows of the form.
 
+**Empty states name the cause and offer the next step.** A new teacher gets no requests because their profile is a draft, incomplete, or unsubscribed — "Aucune demande en attente" alone let them conclude that nobody is looking for lessons. `visibilityBlocker()` in `components/teacher-visibility-notice.tsx` returns what is actually blocking, and the notice appears on `/dashboard` and on an **empty** request inbox only: repeating it to a teacher who already has lessons would be noise. Its order — complete, publish, subscribe — follows the teacher's path and is unit-tested; asking someone with a blank profile to subscribe would make them pay for a page nobody can read. An empty weekly grid says so too: it is publishable but never bookable.
+
 ### Teacher area (`/dashboard/prof`)
 
 Self-service profile editing and availability, behind a second Server Component gate (`app/dashboard/prof/layout.tsx`) that checks for a `TeacherProfile`. Every `/api/teacher/*` route acts on **"my" profile** via `requireTeacher()` and accepts no profile id — there is no other profile to reach by mistake, so authorization stays trivial.
@@ -158,7 +160,11 @@ Server-rendered results with a client island (`SearchFilters`) that holds **no r
 - `visibleTeacherWhere()` sits next to `isTeacherVisible()` in `lib/teacher/visibility.ts` on purpose: search filters in SQL, the profile page checks in JS, and a search returning profiles that then 404 would be worse than no search. Change one, change the other. Verified: expiring a subscription or unpublishing removes the teacher from both at once.
 - `buildQueryString` omits defaults so one search has exactly one URL.
 - `isIndexableSearch` decides `robots`: instrument and city are indexed (`cours de chant à Lyon` is a real query and there are few such pages), while mode/price/trial/pagination are `noindex` — they multiply near-identical pages.
-- An unrecognised instrument term returns **no results** rather than silently dropping the filter, which would bury the student in irrelevant teachers.
+- An unrecognised instrument term returns **no results** rather than silently dropping the filter, which would bury the student in irrelevant teachers. The page says so explicitly — the term wasn't understood — instead of implying the offer is missing.
+
+**Zero results is three different situations, and they get three different answers** (`hasActiveFilters`, unit-tested): filters applied and nothing matched → suggest widening, with a "voir tous les profs" escape; **no filters at all** → the platform is empty, so telling the student to widen a search they never narrowed blames them for a supply problem, and the call to action addresses teachers instead; term not recognised → name the term. Pagination doesn't count as a filter: page 2 of an unfiltered search is still unfiltered.
+
+The instrument chips only list instruments that are actually taught, so the block is **not rendered at all** when empty — it used to leave an "Instrument" heading followed by nothing.
 
 **Known limitation:** instruments are flat. Searching `guitare` matches the `guitare` instrument only — a teacher listed under `guitare-electrique` will not appear. Defensible (they are distinct instruments) but probably not what a student expects; fixing it means a parent/family relation in the schema, not fuzzier matching, which would wreck precision elsewhere.
 
@@ -345,7 +351,7 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 What is missing:
 
 - **Only the hosted Checkout page is untested**, because completing it requires entering a card. Everything around it now runs against real Stripe in test mode — see the Payments section.
-- The signed-in area was reviewed on screen for the first time and reworked — see *Signed-in chrome* above. What was **not** reviewed: `/onboarding`, `/mot-de-passe-oublie`, `/reinitialiser-mot-de-passe`, and every error/empty state that needs data to reproduce.
+- The signed-in area and the empty states were reviewed on screen against a genuinely empty database — see *Signed-in chrome* and *Search* above. Still **not** reviewed: `/onboarding`, `/mot-de-passe-oublie`, `/reinitialiser-mot-de-passe`, and error states (failed save, expired session, network loss).
 - No dedicated instrument/city landing pages, but `/profs?instrument=…` is now linked from the home page and indexable, which covers the need for now.
 - `StudentProfile.preferredGenres` and `prefersOnline` are stored but never read; `postalCode` has no UI.
 - Email notifications fire on request/confirm/decline/cancel/review and 24h before a lesson. `RESEND_API_KEY` is set, but **the Resend account has no verified domain**, so delivery is restricted to the account owner's own address and every other recipient comes back 403. Verify a domain before this counts as working in production.

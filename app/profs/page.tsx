@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { RatingBadge } from "@/components/ui/stars";
 import {
   buildQueryString,
+  hasActiveFilters,
   isIndexableSearch,
   parseFilters,
   SEARCH_PAGE_SIZE,
@@ -87,6 +88,11 @@ export default async function SearchPage({
   );
 
   const lastPage = Math.max(1, Math.ceil(total / SEARCH_PAGE_SIZE));
+  const filtered = hasActiveFilters(filters);
+  // Terme d'instrument saisi mais introuvable au catalogue : `searchTeachers`
+  // rend alors une liste vide plutôt que d'ignorer le filtre, et l'élève doit
+  // savoir que c'est le mot qui n'a pas été compris — pas l'offre qui manque.
+  const unknownInstrument = filters.instrument !== null && matchedInstrument === null;
 
   return (
     <>
@@ -100,9 +106,11 @@ export default async function SearchPage({
           {filters.city ? ` à ${filters.city}` : ""}
         </h1>
         <p className="text-muted">
-          {total === 0
-            ? "Aucun prof ne correspond à cette recherche."
-            : `${total} prof${total > 1 ? "s" : ""} disponible${total > 1 ? "s" : ""}.`}
+          {total > 0
+            ? `${total} prof${total > 1 ? "s" : ""} disponible${total > 1 ? "s" : ""}.`
+            : filtered
+              ? "Aucun prof ne correspond à cette recherche."
+              : "Aucun prof n'est encore inscrit sur Noteva."}
         </p>
       </header>
 
@@ -114,11 +122,41 @@ export default async function SearchPage({
 
       {results.length === 0 ? (
         <Card>
-          <CardContent className="py-10 text-center">
-            <p className="text-muted">
-              Essayez d&apos;élargir votre recherche : un autre instrument, une
-              autre ville, ou les cours en visio.
-            </p>
+          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+            {unknownInstrument ? (
+              <>
+                <p className="text-muted">
+                  {`Nous ne connaissons pas « ${filters.instrument} » comme instrument.`}
+                </p>
+                {instruments.length > 0 ? (
+                  <p className="text-sm text-subtle">
+                    Choisissez-en un dans la liste ci-dessus.
+                  </p>
+                ) : null}
+              </>
+            ) : filtered ? (
+              <>
+                <p className="text-muted">
+                  Essayez d&apos;élargir votre recherche : un autre instrument,
+                  une autre ville, ou les cours en visio.
+                </p>
+                <Button variant="outline" asChild>
+                  <Link href="/profs">Voir tous les profs</Link>
+                </Button>
+              </>
+            ) : (
+              // Plateforme vide : rien à élargir. Le seul geste utile est de
+              // recruter, donc l'appel s'adresse aux profs.
+              <>
+                <p className="text-muted">
+                  Les premiers professeurs arrivent. Revenez bientôt — ou
+                  ouvrez votre propre fiche si vous enseignez.
+                </p>
+                <Button asChild>
+                  <Link href="/connexion">Je suis professeur</Link>
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (

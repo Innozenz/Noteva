@@ -135,6 +135,16 @@ export function AvailabilityEditor({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
+          {/* Une grille vide n'est pas un état neutre : elle ne propose aucun
+              créneau, donc la fiche est publiable mais jamais réservable. Sept
+              lignes « Indisponible » ne le disaient pas. */}
+          {rows.length === 0 ? (
+            <p className="rounded-md bg-warning-soft px-3 py-2 text-sm">
+              Aucune plage définie : aucun créneau n&apos;est proposé aux élèves,
+              même une fois votre fiche publiée. Ajoutez au moins une plage.
+            </p>
+          ) : null}
+
           {[1, 2, 3, 4, 5, 6, 7].map((weekday) => {
             const dayRows = rows
               .map((row, index) => ({ row, index }))

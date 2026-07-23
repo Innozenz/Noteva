@@ -73,6 +73,10 @@ export function SearchFilters({ instruments }: { instruments: Instrument[] }) {
         </Button>
       </form>
 
+      {/* Le catalogue ne contient que les instruments réellement enseignés :
+          il est donc vide tant qu'aucun prof n'est visible. Sans cette
+          condition, il restait un intitulé « Instrument » suivi de rien. */}
+      {instruments.length === 0 ? null : (
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium">Instrument</p>
         <div className="flex flex-wrap gap-2">
@@ -100,6 +104,7 @@ export function SearchFilters({ instruments }: { instruments: Instrument[] }) {
           })}
         </div>
       </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Toggle

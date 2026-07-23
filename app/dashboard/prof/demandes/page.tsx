@@ -5,9 +5,15 @@ import {
   TeacherBookings,
   type BookingRow,
 } from "@/components/teacher-bookings";
+import {
+  TeacherVisibilityNotice,
+  visibilityBlocker,
+} from "@/components/teacher-visibility-notice";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { guardianSummary } from "@/lib/student/profile";
+import { checkPublishable } from "@/lib/teacher/publishable";
+import { isSubscriptionActive } from "@/lib/teacher/visibility";
 
 /**
  * Boîte de réception du prof.
@@ -23,7 +29,24 @@ export default async function TeacherBookingsPage() {
 
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: session.user.id },
-    select: { timezone: true, teacherProfile: { select: { id: true } } },
+    select: {
+      timezone: true,
+      teacherProfile: {
+        select: {
+          id: true,
+          status: true,
+          headline: true,
+          bio: true,
+          hourlyRateCents: true,
+          teachesOnline: true,
+          teachesInPerson: true,
+          teachesAtHome: true,
+          city: true,
+          stripeCurrentPeriodEnd: true,
+          _count: { select: { instruments: true, rules: true } },
+        },
+      },
+    },
   });
 
   if (!user.teacherProfile) redirect("/dashboard");
@@ -100,5 +123,34 @@ export default async function TeacherBookingsPage() {
     };
   });
 
-  return <TeacherBookings initial={rows} timezone={user.timezone} />;
+  const profile = user.teacherProfile;
+
+  // L'avertissement ne s'affiche que sur une boîte réellement vide : un prof
+  // qui a déjà des cours sait que sa fiche fonctionne, et le répéter le
+  // transformerait en bruit.
+  const blocker =
+    rows.length === 0
+      ? visibilityBlocker({
+          publishable: checkPublishable({
+            headline: profile.headline,
+            bio: profile.bio,
+            hourlyRateCents: profile.hourlyRateCents,
+            teachesOnline: profile.teachesOnline,
+            teachesInPerson: profile.teachesInPerson,
+            teachesAtHome: profile.teachesAtHome,
+            city: profile.city,
+            instrumentCount: profile._count.instruments,
+            availabilityRuleCount: profile._count.rules,
+          }).ok,
+          published: profile.status === "PUBLISHED",
+          subscribed: isSubscriptionActive(profile.stripeCurrentPeriodEnd, now),
+        })
+      : null;
+
+  return (
+    <div className="flex flex-col gap-6">
+      {blocker ? <TeacherVisibilityNotice blocker={blocker} /> : null}
+      <TeacherBookings initial={rows} timezone={user.timezone} />
+    </div>
+  );
 }

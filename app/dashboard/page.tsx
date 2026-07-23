@@ -10,10 +10,16 @@ import {
   UserCog,
 } from "lucide-react";
 
+import {
+  TeacherVisibilityNotice,
+  visibilityBlocker,
+} from "@/components/teacher-visibility-notice";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { checkPublishable } from "@/lib/teacher/publishable";
+import { isSubscriptionActive } from "@/lib/teacher/visibility";
 
 /**
  * Aiguillage de l'espace connecté.
@@ -39,7 +45,21 @@ export default async function DashboardPage() {
     select: {
       name: true,
       role: true,
-      teacherProfile: { select: { id: true } },
+      teacherProfile: {
+        select: {
+          id: true,
+          status: true,
+          headline: true,
+          bio: true,
+          hourlyRateCents: true,
+          teachesOnline: true,
+          teachesInPerson: true,
+          teachesAtHome: true,
+          city: true,
+          stripeCurrentPeriodEnd: true,
+          _count: { select: { instruments: true, rules: true } },
+        },
+      },
     },
   });
 
@@ -59,6 +79,29 @@ export default async function DashboardPage() {
     : 0;
 
   const isTeacher = user.role === "TEACHER";
+
+  // Ce qui empêche la fiche d'être trouvée passe avant tout le reste : c'est
+  // la seule chose à faire tant qu'elle n'est pas visible.
+  const blocker = user.teacherProfile
+    ? visibilityBlocker({
+        publishable: checkPublishable({
+          headline: user.teacherProfile.headline,
+          bio: user.teacherProfile.bio,
+          hourlyRateCents: user.teacherProfile.hourlyRateCents,
+          teachesOnline: user.teacherProfile.teachesOnline,
+          teachesInPerson: user.teacherProfile.teachesInPerson,
+          teachesAtHome: user.teacherProfile.teachesAtHome,
+          city: user.teacherProfile.city,
+          instrumentCount: user.teacherProfile._count.instruments,
+          availabilityRuleCount: user.teacherProfile._count.rules,
+        }).ok,
+        published: user.teacherProfile.status === "PUBLISHED",
+        subscribed: isSubscriptionActive(
+          user.teacherProfile.stripeCurrentPeriodEnd,
+          new Date()
+        ),
+      })
+    : null;
 
   const links = isTeacher
     ? [
@@ -130,6 +173,12 @@ export default async function DashboardPage() {
             : "Vos cours et votre profil d'élève."}
         </p>
       </header>
+
+      {blocker ? (
+        <div className="mb-6">
+          <TeacherVisibilityNotice blocker={blocker} />
+        </div>
+      ) : null}
 
       <ul className="grid gap-4 sm:grid-cols-2">
         {links.map((link) => {

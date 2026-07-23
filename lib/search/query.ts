@@ -82,6 +82,28 @@ export function isIndexableSearch(filters: SearchFilters): boolean {
   );
 }
 
+/**
+ * L'élève a-t-il restreint quoi que ce soit ?
+ *
+ * Sert à distinguer deux situations que zéro résultat confond, et qui appellent
+ * des réponses opposées : une recherche filtrée qui ne trouve rien se corrige
+ * en élargissant, tandis qu'une recherche **sans aucun filtre** qui ne trouve
+ * rien signifie que la plateforme est vide — conseiller alors d'« élargir la
+ * recherche » revient à reprocher à l'élève une pénurie d'offre.
+ *
+ * La pagination est exclue : la page 2 d'une recherche sans filtre reste une
+ * recherche sans filtre.
+ */
+export function hasActiveFilters(filters: SearchFilters): boolean {
+  return (
+    filters.instrument !== null ||
+    filters.city !== null ||
+    filters.mode !== null ||
+    filters.maxRateCents !== null ||
+    filters.trialOnly
+  );
+}
+
 export const SEARCH_PAGE_SIZE = PAGE_SIZE;
 
 export function pageOffset(page: number): number {
