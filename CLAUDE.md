@@ -45,7 +45,7 @@ Tests cover `lib/availability` only, and that's deliberate: it's the one piece o
 - `DATABASE_URL` — read by `prisma.config.ts`, not by `schema.prisma` (see Prisma 7 note below).
 - `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` — read by Better Auth itself; they don't appear anywhere in the source.
 - `NEXT_PUBLIC_APP_URL` — Better Auth *client* baseURL (`lib/auth-client.ts`) and the Stripe checkout success/cancel URLs. Separate from `BETTER_AUTH_URL`; keep them in sync.
-- `NEXT_PUBLIC_STRIPE_PRICE_ID` — fallback price in `components/subscription-button.tsx` when no `priceId` prop is passed. This is the **teacher** subscription price.
+- `NEXT_PUBLIC_STRIPE_PRICE_ID` — fallback read by `/api/stripe/checkout` when `STRIPE_PRICE_ID` is absent. Same **teacher** subscription price; keep them equal or drop this one. (`components/subscription-button.tsx`, its former consumer, went with the boilerplate dashboard.)
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — only consumed by `lib/stripe-client.ts`, which nothing imports, so it's currently unused at runtime.
 
 ### Database setup
@@ -98,6 +98,16 @@ Real validation only happens server-side in API routes via `auth.api.getSession`
 
 This matters more now than it did for the boilerplate: the data is multi-tenant. Every handler touching a booking, a calendar or a profile must check *this user owns this resource*, not merely *this user is logged in* — otherwise any student can read another's lessons through `/api/bookings/[id]`.
 
+### Signed-in chrome
+
+`app/dashboard/layout.tsx` renders `AppHeader` — logo, link to the public search, account menu. It replaced an unstyled band reading "Compte prof" that carried no identity, no way back to the site and no sign-out; the teacher area then stacked a second bar under it, so the app looked like two products glued together. `UserNav` is now **the only** place to sign out: the red button on the old demo dashboard went with it, and an app you cannot leave is not an app.
+
+Anything new behind the login wall goes under this layout. Do not add a second header.
+
+`TeacherTabs` is a Client Component for one reason — marking the current tab needs `usePathname`. Its tab list lives **in the client component**, not in the layout: Lucide icons are components, and a component cannot cross the server→client boundary ("Only plain objects can be passed to Client Components"). The layout passes `pendingCount`, a number.
+
+Sticky save bars (`teacher-profile-form`, `student-profile-form`) are full-width bars with a border and an opaque background, not floating buttons. A bare sticky button sits on top of the content it overlaps and hides the last rows of the form.
+
 ### Teacher area (`/dashboard/prof`)
 
 Self-service profile editing and availability, behind a second Server Component gate (`app/dashboard/prof/layout.tsx`) that checks for a `TeacherProfile`. Every `/api/teacher/*` route acts on **"my" profile** via `requireTeacher()` and accepts no profile id — there is no other profile to reach by mistake, so authorization stays trivial.
@@ -129,7 +139,7 @@ The teacher's inbox shows the level **for the requested instrument only** (`Stud
 
 ### Public pages must be Server Components
 
-Search discovery is how a marketplace lives, so the public surface needs Server Components with `generateMetadata`. **Do not copy the pattern from `app/dashboard/page.tsx`** — it is `"use client"` and reads the session via `authClient.useSession()`, which renders nothing crawlable. Public = RSC; the signed-in area can stay client-side.
+Search discovery is how a marketplace lives, so the public surface needs Server Components with `generateMetadata`. A page that reads the session via `authClient.useSession()` renders nothing crawlable — that pattern belongs behind the login wall only, and only where interactivity demands it. Public = RSC.
 
 `app/layout.tsx` sets `metadataBase` (from `NEXT_PUBLIC_APP_URL`) and a title template — without `metadataBase` every canonical and OG image stays relative and unusable to crawlers.
 
@@ -335,7 +345,7 @@ The schema is migrated and applied, but the app on top of it is still the boiler
 What is missing:
 
 - **Only the hosted Checkout page is untested**, because completing it requires entering a card. Everything around it now runs against real Stripe in test mode — see the Payments section.
-- `app/dashboard/page.tsx` is still boilerplate demo code showing a generic subscription card. With `/dashboard/prof/*` and `/dashboard/cours` doing the real work, it's mostly redundant — its layout banner is what routes people onward.
+- The signed-in area was reviewed on screen for the first time and reworked — see *Signed-in chrome* above. What was **not** reviewed: `/onboarding`, `/mot-de-passe-oublie`, `/reinitialiser-mot-de-passe`, and every error/empty state that needs data to reproduce.
 - No dedicated instrument/city landing pages, but `/profs?instrument=…` is now linked from the home page and indexable, which covers the need for now.
 - `StudentProfile.preferredGenres` and `prefersOnline` are stored but never read; `postalCode` has no UI.
 - Email notifications fire on request/confirm/decline/cancel/review and 24h before a lesson. `RESEND_API_KEY` is set, but **the Resend account has no verified domain**, so delivery is restricted to the account owner's own address and every other recipient comes back 403. Verify a domain before this counts as working in production.

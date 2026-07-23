@@ -387,11 +387,19 @@ export function StudentProfileForm({
       {error ? <p className="text-sm text-danger">{error}</p> : null}
       {message ? <p className="text-sm text-success">{message}</p> : null}
 
-      <div className="sticky bottom-4 flex justify-end">
-        <Button size="lg" disabled={isSaving} onClick={save}>
-          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Enregistrer
-        </Button>
+      {/* Même barre que la fiche prof : un bouton collant sans fond passe
+          par-dessus le contenu qu'il survole et en masque les dernières
+          lignes. */}
+      <div className="sticky bottom-0 -mx-4 border-t border-border bg-white/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
+        <div className="flex items-center justify-end gap-3">
+          <span className="text-sm text-subtle">
+            Les modifications ne sont enregistrées qu&apos;ici.
+          </span>
+          <Button size="lg" disabled={isSaving} onClick={save}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Enregistrer
+          </Button>
+        </div>
       </div>
     </div>
   );

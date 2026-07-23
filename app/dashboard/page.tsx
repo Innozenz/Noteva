@@ -1,225 +1,176 @@
-"use client";
-
-import { authClient } from "@/lib/auth-client";
-import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { UserNav } from "@/components/user-nav";
-import { SubscriptionButton } from "@/components/subscription-button";
+import { headers } from "next/headers";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
-  CreditCard,
-  LayoutDashboard,
-  LogOut,
-  Shield,
-  Sparkles,
+  ArrowRight,
   CalendarDays,
-  ArrowLeft,
+  Inbox,
+  Search,
+  Star,
+  UserCog,
 } from "lucide-react";
 
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.1, duration: 0.4 },
-  }),
-};
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { auth } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 
-export default function DashboardPage() {
-  const session = authClient.useSession();
-  const router = useRouter();
+/**
+ * Aiguillage de l'espace connecté.
+ *
+ * Server Component, comme tout ce qui lit un rôle. La version précédente était
+ * la démonstration du boilerplate : `"use client"`, framer-motion, une carte
+ * « Profil » qui répétait le nom et l'e-mail, un bouton vert « S'abonner » et
+ * un bouton rouge « Se déconnecter » — deux couleurs qui n'existent nulle part
+ * ailleurs dans le système.
+ *
+ * Elle affichait surtout un état d'abonnement calculé par une route qui avait
+ * dérivé de la règle unique : un prof abonné y lisait « Inactif » pendant que
+ * son propre espace lui disait « Actif ». Le doublon disparaît ici ;
+ * l'abonnement se gère à un seul endroit, /dashboard/prof/abonnement.
+ */
+export default async function DashboardPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
 
-  const { data: subscription, isLoading: subLoading } = useQuery({
-    queryKey: ["subscription"],
-    queryFn: async () => {
-      const res = await fetch("/api/user/subscription");
-      if (!res.ok) throw new Error("Failed to fetch subscription");
-      return res.json();
+  if (!session?.user) redirect("/connexion");
+
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: session.user.id },
+    select: {
+      name: true,
+      role: true,
+      teacherProfile: { select: { id: true } },
     },
-    enabled: !!session.data,
   });
 
-  if (session.isPending) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-pulse text-muted">Chargement...</div>
-      </div>
-    );
-  }
+  const firstName = user.name?.trim().split(/\s+/)[0];
 
-  if (!session.data) {
-    router.push("/");
-    return null;
-  }
+  // Le compteur de demandes en attente est la seule donnée qui mérite d'être
+  // ici : elle appelle une action, et chaque demande non traitée immobilise un
+  // créneau.
+  const pendingCount = user.teacherProfile
+    ? await prisma.booking.count({
+        where: {
+          teacherId: user.teacherProfile.id,
+          status: "PENDING",
+          endsAt: { gt: new Date() },
+        },
+      })
+    : 0;
 
-  const user = session.data.user;
+  const isTeacher = user.role === "TEACHER";
+
+  const links = isTeacher
+    ? [
+        {
+          href: "/dashboard/prof/demandes",
+          icon: Inbox,
+          title: "Demandes de cours",
+          text:
+            pendingCount > 0
+              ? `${pendingCount} demande${pendingCount > 1 ? "s" : ""} en attente — chacune bloque son créneau.`
+              : "Aucune demande en attente.",
+          highlight: pendingCount > 0,
+        },
+        {
+          href: "/dashboard/prof",
+          icon: UserCog,
+          title: "Ma fiche",
+          text: "Présentation, instruments, tarif et règles de réservation.",
+          highlight: false,
+        },
+        {
+          href: "/dashboard/prof/disponibilites",
+          icon: CalendarDays,
+          title: "Mes disponibilités",
+          text: "La semaine type et les exceptions ponctuelles.",
+          highlight: false,
+        },
+        {
+          href: "/dashboard/prof/avis",
+          icon: Star,
+          title: "Mes avis",
+          text: "Ce que vos élèves ont écrit, et votre droit de réponse.",
+          highlight: false,
+        },
+      ]
+    : [
+        {
+          href: "/dashboard/cours",
+          icon: CalendarDays,
+          title: "Mes cours",
+          text: "Demandes en cours, cours à venir et historique.",
+          highlight: false,
+        },
+        {
+          href: "/dashboard/cours/profil",
+          icon: UserCog,
+          title: "Mon profil",
+          text: "Niveau, objectifs et contact du responsable si vous êtes mineur.",
+          highlight: false,
+        },
+        {
+          href: "/profs",
+          icon: Search,
+          title: "Trouver un prof",
+          text: "Par instrument, par ville, ou en visio.",
+          highlight: false,
+        },
+      ];
 
   return (
-    <div className="min-h-screen bg-surface">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push("/")}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <LayoutDashboard className="h-5 w-5 text-muted" />
-              <h1 className="text-lg font-semibold">Dashboard</h1>
-            </div>
-          </div>
-          <UserNav />
-        </div>
+    <main className="mx-auto max-w-4xl px-4 py-10">
+      <header className="mb-8">
+        <h1 className="text-3xl">
+          {firstName ? `Bonjour ${firstName}` : "Bonjour"}
+        </h1>
+        <p className="mt-1 text-muted">
+          {isTeacher
+            ? "Votre espace professeur."
+            : "Vos cours et votre profil d'élève."}
+        </p>
       </header>
 
-      {/* Content */}
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <motion.div
-          className="grid gap-6 md:grid-cols-2"
-          initial="hidden"
-          animate="visible"
-        >
-          {/* Profil */}
-          <motion.div custom={0} variants={fadeIn}>
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" />
-                  <CardTitle>Profil</CardTitle>
-                </div>
-                <CardDescription>Vos informations de compte</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm text-muted">Nom</p>
-                  <p className="font-medium">{user.name || "Non renseigné"}</p>
-                </div>
-                <Separator />
-                <div>
-                  <p className="text-sm text-muted">Email</p>
-                  <p className="font-medium">{user.email}</p>
-                </div>
-                <Separator />
-                <div>
-                  <p className="text-sm text-muted">Membre depuis</p>
-                  <p className="font-medium">
-                    {new Date(user.createdAt).toLocaleDateString("fr-FR", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+      <ul className="grid gap-4 sm:grid-cols-2">
+        {links.map((link) => {
+          const Icon = link.icon;
 
-          {/* Abonnement */}
-          <motion.div custom={1} variants={fadeIn}>
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-success" />
-                    <CardTitle>Abonnement</CardTitle>
-                  </div>
-                  {subscription?.isActive ? (
-                    <Badge variant="success">Actif</Badge>
-                  ) : (
-                    <Badge variant="secondary">Inactif</Badge>
-                  )}
-                </div>
-                <CardDescription>
-                  Gérez votre abonnement Stripe
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {subLoading ? (
-                  <div className="animate-pulse space-y-3">
-                    <div className="h-4 w-3/4 rounded bg-surface-strong" />
-                    <div className="h-4 w-1/2 rounded bg-surface-strong" />
-                  </div>
-                ) : subscription?.isActive ? (
-                  <>
-                    <div className="flex items-center gap-2 text-sm text-muted">
-                      <CalendarDays className="h-4 w-4" />
-                      <span>
-                        Renouvellement le{" "}
-                        {new Date(
-                          subscription.currentPeriodEnd
-                        ).toLocaleDateString("fr-FR", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </span>
+          return (
+            <li key={link.href}>
+              <Link href={link.href} className="block h-full">
+                <Card
+                  className={`h-full transition-colors hover:border-border-strong ${
+                    link.highlight ? "border-warning" : ""
+                  }`}
+                >
+                  <CardContent className="flex h-full flex-col gap-2 pt-6">
+                    <div className="flex items-center gap-2">
+                      <Icon
+                        className={`h-5 w-5 ${
+                          link.highlight ? "text-warning" : "text-subtle"
+                        }`}
+                      />
+                      <span className="font-medium">{link.title}</span>
                     </div>
-                    <Separator />
-                    <div>
-                      <p className="text-sm text-muted">ID abonnement</p>
-                      <p className="font-mono text-xs text-muted">
-                        {subscription.subscriptionId}
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3 rounded-lg bg-surface p-4">
-                      <Sparkles className="mt-0.5 h-5 w-5 text-warning" />
-                      <div>
-                        <p className="font-medium">Abonnement prof</p>
-                        <p className="text-sm text-muted">
-                          Rendez votre fiche visible des élèves et recevez des
-                          demandes de cours.
-                        </p>
-                      </div>
-                    </div>
-                    <SubscriptionButton />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
+                    <p className="text-sm text-muted">{link.text}</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
 
-          {/* Actions rapides */}
-          <motion.div custom={2} variants={fadeIn} className="md:col-span-2">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-accent" />
-                  <CardTitle>Actions rapides</CardTitle>
-                </div>
-                <CardDescription>
-                  Gérez votre compte en un clic
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    variant="destructive"
-                    onClick={async () => {
-                      await authClient.signOut();
-                      router.push("/");
-                      router.refresh();
-                    }}
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Se déconnecter
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </motion.div>
-      </main>
-    </div>
+      {isTeacher ? (
+        <div className="mt-8">
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/prof/abonnement">
+              Gérer mon abonnement
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      ) : null}
+    </main>
   );
 }

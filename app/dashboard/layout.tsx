@@ -1,8 +1,7 @@
 import { headers } from "next/headers";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight } from "lucide-react";
 
+import { AppHeader } from "@/components/app-header";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
@@ -36,22 +35,11 @@ export default async function DashboardLayout({
 
   return (
     <>
-      {/* Le seul chemin vers les espaces dédiés : sans ce bandeau, les écrans
-          construits jusqu'ici ne sont atteignables qu'en tapant l'URL. */}
-      <div className="border-b border-border bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-2">
-          <span className="text-sm text-muted">
-            {user.role === "TEACHER" ? "Compte prof" : "Compte élève"}
-          </span>
-          <Link
-            href={user.role === "TEACHER" ? "/dashboard/prof" : "/dashboard/cours"}
-            className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-          >
-            {user.role === "TEACHER" ? "Espace prof" : "Mes cours"}
-            <ArrowRight className="h-3 w-3" />
-          </Link>
-        </div>
-      </div>
+      {/* Porte l'identité et la sortie. L'ancien bandeau ne disait que
+          « Compte prof » et pointait vers l'espace : ni logo, ni retour vers le
+          site public, ni déconnexion, et l'espace prof empilait donc deux
+          barres anonymes. */}
+      <AppHeader role={user.role} />
       {children}
     </>
   );

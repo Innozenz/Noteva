@@ -402,11 +402,20 @@ export function TeacherProfileForm({
       {error ? <p className="text-sm text-danger">{error}</p> : null}
       {message ? <p className="text-sm text-success">{message}</p> : null}
 
-      <div className="sticky bottom-4 flex justify-end">
-        <Button size="lg" disabled={isSaving} onClick={save}>
-          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Enregistrer
-        </Button>
+      {/* Barre d'enregistrement collante. Le bouton flottait seul, sans fond :
+          il passait par-dessus la liste d'instruments et masquait les
+          dernières lignes. Une barre pleine bordée en haut sépare franchement
+          l'action du contenu qu'elle survole. */}
+      <div className="sticky bottom-0 -mx-4 border-t border-border bg-white/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
+        <div className="flex items-center justify-end gap-3">
+          <span className="text-sm text-subtle">
+            Les modifications ne sont enregistrées qu&apos;ici.
+          </span>
+          <Button size="lg" disabled={isSaving} onClick={save}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Enregistrer
+          </Button>
+        </div>
       </div>
     </div>
   );

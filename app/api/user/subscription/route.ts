@@ -1,16 +1,26 @@
-import { auth } from "@/lib/auth";
-import prisma from "@/lib/prisma";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
+import { auth } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { isSubscriptionActive } from "@/lib/teacher/visibility";
+
+/**
+ * État de l'abonnement de l'utilisateur courant.
+ *
+ * `isActive` vient de `isSubscriptionActive`, l'implémentation unique. Cette
+ * route réinlinait la règle avec une condition de plus — elle exigeait aussi un
+ * `stripeSubscriptionId` — et les deux définitions avaient donc divergé : la
+ * fiche pouvait être publiquement visible pendant que cet écran annonçait
+ * « abonnement inactif » et proposait de souscrire une seconde fois. C'est
+ * exactement la dérive que l'implémentation unique existe pour empêcher.
+ */
 export async function GET() {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
+    const session = await auth.api.getSession({ headers: await headers() });
 
-    if (!session || !session.user) {
-      return new NextResponse("Unauthorized", { status: 401 });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
     // L'abonnement porte sur le prof : c'est lui le client de la plateforme.
@@ -18,7 +28,6 @@ export async function GET() {
     const teacher = await prisma.teacherProfile.findUnique({
       where: { userId: session.user.id },
       select: {
-        stripeCustomerId: true,
         stripeSubscriptionId: true,
         stripePriceId: true,
         stripeCurrentPeriodEnd: true,
@@ -34,19 +43,14 @@ export async function GET() {
       });
     }
 
-    const isActive =
-      teacher.stripeSubscriptionId !== null &&
-      teacher.stripeCurrentPeriodEnd !== null &&
-      teacher.stripeCurrentPeriodEnd.getTime() > Date.now();
-
     return NextResponse.json({
       subscriptionId: teacher.stripeSubscriptionId,
       priceId: teacher.stripePriceId,
       currentPeriodEnd: teacher.stripeCurrentPeriodEnd,
-      isActive,
+      isActive: isSubscriptionActive(teacher.stripeCurrentPeriodEnd, new Date()),
     });
   } catch (error) {
     console.error("[USER_SUBSCRIPTION_ERROR]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
   }
 }
