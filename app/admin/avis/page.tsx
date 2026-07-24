@@ -3,6 +3,7 @@ import {
   type ModerationRow,
 } from "@/components/review-moderation";
 import prisma from "@/lib/prisma";
+import { hasOpenReport, sortForModeration } from "@/lib/reviews/report";
 
 /**
  * Modération des avis.
@@ -16,12 +17,15 @@ import prisma from "@/lib/prisma";
  * posé à la création dans `/api/reviews` — mais suppose de tenir la file, sans
  * quoi la fonctionnalité meurt en silence.
  *
- * Le tri place les avis masqués en tête : ce sont les décisions à réexaminer,
- * et elles seraient sinon noyées sous les avis normaux au fil du temps.
+ * L'ordre vit dans `lib/reviews/report.ts` et y est testé : signalements
+ * ouverts d'abord (seul rang qui attend une décision), puis les avis masqués
+ * (décisions à pouvoir relire), puis le reste. Il ne se fait pas en SQL parce
+ * qu'il dépend d'un rang calculé, pas d'une colonne — et la file est bornée à
+ * 200 lignes, donc trier en mémoire ne coûte rien.
  */
 export default async function AdminReviewsPage() {
   const reviews = await prisma.review.findMany({
-    orderBy: [{ publishedAt: "asc" }, { createdAt: "desc" }],
+    orderBy: { createdAt: "desc" },
     take: 200,
     select: {
       id: true,
@@ -34,6 +38,14 @@ export default async function AdminReviewsPage() {
       student: { select: { user: { select: { name: true } } } },
       teacher: {
         select: { slug: true, user: { select: { name: true } } },
+      },
+      report: {
+        select: {
+          reason: true,
+          detail: true,
+          resolvedAt: true,
+          createdAt: true,
+        },
       },
     },
   });
@@ -51,16 +63,33 @@ export default async function AdminReviewsPage() {
     teacherName: review.teacher.user.name,
     teacherSlug: review.teacher.slug,
     instrumentName: review.booking.instrument.name,
+    report: review.report
+      ? {
+          reason: review.report.reason,
+          detail: review.report.detail,
+          createdAt: review.report.createdAt.toISOString(),
+          resolvedAt: review.report.resolvedAt?.toISOString() ?? null,
+        }
+      : null,
   }));
 
-  const hidden = rows.filter((row) => !row.published).length;
+  const ordered = sortForModeration(rows);
+  const reported = ordered.filter(hasOpenReport).length;
+  const hidden = ordered.filter((row) => !row.published).length;
+
+  // Le signalement passe devant : c'est le seul des deux qui attend une
+  // décision. Le nombre d'avis masqués n'est qu'un état.
+  const summary =
+    reported > 0
+      ? `${reported} signalement${reported > 1 ? "s" : ""} en attente.`
+      : "Aucun signalement en attente.";
 
   return (
     <div className="flex flex-col gap-6">
       <header>
         <h1 className="text-2xl font-semibold">Avis</h1>
         <p className="mt-1 text-sm text-muted">
-          {`Les avis sont publiés dès leur dépôt. ${
+          {`Les avis sont publiés dès leur dépôt. ${summary} ${
             hidden > 0
               ? `${hidden} avis actuellement masqué${hidden > 1 ? "s" : ""}.`
               : "Aucun avis masqué."
@@ -68,7 +97,7 @@ export default async function AdminReviewsPage() {
         </p>
       </header>
 
-      <ReviewModeration initial={rows} />
+      <ReviewModeration initial={ordered} />
     </div>
   );
 }

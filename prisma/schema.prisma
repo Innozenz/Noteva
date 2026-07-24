@@ -216,6 +216,7 @@ model TeacherProfile {
   exceptions  AvailabilityException[]
   bookings    Booking[]
   reviews     Review[]
+  reports     ReviewReport[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -427,11 +428,54 @@ model Review {
   teacherRepl String? // droit de réponse du prof
   publishedAt DateTime? // null = en attente de modération
 
+  report ReviewReport?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([teacherId, publishedAt])
   @@map("review")
+}
+
+// ---------------------------------------------------------------------------
+// Signalement d'un avis par le prof qui le reçoit.
+//
+// Le prof ne peut ni modifier ni supprimer un avis (voir Review) : le signaler
+// est son seul recours quand il est injurieux ou mensonger. Le signalement ne
+// masque rien de lui-même — il remonte l'avis en tête de la file de modération,
+// où un administrateur tranche. Le noté ne s'auto-arbitre jamais.
+//
+// `reviewId` unique : un avis n'a qu'un seul prof destinataire, donc un seul
+// signalement possible. L'unicité en base arbitre deux clics simultanés là où
+// un test applicatif aurait une fenêtre de course, comme partout ailleurs.
+// ---------------------------------------------------------------------------
+
+enum ReportReason {
+  OFFENSIVE // propos injurieux, haineux ou diffamatoires
+  DISHONEST // avis mensonger, sans rapport avec un cours réel
+  PRIVACY // divulgue des informations personnelles
+  SPAM // hors sujet, publicitaire
+  OTHER
+}
+
+model ReviewReport {
+  id       String @id @default(cuid())
+  reviewId String @unique
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  // Le prof destinataire de l'avis, seul habilité à signaler. Stocké pour la
+  // traçabilité même s'il est dérivable de l'avis.
+  teacherId String
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  reason ReportReason
+  detail String? // précision facultative du prof
+
+  resolvedAt DateTime? // null = signalement ouvert ; daté = traité par la modération
+  createdAt  DateTime  @default(now())
+
+  @@index([resolvedAt])
+  @@map("review_report")
 }
 
 // ---------------------------------------------------------------------------

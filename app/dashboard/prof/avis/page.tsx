@@ -46,6 +46,7 @@ export default async function TeacherReviewsPage() {
           select: { startsAt: true, instrument: { select: { name: true } } },
         },
         student: { select: { user: { select: { name: true } } } },
+        report: { select: { resolvedAt: true } },
       },
     }),
     getRatingCounts(teacher.id),
@@ -64,6 +65,15 @@ export default async function TeacherReviewsPage() {
     instrumentName: review.booking.instrument.name,
     lessonAt: review.booking.startsAt.toISOString(),
     publishedAt: (review.publishedAt ?? review.createdAt).toISOString(),
+    // Le prof voit que son signalement a été traité, sans savoir dans quel
+    // sens : l'avis toujours en ligne le lui dit déjà, et le motif de la
+    // décision appartient à la modération.
+    report: review.report
+      ? { resolved: review.report.resolvedAt !== null }
+      : null,
+    // Un avis masqué par la modération n'est plus visible des élèves ; le lui
+    // cacher lui ferait croire qu'il est toujours en ligne.
+    hidden: review.publishedAt === null,
   }));
 
   return (
