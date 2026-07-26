@@ -20,6 +20,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { checkPublishable } from "@/lib/teacher/publishable";
 import { isSubscriptionActive } from "@/lib/teacher/visibility";
+import { givenName } from "@/lib/user/name";
 
 /**
  * Aiguillage de l'espace connecté.
@@ -44,6 +45,7 @@ export default async function DashboardPage() {
     where: { id: session.user.id },
     select: {
       name: true,
+      firstName: true,
       role: true,
       teacherProfile: {
         select: {
@@ -68,7 +70,7 @@ export default async function DashboardPage() {
   // d'élève » au-dessus de cartes vides.
   if (user.role === "ADMIN") redirect("/admin/avis");
 
-  const firstName = user.name?.trim().split(/\s+/)[0];
+  const firstName = givenName(user);
 
   // Le compteur de demandes en attente est la seule donnée qui mérite d'être
   // ici : elle appelle une action, et chaque demande non traitée immobilise un

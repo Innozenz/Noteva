@@ -33,11 +33,29 @@ enum Role {
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
+  // Nom d'affichage, au format attendu par Better Auth : c'est lui qu'écrit
+  // l'inscription (formulaire ou profil Google) et que lit tout le reste de
+  // l'application. Il reste donc la source unique du nom complet.
   name          String?
   emailVerified Boolean  @default(false)
   image         String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  // Prénom et nom saisis séparément.
+  //
+  // Deux champs plutôt qu'un parce que la coupure ne se devine pas : « Jean
+  // Baptiste Moreau » se découpe aussi bien en Jean / Baptiste Moreau qu'en
+  // Jean Baptiste / Moreau, et les avis sont signés du seul prénom. Les
+  // déduire de `name` à la lecture donnait donc un prénom deviné, réécrit à
+  // chaque affichage sans que personne puisse le corriger.
+  //
+  // Nuls tant que l'utilisateur n'a rien saisi : Better Auth ne renseigne que
+  // `name`. `lib/user/name.ts` retombe alors sur le découpage, en un seul
+  // endroit. Toute écriture de ces deux champs **recompose `name`** dans la
+  // même requête — c'est l'invariant qui évite d'avoir deux vérités.
+  firstName String?
+  lastName  String?
 
   // null tant que l'onboarding n'est pas fait : avec Google OAuth l'utilisateur
   // est créé avant d'avoir choisi son rôle. Les routes doivent rediriger vers

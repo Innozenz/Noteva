@@ -1,7 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { CalendarDays, CreditCard, LogOut, Star, UserCog } from "lucide-react";
+import {
+  CalendarDays,
+  CreditCard,
+  LogOut,
+  Settings,
+  Star,
+  UserCog,
+} from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -16,6 +23,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
 
+export type NavUser = {
+  name: string | null;
+  email: string;
+  image: string | null;
+};
+
 /**
  * Menu du compte.
  *
@@ -26,14 +39,27 @@ import { authClient } from "@/lib/auth-client";
  * Les entrées dépendent du rôle. Auparavant elles pointaient toutes deux vers
  * /dashboard, ce qui donnait un menu où « Abonnement » n'ouvrait pas
  * l'abonnement.
+ *
+ * **L'identité vient du layout, pas de `authClient.useSession()`.** Better Auth
+ * garde la session en cache côté client : après un changement de nom sur
+ * /dashboard/compte, l'en-tête continuait d'afficher l'ancien juste au-dessus
+ * du formulaire qui venait de dire « enregistré ». Le layout lit déjà
+ * l'utilisateur pour son contrôle de rôle, donc élargir son `select` ne coûte
+ * aucune requête, et un `router.refresh()` suffit à remettre l'en-tête à jour.
+ * C'est aussi la raison pour laquelle `SiteHeader` est un Server Component :
+ * une identité lue côté client clignote.
+ *
+ * Le composant reste client pour le menu déroulant et la déconnexion.
  */
-export function UserNav({ role }: { role: "TEACHER" | "STUDENT" | "ADMIN" }) {
-  const session = authClient.useSession();
+export function UserNav({
+  role,
+  user,
+}: {
+  role: "TEACHER" | "STUDENT" | "ADMIN";
+  user: NavUser;
+}) {
   const router = useRouter();
 
-  if (!session.data) return null;
-
-  const user = session.data.user;
   const initials = user.name
     ? user.name
         .split(" ")
@@ -43,7 +69,7 @@ export function UserNav({ role }: { role: "TEACHER" | "STUDENT" | "ADMIN" }) {
         .toUpperCase()
     : user.email.charAt(0).toUpperCase();
 
-  const items =
+  const byRole =
     role === "ADMIN"
       ? [{ icon: Star, label: "Modération des avis", href: "/admin/avis" }]
       : role === "TEACHER"
@@ -64,6 +90,14 @@ export function UserNav({ role }: { role: "TEACHER" | "STUDENT" | "ADMIN" }) {
             href: "/dashboard/cours/profil",
           },
         ];
+
+  // « Mon compte » vaut pour les trois rôles : le nom appartient à la personne,
+  // pas à sa fiche prof ni à son profil élève. C'est aussi le seul endroit où
+  // un administrateur peut modifier le sien.
+  const items = [
+    ...byRole,
+    { icon: Settings, label: "Mon compte", href: "/dashboard/compte" },
+  ];
 
   return (
     <DropdownMenu>

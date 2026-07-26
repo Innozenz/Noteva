@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Music4, Search } from "lucide-react";
 
-import { UserNav } from "@/components/user-nav";
+import { UserNav, type NavUser } from "@/components/user-nav";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -13,10 +13,18 @@ import { Button } from "@/components/ui/button";
  * vers les pages publiques, ni de moyen de se déconnecter, et l'espace prof
  * empilait donc deux barres sans identité.
  *
- * Le rôle est passé par le layout, qui l'a déjà lu pour son propre contrôle :
- * le relire ici ferait une requête de plus par page.
+ * Le rôle **et l'identité** sont passés par le layout, qui a déjà lu
+ * l'utilisateur pour son propre contrôle : les relire ici ferait une requête de
+ * plus par page, et les lire côté client les ferait clignoter — puis rester
+ * périmés après un changement de nom, la session étant mise en cache.
  */
-export function AppHeader({ role }: { role: "TEACHER" | "STUDENT" | "ADMIN" }) {
+export function AppHeader({
+  role,
+  user,
+}: {
+  role: "TEACHER" | "STUDENT" | "ADMIN";
+  user: NavUser;
+}) {
   const home =
     role === "TEACHER"
       ? "/dashboard/prof"
@@ -41,7 +49,7 @@ export function AppHeader({ role }: { role: "TEACHER" | "STUDENT" | "ADMIN" }) {
               Trouver un prof
             </Link>
           </Button>
-          <UserNav role={role} />
+          <UserNav role={role} user={user} />
         </nav>
       </div>
     </header>

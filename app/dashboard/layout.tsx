@@ -24,9 +24,12 @@ export default async function DashboardLayout({
     redirect("/");
   }
 
+  // L'identité voyage avec le rôle : l'en-tête l'affiche, et la lire ici plutôt
+  // que côté client évite à la fois une requête et un nom périmé après un
+  // changement sur /dashboard/compte.
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true },
+    select: { role: true, name: true, email: true, image: true },
   });
 
   if (!user?.role) {
@@ -39,7 +42,10 @@ export default async function DashboardLayout({
           « Compte prof » et pointait vers l'espace : ni logo, ni retour vers le
           site public, ni déconnexion, et l'espace prof empilait donc deux
           barres anonymes. */}
-      <AppHeader role={user.role} />
+      <AppHeader
+        role={user.role}
+        user={{ name: user.name, email: user.email, image: user.image }}
+      />
       {children}
     </>
   );

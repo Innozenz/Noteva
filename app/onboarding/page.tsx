@@ -7,6 +7,7 @@ import { Music4 } from "lucide-react";
 import { OnboardingChoice } from "@/components/onboarding-choice";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { givenName } from "@/lib/user/name";
 
 export const metadata: Metadata = {
   title: "Bienvenue sur Noteva",
@@ -29,7 +30,7 @@ export default async function OnboardingPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true, name: true },
+    select: { role: true, name: true, firstName: true },
   });
 
   // Le choix est définitif : repasser ici une fois le rôle posé n'a pas de sens.
@@ -37,7 +38,7 @@ export default async function OnboardingPage() {
     redirect("/dashboard");
   }
 
-  const firstName = user?.name?.trim().split(" ")[0];
+  const firstName = user ? givenName(user) : null;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-4 py-12">

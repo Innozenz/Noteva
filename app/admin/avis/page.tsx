@@ -4,6 +4,7 @@ import {
 } from "@/components/review-moderation";
 import prisma from "@/lib/prisma";
 import { hasOpenReport, sortForModeration } from "@/lib/reviews/report";
+import { givenName } from "@/lib/user/name";
 
 /**
  * Modération des avis.
@@ -35,7 +36,9 @@ export default async function AdminReviewsPage() {
       publishedAt: true,
       createdAt: true,
       booking: { select: { instrument: { select: { name: true } } } },
-      student: { select: { user: { select: { name: true } } } },
+      student: {
+        select: { user: { select: { name: true, firstName: true } } },
+      },
       teacher: {
         select: { slug: true, user: { select: { name: true } } },
       },
@@ -59,7 +62,7 @@ export default async function AdminReviewsPage() {
     createdAt: review.createdAt.toISOString(),
     // Prénom seul, comme partout ailleurs : modérer ne demande pas d'en savoir
     // plus que ce que voient les élèves.
-    studentName: review.student.user.name?.trim().split(/\s+/)[0] ?? null,
+    studentName: givenName(review.student.user),
     teacherName: review.teacher.user.name,
     teacherSlug: review.teacher.slug,
     instrumentName: review.booking.instrument.name,

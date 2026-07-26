@@ -34,7 +34,9 @@ npx prisma db seed         # instrument catalogue (idempotent, upsert by slug)
 
 **Do not use `prisma db push`.** This project is on `prisma migrate` because the schema depends on hand-written SQL that `db push` would silently drop (see *Integrity constraints* below).
 
-**Read every generated migration before applying it.** Prisma does not know about the hand-written SQL and tries to undo it: the `reminders` migration was generated with a `DROP INDEX "instrument_aliases_idx"` on top, which would have killed alias search (« technique vocale » → chant) with no symptom but growing slowness. Generate with `--create-only`, strip what does not belong, then `migrate deploy`.
+**Read every generated migration before applying it.** Prisma does not know about the hand-written SQL and tries to undo it: the `reminders` migration was generated with a `DROP INDEX "instrument_aliases_idx"` on top, which would have killed alias search (« technique vocale » → chant) with no symptom but growing slowness. Generate with `--create-only`, strip what does not belong, then `migrate deploy`. This is not a one-off — `user_first_last_name` was generated with the very same `DROP INDEX` on top. Expect it on **every** migration, and verify the index is still there afterwards (`SELECT indexname FROM pg_indexes WHERE tablename='instrument'`).
+
+**Restart the dev server after `prisma generate`.** The running server keeps the old client in its module graph, so a new column type-checks (`tsc` reads the freshly generated types from disk) while the page fails at runtime with "Unknown field … for select statement". The error names the schema, not the cause, which sends you looking at the migration you just verified.
 
 Tests cover `lib/availability` only, and that's deliberate: it's the one piece of logic whose bugs are invisible by inspection (see below). Don't feel obliged to backfill tests for CRUD routes.
 
@@ -137,6 +139,10 @@ Two silent failures were fixed along the way: deleting a time-off entry did noth
 `app/dashboard/layout.tsx` renders `AppHeader` — logo, link to the public search, account menu. It replaced an unstyled band reading "Compte prof" that carried no identity, no way back to the site and no sign-out; the teacher area then stacked a second bar under it, so the app looked like two products glued together. `UserNav` is now **the only** place to sign out: the red button on the old demo dashboard went with it, and an app you cannot leave is not an app.
 
 Anything new behind the login wall goes under this layout. Do not add a second header.
+
+**`UserNav` takes its identity from the layout, not from `authClient.useSession()`.** Better Auth caches the session client-side, so after a name change the header kept showing the old one directly above a form that had just said "enregistré" — the app contradicting itself. The layout already reads the user for its role gate, so widening that `select` costs no query, and a `router.refresh()` now updates the header. Same reasoning that makes `SiteHeader` a Server Component. `UserNav` stays a Client Component for the dropdown and sign-out only. Note that `authClient.getSession({ query: { disableCookieCache: true } })` does **not** fix this — it does not feed the `useSession` store.
+
+`/dashboard/compte` edits the person's identity (given name, surname) and is **shared by all three roles**, reached from `UserNav`. It sits under `/dashboard`, so the layout's role gate already covers it and `middleware.ts` needs no change — `protectedRoutes` matches on `startsWith("/dashboard")` and the matcher is `/dashboard/:path*`. Putting these fields inside the teacher and student profile screens instead would have meant writing them twice, with two routes updating one column: a name belongs to the person, not to either profile.
 
 `TeacherTabs` is a Client Component for one reason — marking the current tab needs `usePathname`. Its tab list lives **in the client component**, not in the layout: Lucide icons are components, and a component cannot cross the server→client boundary ("Only plain objects can be passed to Client Components"). The layout passes `pendingCount`, a number.
 
@@ -254,7 +260,13 @@ The instrument chips only list instruments that are actually taught, so the bloc
 
 ### Domain model (Prisma)
 
-`User`/`Session`/`Account`/`Verification` match Better Auth's expected shape and are `@@map`ped to lowercase tables — don't rename fields or mappings without adjusting the adapter config in `lib/auth.ts`. Everything else is Noteva's domain. `lib/prisma.ts` exports a singleton `PrismaClient` cached on `globalThis` outside production to survive dev hot-reload.
+`User`/`Session`/`Account`/`Verification` match Better Auth's expected shape and are `@@map`ped to lowercase tables — don't rename fields or mappings without adjusting the adapter config in `lib/auth.ts`. Everything else is Noteva's domain.
+
+**`User` carries three name columns and one invariant.** `name` is Better Auth's display name — signup and Google OAuth write it, and every read site in the app uses it. `firstName`/`lastName` are what the user actually typed, and **every write of the pair recomposes `name` in the same statement** (`PATCH /api/user/identity`). That is what let the pair be added without touching a single read site: there is never a second truth about the full name, and nothing to resynchronise, so nothing can drift.
+
+Two fields rather than one because the split cannot be guessed. "Jean Baptiste Moreau" divides as plausibly into Jean / Baptiste Moreau as into Jean Baptiste / Moreau, and "Dupont Jean" — surname first, which plenty of people type — yields the wrong given name. That mattered because **reviews are signed with the given name alone**: derived at read time it was re-guessed on every render, with no way for the person concerned to correct it. `lib/user/name.ts` is the single implementation (`fullName`, `givenName`, `composeName`, `splitFullName`), and it replaced **four** copies of the same `split(/\s+/)[0]` heuristic — four copies being a guarantee that they would eventually disagree. The split survives only as the seed for accounts that have never filled the pair in, since Better Auth sets `name` alone.
+
+Email is deliberately **not** editable there: changing it requires re-verifying the address, and a field writing the column directly would be an account-takeover path. Better Auth has its own flow for it. `lib/prisma.ts` exports a singleton `PrismaClient` cached on `globalThis` outside production to survive dev hot-reload.
 
 **Two conventions hold the whole booking model together. Read them before touching availability or bookings:**
 

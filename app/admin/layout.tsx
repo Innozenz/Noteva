@@ -4,6 +4,7 @@ import { ShieldCheck, Star } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
 import { requireAdmin } from "@/lib/admin/session";
+import prisma from "@/lib/prisma";
 
 /**
  * Espace d'administration.
@@ -25,9 +26,16 @@ export default async function AdminLayout({
 
   if (!admin.ok) notFound();
 
+  // `requireAdmin` ne rend que l'identifiant — il sert aussi aux routes d'API,
+  // qui n'ont que faire d'un nom d'affichage.
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: admin.userId },
+    select: { name: true, email: true, image: true },
+  });
+
   return (
     <div className="min-h-screen bg-surface">
-      <AppHeader role="ADMIN" />
+      <AppHeader role="ADMIN" user={user} />
 
       <header className="border-b border-border bg-white">
         <nav className="mx-auto flex max-w-4xl items-center gap-1 px-4">

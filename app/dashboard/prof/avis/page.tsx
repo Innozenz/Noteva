@@ -10,6 +10,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getRatingCounts } from "@/lib/reviews/queries";
 import { formatAverage, summarizeFromCounts } from "@/lib/reviews/summary";
+import { givenName } from "@/lib/user/name";
 
 /**
  * Avis reçus par le prof.
@@ -45,7 +46,9 @@ export default async function TeacherReviewsPage() {
         booking: {
           select: { startsAt: true, instrument: { select: { name: true } } },
         },
-        student: { select: { user: { select: { name: true } } } },
+        student: {
+          select: { user: { select: { name: true, firstName: true } } },
+        },
         report: { select: { resolvedAt: true } },
       },
     }),
@@ -61,7 +64,7 @@ export default async function TeacherReviewsPage() {
     reply: review.teacherRepl,
     // Prénom seul, comme sur la fiche publique : le prof ne voit pas plus que
     // ce que voient ses futurs élèves.
-    studentName: review.student.user.name?.trim().split(/\s+/)[0] ?? null,
+    studentName: givenName(review.student.user),
     instrumentName: review.booking.instrument.name,
     lessonAt: review.booking.startsAt.toISOString(),
     publishedAt: (review.publishedAt ?? review.createdAt).toISOString(),
