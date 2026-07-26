@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Moon,
+  Sun,
+  Sunrise,
+} from "lucide-react";
 
 import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
@@ -14,6 +22,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  groupSlotsByPeriod,
+  PERIOD_LABELS,
+  type DayPeriod,
+} from "@/lib/bookings/day-period";
 import { postJson, type Failure } from "@/lib/http/failure";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +34,13 @@ type Slot = { startsAt: string; endsAt: string };
 type Instrument = { slug: string; name: string };
 
 const DAY_MS = 86_400_000;
+
+/** Le repère visuel de la plage : lu avant le mot, et suffisant au rappel. */
+const PERIOD_ICONS: Record<DayPeriod, typeof Sun> = {
+  MORNING: Sunrise,
+  AFTERNOON: Sun,
+  EVENING: Moon,
+};
 
 /**
  * Sélection d'un créneau et envoi d'une demande.
@@ -141,7 +161,11 @@ export function BookingWidget({
     );
   }
 
-  const byDay = groupByDay(slots ?? [], timezone);
+  const byDay = groupSlotsByPeriod(
+    slots ?? [],
+    (slot) => new Date(slot.startsAt),
+    timezone
+  );
 
   return (
     <Card>
@@ -196,27 +220,52 @@ export function BookingWidget({
             Aucun créneau disponible cette semaine.
           </p>
         ) : (
-          <div className="flex flex-col gap-3">
-            {byDay.map(([day, daySlots]) => (
-              <div key={day}>
-                <p className="mb-2 text-sm font-medium capitalize">{day}</p>
-                <div className="flex flex-wrap gap-2">
-                  {daySlots.map((slot) => (
-                    <button
-                      key={slot.startsAt}
-                      type="button"
-                      aria-pressed={selected === slot.startsAt}
-                      onClick={() => setSelected(slot.startsAt)}
-                      className={cn(
- "rounded-md border px-3 py-1.5 text-sm transition-colors",
-                        selected === slot.startsAt
-                          ? "border-primary bg-primary text-white"
-                          : "border-border hover:border-primary"
-                      )}
-                    >
-                      {formatHour(slot.startsAt, timezone)}
-                    </button>
-                  ))}
+          <div className="flex flex-col gap-5">
+            {byDay.map((day) => (
+              <div key={day.date}>
+                {/* `first-letter` et non `capitalize` : `capitalize` met une
+                    majuscule à chaque mot et écrivait « Lundi 3 Août », alors
+                    qu'en français le mois reste en minuscule. */}
+                <p className="mb-2.5 text-sm font-medium first-letter:uppercase">
+                  {formatDay(day.periods[0].slots[0].startsAt, timezone)}
+                </p>
+
+                <div className="flex flex-col gap-3">
+                  {day.periods.map(({ period, slots: periodSlots }) => {
+                    const Icon = PERIOD_ICONS[period];
+
+                    return (
+                      // Le titre de plage est rendu même quand la journée n'en
+                      // compte qu'une : « Matin » seul dit que ce prof
+                      // n'enseigne que le matin ce jour-là, ce qui est
+                      // précisément l'information cherchée.
+                      <div key={period}>
+                        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-subtle">
+                          <Icon className="h-3.5 w-3.5" />
+                          {PERIOD_LABELS[period]}
+                        </p>
+
+                        <div className="flex flex-wrap gap-2">
+                          {periodSlots.map((slot) => (
+                            <button
+                              key={slot.startsAt}
+                              type="button"
+                              aria-pressed={selected === slot.startsAt}
+                              onClick={() => setSelected(slot.startsAt)}
+                              className={cn(
+                                "rounded-md border px-3 py-1.5 text-sm transition-colors",
+                                selected === slot.startsAt
+                                  ? "border-primary bg-primary text-white"
+                                  : "border-border hover:border-primary"
+                              )}
+                            >
+                              {formatHour(slot.startsAt, timezone)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -291,21 +340,18 @@ function startOfWeek(date: Date): Date {
   return monday;
 }
 
-function groupByDay(slots: Slot[], timezone: string): [string, Slot[]][] {
-  const map = new Map<string, Slot[]>();
-
-  for (const slot of slots) {
-    const label = new Date(slot.startsAt).toLocaleDateString("fr-FR", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      timeZone: timezone,
-    });
-
-    map.set(label, [...(map.get(label) ?? []), slot]);
-  }
-
-  return [...map.entries()];
+/**
+ * Étiquette du jour, formatée depuis l'**instant** d'un créneau et non depuis la
+ * clé civile du regroupement : celle-ci est déjà exprimée dans le fuseau du
+ * prof, la repasser dans ce fuseau la décalerait d'un jour.
+ */
+function formatDay(iso: string, timezone: string): string {
+  return new Date(iso).toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: timezone,
+  });
 }
 
 function formatHour(iso: string, timezone: string): string {

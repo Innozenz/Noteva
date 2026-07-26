@@ -225,6 +225,10 @@ Staggering a scroll reveal shifts the **range**, not the delay: on a view timeli
 
 `/profs/[slug]` is the reference implementation: server-rendered profile with `generateMetadata`, canonical, OpenGraph and `Service` JSON-LD, plus one client island (`BookingWidget`) for slot selection. Slots can't be prerendered — they change on every booking — so the island fetches them on mount while the rest stays crawlable.
 
+**Slots are grouped by day and then by period** — matin / après-midi / soir, cut at 12:00 and 18:00 — because a student shops for a *slot of the day* ("after work", "before school"), not for an hour, and twenty chips in a row make them read the whole list to find out. `lib/bookings/day-period.ts` is the pure, tested module behind it, and the reason it is a module rather than four lines in the widget is that its bug is invisible to whoever writes it: the period must be read in the **teacher's** timezone via `localMinutesInZone`, so a student in Montréal sees "Soir" on the slot the teacher calls evening, and a DST day doesn't file 12:05 under the morning. A developer in Paris testing a Paris teacher would never see either. An empty period is not rendered — an "Après-midi" heading followed by nothing makes a morning-only teacher look booked solid — but a period heading *is* shown even when it's the day's only one, since "Matin" alone is exactly the information being looked for.
+
+French date labels use `first-letter:uppercase`, never `capitalize`: `capitalize` uppercases every word and wrote « Lundi 3 Août », where French keeps the month lowercase.
+
 **It is rendered on demand, with no cache, deliberately.** Visibility depends on subscription expiry, so a cached page would stay online after it lapses; recomputing per request is the only way a profile disappears exactly when it should. Note that `export const revalidate` alone does **not** make a dynamic route ISR — without `generateStaticParams` it stays `ƒ` (server-rendered on demand), which the build output will tell you. Moving to ISR would mean accepting a staleness window on visibility and driving invalidation from the publish and subscription routes; the `revalidatePath` calls already sitting in `/api/teacher/profile*` are there for that day and are inert until then.
 
 `getPublicTeacher` is wrapped in React `cache()` because `generateMetadata` and the page component both need the profile — without it the query runs twice per render.
@@ -420,10 +424,6 @@ Publishing and being visible are **separate**: a teacher without a subscription 
 
 Typography: Geist for body, **Bricolage Grotesque for `h1`–`h3` only**, wired through `--font-sans-custom` / `--font-display`. Note the boilerplate had a bug worth not reintroducing — `globals.css` hardcoded `font-family: Arial` on `body`, silently overriding the font `next/font` had loaded.
 
-Two Tailwind 4 traps this codebase already hit:
-
-- **A bare custom property in an arbitrary value is invalid.** `rounded-` followed by `[--radius]` compiles to `border-radius: --radius` and silently yields square corners; wrap it in `var()`.
-- **Never put a comma-bearing value in an arbitrary class.** A `bg-` arbitrary value holding a `radial-gradient(...)` with commas makes the scanner split at the commas and invent a bogus utility from the fragment, which then emits unparseable CSS. Use an inline `style` for gradients.
 **Instrument families own the colour** (`--family-*`, eight pairs of tokens; `lib/instruments/family.ts` maps them to labels and class strings). This generalises the rule the agenda arrived at the hard way — *neutrals belong to the grid, hues belong to the content* — into the one rule the whole palette follows: **a hue names something.** Family tokens name a family, status tokens (`success`/`warning`/`danger`) name a state, greys are layout, and pink `--accent` is editorial emphasis. Nothing may take a hue merely because it looks better in colour; that is what makes the colours readable as information rather than decoration.
 
 Two consequences worth keeping:
@@ -431,6 +431,10 @@ Two consequences worth keeping:
 - The eight hues are **spaced around the wheel before being chosen by analogy**. They have to be told apart first — "brass is golden" only settles which of the remaining slots it takes. `THEORY` is deliberately neutral graphite: solfège is the page itself.
 - The class strings in `FAMILY_STYLES` are written **out in full and literally**. Tailwind scans source as text, so a class assembled at runtime from a family name is never generated, and the colour vanishes in production with no error and no build failure.
 
+Two Tailwind 4 traps this codebase already hit:
+
+- **A bare custom property in an arbitrary value is invalid.** `rounded-` followed by `[--radius]` compiles to `border-radius: --radius` and silently yields square corners; wrap it in `var()`.
+- **Never put a comma-bearing value in an arbitrary class.** A `bg-` arbitrary value holding a `radial-gradient(...)` with commas makes the scanner split at the commas and invent a bogus utility from the fragment, which then emits unparseable CSS. Use an inline `style` for gradients.
 - **Tailwind scans this file too.** Writing one of those broken class names verbatim in any non-ignored file — source, comment, or Markdown — is enough for the scanner to pick it up and regenerate the invalid rule. That is why the examples above are described rather than quoted.
 - Native checkbox/radio tint uses the hand-written `.accent-primary` class in `globals.css` for the same reason.
 
