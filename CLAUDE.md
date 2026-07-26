@@ -200,6 +200,29 @@ Search discovery is how a marketplace lives, so the public surface needs Server 
 
 `app/page.tsx` is the landing page and is server-rendered. It lists **only instruments and cities that actually have visible teachers**, queried live, each linking to `/profs?instrument=…` / `?ville=…`. That's what makes those searches crawlable at all, and it's why they're the combinations `isIndexableSearch` allows; linking to empty searches would waste crawl budget and disappoint visitors. `SiteHeader` (a Server Component, so no session flicker) carries navigation on all three public pages.
 
+**Its visual direction is editorial — a stave, oversized display type, hairlines instead of cards.** The five-line stave is a `repeating-linear-gradient` in an inline `style` (commas, see the Tailwind trap below) sized to `4 × gap + 1` so it renders exactly five lines and not six; nothing is loaded, nothing is animated, and it prints. Three things about it are load-bearing rather than cosmetic:
+
+- **The stave carries a real engraved phrase** — clef, 4/4, four bars of beamed quavers, bar lines — and **every notehead is a family actually taught**, in that family's colour. `lib/instruments/score.ts` lays it out as a pure module (fractions of width, half-spaces of pitch; the page multiplies by its own geometry) and is unit-tested. The phrase fills by *repeating* the taught families and transposing each bar, which is what makes it a phrase rather than a frieze; a platform teaching only guitar therefore plays twelve notes of one colour — many notes, one family, which is exactly the truth. Inventing families to pad the motif would make the répertoire below stop being its legend, and the stave would revert to decoration.
+
+  Engraving rules worth keeping, because breaking them is what makes a fake score look fake: stem direction is decided **per bar** (a beam cannot join an up-stem to a down-stem), the beam sits past the outermost notehead so it never slices one, and pitches are clamped to the stave so no note needs a ledger line. The clef is deliberately **monoline** — a real one is a filled shape with modulated stroke, invisible at this size and out of step with the hairlines around it — and is drawn in the stave's own coordinate space, so its spiral lands on the G line without hand-tuning.
+
+  A down-stem beam reaches six half-spaces below the bottom line, i.e. 41px outside the stave's own box. The clearance under it is set from that number, not by eye.
+- **The instrument list is grouped by family**, which is what gives the colour a referent: the reader learns the mapping walking down the page, with no legend.
+- The counts in the eyebrow (`N professeurs · M instruments · V villes`) come from the same queries, so the instrument query's `take` is set **above the catalogue size** — a truncated query would silently print a wrong number.
+
+Sizes use `clamp()` in an inline `style` for the same comma reason. The gap under the `h1` is generous on purpose: the leg of the *Q* in MUSIQUE descends far enough to touch the line beneath it — and where a title line is revealed from behind an `overflow: hidden` mask, that mask needs a `padding-bottom` (cancelled by a negative margin) or it slices the *Q* off.
+
+**The motion is a sequencer, and it is one idea rather than a pile of effects.** A playhead sweeps the stave on a loop and each note ignites as it passes. Everything lives in the *Mouvement* block of `globals.css`; `app/page.tsx` only supplies positions and delays. Four properties hold it up:
+
+- **Sync is a negative `animation-delay`, not a timer.** Playhead and notes share one `--sequence` duration declared on the stave; a note at fraction *p* of the width starts its cycle at `-(1 - p) × duration`, which puts its hit exactly under the playhead. Nothing counts, nothing polls, and the two animations cannot drift because they read the same variable.
+- **The playhead translates a full-width container by 100%**, so it never animates `left` and never needs to know the stave's pixel width. It lives inside the *music* area rather than spanning the whole stave — it reads the notes, not the clef — which is also what keeps `buildScore`'s fractions and the sweep in one coordinate space.
+- **Tailwind 4 drives `rotate`, `scale` and `translate` as separate properties.** The note keyframes therefore animate `scale` alone — written as `transform: scale(…)` they would clobber the utility's `rotate` and the notes would straighten as they fire.
+- **Every animation sits inside `prefers-reduced-motion: no-preference`, so the page's default state is its final state.** Nothing is hidden by a static rule. That is also why scroll reveals use `animation-timeline: view()` inside an `@supports`: where the property is missing the whole rule is dropped and the content is simply there. Reveal-on-scroll implemented the other way round — hide in CSS, reveal in JS — leaves the page blank for anything that doesn't run the script, which on a page that exists for crawlers is the one unacceptable failure. A reduced-motion reader also loses the playhead entirely (`display: none`): frozen, it is just a line lying across the stave at random.
+
+Staggering a scroll reveal shifts the **range**, not the delay: on a view timeline progress follows position, so `animation-delay` means nothing there.
+
+`components/spotlight.tsx` is the page's **only client island**, because no stylesheet knows where the pointer is. It renders no text of its own — the content passes through as `children` and stays server-rendered, which is how a public page gains interaction without losing what makes it indexable. It writes CSS variables directly to the node instead of going through React state, and does so **once per frame**: a `getBoundingClientRect` per `pointermove` forces a layout pass far more often than the screen refreshes, and measuring inside the frame (rather than caching the rect) also keeps the light aligned when the page scrolls under a still cursor.
+
 `/profs/[slug]` is the reference implementation: server-rendered profile with `generateMetadata`, canonical, OpenGraph and `Service` JSON-LD, plus one client island (`BookingWidget`) for slot selection. Slots can't be prerendered — they change on every booking — so the island fetches them on mount while the rest stays crawlable.
 
 **It is rendered on demand, with no cache, deliberately.** Visibility depends on subscription expiry, so a cached page would stay online after it lapses; recomputing per request is the only way a profile disappears exactly when it should. Note that `export const revalidate` alone does **not** make a dynamic route ISR — without `generateStaticParams` it stays `ƒ` (server-rendered on demand), which the build output will tell you. Moving to ISR would mean accepting a staleness window on visibility and driving invalidation from the publish and subscription routes; the `revalidatePath` calls already sitting in `/api/teacher/profile*` are there for that day and are inert until then.
@@ -401,6 +424,13 @@ Two Tailwind 4 traps this codebase already hit:
 
 - **A bare custom property in an arbitrary value is invalid.** `rounded-` followed by `[--radius]` compiles to `border-radius: --radius` and silently yields square corners; wrap it in `var()`.
 - **Never put a comma-bearing value in an arbitrary class.** A `bg-` arbitrary value holding a `radial-gradient(...)` with commas makes the scanner split at the commas and invent a bogus utility from the fragment, which then emits unparseable CSS. Use an inline `style` for gradients.
+**Instrument families own the colour** (`--family-*`, eight pairs of tokens; `lib/instruments/family.ts` maps them to labels and class strings). This generalises the rule the agenda arrived at the hard way — *neutrals belong to the grid, hues belong to the content* — into the one rule the whole palette follows: **a hue names something.** Family tokens name a family, status tokens (`success`/`warning`/`danger`) name a state, greys are layout, and pink `--accent` is editorial emphasis. Nothing may take a hue merely because it looks better in colour; that is what makes the colours readable as information rather than decoration.
+
+Two consequences worth keeping:
+
+- The eight hues are **spaced around the wheel before being chosen by analogy**. They have to be told apart first — "brass is golden" only settles which of the remaining slots it takes. `THEORY` is deliberately neutral graphite: solfège is the page itself.
+- The class strings in `FAMILY_STYLES` are written **out in full and literally**. Tailwind scans source as text, so a class assembled at runtime from a family name is never generated, and the colour vanishes in production with no error and no build failure.
+
 - **Tailwind scans this file too.** Writing one of those broken class names verbatim in any non-ignored file — source, comment, or Markdown — is enough for the scanner to pick it up and regenerate the invalid rule. That is why the examples above are described rather than quoted.
 - Native checkbox/radio tint uses the hand-written `.accent-primary` class in `globals.css` for the same reason.
 
@@ -410,7 +440,7 @@ Two Tailwind 4 traps this codebase already hit:
 
 `components/ui/*` are shadcn/ui-style primitives (Radix + `class-variance-authority` + `tailwind-merge`, composed via `cn()` in `lib/utils.ts`). Extend these rather than adding another component library. They have been **rewritten onto the tokens** and carry non-stock variants — `success` and `accent` on `Button`, `success`/`warning`/`accent` on `Badge` — so read the `cva` config before assuming upstream shadcn behaviour. Badges are soft-tinted on purpose: they annotate, they don't compete with buttons.
 
-The pink `--accent` is deliberately **rare** — currently the hero underline alone. Spending it everywhere would make it stop meaning anything.
+The pink `--accent` is deliberately **rare** — currently the hero underline alone, even now that the landing page is in colour. It is the one hue that names no category, so it only means something while it stays scarce.
 
 ### Path aliases
 

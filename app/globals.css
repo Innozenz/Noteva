@@ -46,6 +46,35 @@
   --danger: #dc2626;
   --danger-soft: #fef2f2;
 
+  /**
+   * Familles d'instruments.
+   *
+   * Une teinte par famille, et la teinte ne sert qu'à ça : elle nomme une
+   * famille, jamais un état ni une décoration. Les huit valeurs sont espacées
+   * sur la roue plutôt que choisies par analogie — il faut d'abord les
+   * distinguer les unes des autres ; « le cuivre est doré » ne vient qu'après.
+   *
+   * La théorie est volontairement neutre : le solfège, c'est la page elle-même.
+   *
+   * Toutes en 600–700 : lisibles sur blanc, et sur leur propre fond clair.
+   */
+  --family-voice: #be185d;
+  --family-voice-soft: #fdf2f8;
+  --family-keyboard: #4f46e5;
+  --family-keyboard-soft: #eef2ff;
+  --family-strings: #c2410c;
+  --family-strings-soft: #fff7ed;
+  --family-winds: #0f766e;
+  --family-winds-soft: #f0fdfa;
+  --family-brass: #a16207;
+  --family-brass-soft: #fefce8;
+  --family-percussion: #15803d;
+  --family-percussion-soft: #f0fdf4;
+  --family-electronic: #0369a1;
+  --family-electronic-soft: #f0f9ff;
+  --family-theory: #52525b;
+  --family-theory-soft: #f4f4f5;
+
   --radius: 0.75rem;
   --radius-sm: 0.5rem;
   --radius-lg: 1.25rem;
@@ -83,6 +112,23 @@
   --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+
+  --color-family-voice: var(--family-voice);
+  --color-family-voice-soft: var(--family-voice-soft);
+  --color-family-keyboard: var(--family-keyboard);
+  --color-family-keyboard-soft: var(--family-keyboard-soft);
+  --color-family-strings: var(--family-strings);
+  --color-family-strings-soft: var(--family-strings-soft);
+  --color-family-winds: var(--family-winds);
+  --color-family-winds-soft: var(--family-winds-soft);
+  --color-family-brass: var(--family-brass);
+  --color-family-brass-soft: var(--family-brass-soft);
+  --color-family-percussion: var(--family-percussion);
+  --color-family-percussion-soft: var(--family-percussion-soft);
+  --color-family-electronic: var(--family-electronic);
+  --color-family-electronic-soft: var(--family-electronic-soft);
+  --color-family-theory: var(--family-theory);
+  --color-family-theory-soft: var(--family-theory-soft);
 
   --font-sans: var(--font-sans-custom);
   --font-display: var(--font-display);
@@ -138,5 +184,172 @@ h3 {
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong) transparent;
+  }
+}
+
+/* ==========================================================================
+ * Mouvement
+ *
+ * Une seule figure anime la page d'accueil : le **séquenceur**. Une tête de
+ * lecture balaie la portée, et chaque note s'allume exactement à son passage.
+ * Le reste (entrées, dérive des aurores) est du décor tranquille autour.
+ *
+ * Trois règles tiennent cette couche :
+ *
+ * 1. **Tout est sous `prefers-reduced-motion: no-preference`.** L'état par
+ *    défaut de la page est donc l'état final : si le mouvement est refusé, ou
+ *    si le CSS n'est pas appliqué, rien n'est caché. Une animation d'entrée qui
+ *    laisse le contenu invisible quand elle ne tourne pas, c'est une page
+ *    blanche, pas une page sobre.
+ * 2. **On anime `opacity`, `transform`, `scale`, `filter` — jamais la mise en
+ *    page.** La seule exception serait la tête de lecture, et elle est justement
+ *    écrite comme une translation d'un conteneur pleine largeur pour ne pas
+ *    animer `left`.
+ * 3. **Tailwind 4 pilote `rotate`, `scale` et `translate` comme propriétés
+ *    séparées**, pas via `transform`. Les images-clés ci-dessous animent donc
+ *    `scale` seul : écrit en `transform: scale(...)`, l'animation écraserait le
+ *    `rotate` de l'utilitaire et les notes se redresseraient en tournant.
+ * ========================================================================== */
+
+/* Tête de lecture. Le conteneur fait la largeur de la portée, donc translater
+   de 100 % le déplace d'exactement une portée — sans jamais lire la mise en
+   page ni connaître la largeur en pixels. */
+@keyframes noteva-playhead {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Frappe de la note. Le décalage négatif appliqué en style inline place cet
+   instant pile sous la tête de lecture : voir `app/page.tsx`.
+
+   Le grossissement reste **discret**. Une tête qui double de taille ne se lit
+   plus comme une note qu'on joue mais comme un défaut d'affichage, et douze
+   d'entre elles font clignoter la portée. La détente est adoucie sur place :
+   l'animation entière est `linear` — il le faut pour que la tête de lecture
+   balaie à vitesse constante —, donc c'est cette image-clé qui porte sa propre
+   courbe. */
+@keyframes noteva-note-hit {
+  0% {
+    scale: 1.45;
+    box-shadow: 0 0 11px 2px currentColor;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  22% {
+    scale: 1;
+    box-shadow: 0 0 0 0 transparent;
+  }
+  100% {
+    scale: 1;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* Entrée : monte, se dévoile, se met au net. */
+@keyframes noteva-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+/* Ligne de titre qui monte de derrière son masque. */
+@keyframes noteva-unmask {
+  from {
+    transform: translateY(115%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Aurores. Deux nappes, deux durées premières entre elles : le motif ne se
+   répète jamais à l'identique, donc l'œil n'y trouve pas de boucle. */
+@keyframes noteva-drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, 3%, 0) scale(1.14);
+  }
+}
+
+@keyframes noteva-drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.1);
+  }
+  50% {
+    transform: translate3d(-5%, -4%, 0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .m-rise {
+    animation: noteva-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .m-unmask {
+    animation: noteva-unmask 1.05s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* `--sequence` est porté par la portée : la tête et ses notes partagent
+     forcément la même durée, donc elles ne peuvent pas se désynchroniser. */
+  .m-playhead {
+    animation: noteva-playhead var(--sequence) linear infinite;
+  }
+
+  .m-note {
+    animation: noteva-note-hit var(--sequence) linear infinite;
+  }
+
+  .m-drift-a {
+    animation: noteva-drift-a 23s ease-in-out infinite;
+  }
+
+  .m-drift-b {
+    animation: noteva-drift-b 31s ease-in-out infinite;
+  }
+}
+
+/* Sans mouvement, une tête de lecture immobile n'est plus qu'un trait posé au
+   hasard sur la portée : elle disparaît. */
+@media (prefers-reduced-motion: reduce) {
+  .m-playhead {
+    display: none;
+  }
+}
+
+/**
+ * Révélation au défilement, sans une ligne de JavaScript.
+ *
+ * `animation-timeline: view()` lie l'avancement de l'animation à la traversée
+ * du bloc dans la fenêtre. Le `@supports` n'est pas une politesse : là où la
+ * propriété manque, la règle entière est ignorée et le contenu reste
+ * simplement visible. C'est le seul ordre acceptable — l'inverse (cacher, puis
+ * révéler en JS) rend la page vide pour qui n'exécute pas le script.
+ *
+ * Un bloc déjà à l'écran au chargement est au-delà de `entry 100 %`, donc
+ * `both` le laisse à son état final : pas de clignotement au-dessus de la
+ * ligne de flottaison.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .m-reveal {
+      animation: noteva-rise linear both;
+      animation-timeline: view();
+      animation-range: entry var(--reveal-from, 0%) entry
+        var(--reveal-to, 65%);
+    }
   }
 }
