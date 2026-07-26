@@ -1,5 +1,3 @@
-import { TZDate } from "@date-fns/tz";
-
 import { clamp, normalize, subtract, type Interval } from "./intervals";
 import type {
   ExceptionInput,
@@ -7,6 +5,13 @@ import type {
   Slot,
   SlotEngineInput,
 } from "./types";
+import {
+  civilDateKey,
+  civilDateKeyInZone,
+  isoWeekday,
+  MINUTES_PER_DAY,
+  wallClockToInstant,
+} from "./zone";
 
 export * from "./types";
 export { type Interval } from "./intervals";
@@ -14,7 +19,6 @@ export { type Interval } from "./intervals";
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
-const MINUTES_PER_DAY = 1440;
 
 /**
  * Calcule les créneaux réservables d'un prof sur une fenêtre donnée.
@@ -67,7 +71,7 @@ export function computeAvailableSlots(input: SlotEngineInput): Slot[] {
   const open: Interval[] = [];
 
   for (const dayKey of enumerateLocalDays(range.from, range.to, timezone)) {
-    for (const local of openMinutesForDay(dayKey, rules, exceptions)) {
+    for (const local of dayOpenings(dayKey, rules, exceptions).open) {
       open.push({
         start: wallClockToInstant(dayKey, local.start, timezone),
         end: wallClockToInstant(dayKey, local.end, timezone),
@@ -127,15 +131,30 @@ export function computeAvailableSlots(input: SlotEngineInput): Slot[] {
   return slots.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 }
 
+export type DayOpenings = {
+  /** Ce qui est réellement ouvert ce jour-là. */
+  open: Interval[];
+  /**
+   * Ce qu'une exception BLOCKED a retiré d'une plage par ailleurs ouverte.
+   *
+   * Le moteur de créneaux n'en a pas l'usage — il ne retient que le libre. Mais
+   * l'agenda du prof, lui, doit distinguer « fermé exprès » de « jamais
+   * ouvert » : un congé posé sur un mardi travaillé doit se voir, sinon la
+   * journée ressemble à un oubli de saisie. Un BLOCKED sur un jour sans règle
+   * ne rend donc rien : il n'a rien retiré.
+   */
+  closed: Interval[];
+};
+
 /**
  * Ouvertures d'une journée civile, en minutes depuis minuit local :
  * (règles hebdo ∪ exceptions EXTRA) − exceptions BLOCKED.
  */
-function openMinutesForDay(
+export function dayOpenings(
   dayKey: string,
   rules: RuleInput[],
   exceptions: ExceptionInput[]
-): Interval[] {
+): DayOpenings {
   const weekday = isoWeekday(dayKey);
   const todays = exceptions.filter((e) => civilDateKey(e.date) === dayKey);
 
@@ -157,38 +176,16 @@ function openMinutesForDay(
         : { start: e.startMinute, end: e.endMinute }
     );
 
-  return subtract(normalize([...base, ...extra]), blocked);
+  const declared = normalize([...base, ...extra]);
+  const open = subtract(declared, blocked);
+
+  return { open, closed: subtract(declared, open) };
 }
 
 function isRuleActiveOn(rule: RuleInput, dayKey: string): boolean {
   if (rule.validFrom && dayKey < civilDateKey(rule.validFrom)) return false;
   if (rule.validUntil && dayKey > civilDateKey(rule.validUntil)) return false;
   return true;
-}
-
-/**
- * Instant correspondant à une heure murale dans un fuseau donné.
- *
- * `minute` peut valoir 1440 : minuit le lendemain, ce que le constructeur
- * normalise comme le fait `Date`.
- */
-function wallClockToInstant(
-  dayKey: string,
-  minute: number,
-  timezone: string
-): number {
-  const [year, month, day] = dayKey.split("-").map(Number);
-
-  return new TZDate(
-    year,
-    month - 1,
-    day,
-    Math.floor(minute / 60),
-    minute % 60,
-    0,
-    0,
-    timezone
-  ).getTime();
 }
 
 /**
@@ -210,34 +207,4 @@ function enumerateLocalDays(from: Date, to: Date, timezone: string): string[] {
   keys.add(civilDateKeyInZone(new Date(end), timezone));
 
   return [...keys].sort();
-}
-
-/** Date civile d'un instant, lue dans un fuseau. */
-function civilDateKeyInZone(instant: Date, timezone: string): string {
-  const zoned = new TZDate(instant.getTime(), timezone);
-  return formatKey(zoned.getFullYear(), zoned.getMonth() + 1, zoned.getDate());
-}
-
-/**
- * Date civile d'une colonne `@db.Date`. Prisma rend ces valeurs sous forme de
- * Date à minuit UTC : les lire en heure locale du serveur décalerait d'un jour
- * pour tout fuseau derrière UTC.
- */
-function civilDateKey(date: Date): string {
-  return formatKey(
-    date.getUTCFullYear(),
-    date.getUTCMonth() + 1,
-    date.getUTCDate()
-  );
-}
-
-/** 1 = lundi … 7 = dimanche, calculé sur la date civile seule. */
-function isoWeekday(dayKey: string): number {
-  const [year, month, day] = dayKey.split("-").map(Number);
-  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
-  return weekday === 0 ? 7 : weekday;
-}
-
-function formatKey(year: number, month: number, day: number): string {
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }

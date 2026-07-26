@@ -3,7 +3,14 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, CreditCard, Inbox, Star, UserCog } from "lucide-react";
+import {
+  CalendarClock,
+  CalendarDays,
+  CreditCard,
+  Inbox,
+  Star,
+  UserCog,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -27,6 +34,9 @@ const TABS = [
     icon: CalendarDays,
     label: "Disponibilités",
   },
+  // « Disponibilités » déclare les horaires possibles, « Agenda » montre la
+  // semaine réelle : deux questions distinctes, deux écrans.
+  { href: "/dashboard/prof/agenda", icon: CalendarClock, label: "Agenda" },
   { href: "/dashboard/prof/demandes", icon: Inbox, label: "Demandes" },
   { href: "/dashboard/prof/avis", icon: Star, label: "Avis" },
   {
