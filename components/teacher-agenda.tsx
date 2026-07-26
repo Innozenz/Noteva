@@ -91,6 +91,10 @@ const HOUR_HEIGHT = 56;
  */
 const HOUR_LINES = `repeating-linear-gradient(to bottom, var(--border) 0, var(--border) 1px, transparent 1px, transparent ${HOUR_HEIGHT}px)`;
 
+/** Hachures du congé. Partagées avec la légende, pour qu'elles ne divergent pas. */
+const HATCH =
+  "repeating-linear-gradient(45deg, var(--border-strong) 0, var(--border-strong) 2px, transparent 2px, transparent 7px)";
+
 const WEEKDAY_SHORT = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 const MODE_LABELS: Record<AgendaRow["mode"], string> = {
@@ -107,13 +111,24 @@ const STATUS_LABELS: Record<AgendaRow["status"], string> = {
 };
 
 /**
- * Une demande est bordée en pointillés : rien n'est acquis tant que le prof
- * n'a pas répondu, et le créneau reste immobilisé pendant ce temps.
+ * Une règle tient l'ensemble : **les neutres appartiennent à la grille, les
+ * teintes aux cours.** Blanc, gris et hachures disent l'état d'une plage
+ * horaire ; bleu, ambre, vert et rouge disent l'état d'un cours. Aucun cours ne
+ * peut donc être confondu avec un fond.
+ *
+ * Elle a été apprise à l'envers : un cours terminé a partagé `surface-strong`
+ * avec les heures fermées, et toutes les heures fermées de la semaine se sont
+ * mises à se lire « Passé » dans la légende — sur des dates à venir. Le blanc
+ * bordé essayé ensuite entrait en collision avec « Ouvert ». Un vert « terminé »
+ * n'entre en collision avec rien.
+ *
+ * Une demande est en outre bordée en pointillés : rien n'est acquis tant que le
+ * prof n'a pas répondu, et le créneau reste immobilisé pendant ce temps.
  */
 const STATUS_STYLES: Record<AgendaRow["status"], string> = {
   PENDING: "border-dashed border-warning/60 bg-warning-soft text-warning",
   CONFIRMED: "border-primary/40 bg-primary-soft text-primary",
-  COMPLETED: "border-border-strong bg-surface-strong text-muted",
+  COMPLETED: "border-success/40 bg-success-soft text-success",
   NO_SHOW: "border-danger/40 bg-danger-soft text-danger",
 };
 
@@ -328,7 +343,13 @@ export function TeacherAgenda({
               grille défile horizontalement plutôt que de se comprimer. La
               colonne des heures reste épinglée à gauche — sans elle, un bloc
               vu au milieu du défilement ne dit plus à quelle heure il est. */}
-          <div className="-mx-2 overflow-x-auto px-2">
+          {/* `overflow-y-clip` et non le défaut : dès qu'un axe cesse d'être
+              `visible`, l'autre est ramené à `auto` par la spécification, et la
+              grille se retrouvait avec un ascenseur vertical propre qui
+              décrochait la ligne des jours de ses colonnes. `clip` n'est pas
+              `visible`, donc il coupe court à cette coercition sans rien
+              rogner : la hauteur du contenu est fixée par construction. */}
+          <div className="-mx-2 overflow-x-auto overflow-y-clip px-2">
             <div className="min-w-[44rem]">
               <div className="flex">
                 <div className="sticky left-0 z-20 w-12 shrink-0 bg-elevated" />
@@ -472,11 +493,7 @@ function DayColumn({
         <div
           key={`closed-${interval.start}`}
           className="absolute inset-x-0 bg-background"
-          style={{
-            ...band(interval.start, interval.end),
-            backgroundImage:
-              "repeating-linear-gradient(45deg, var(--border-strong) 0, var(--border-strong) 2px, transparent 2px, transparent 7px)",
-          }}
+          style={{ ...band(interval.start, interval.end), backgroundImage: HATCH }}
           title="Congé"
         />
       ))}
@@ -684,25 +701,60 @@ function BookingDetail({
   );
 }
 
+/**
+ * Légende, en deux familles.
+ *
+ * Elle ne décrivait que les cours et « Ouvert », en laissant sans nom le gris
+ * qui couvre le plus de surface et les hachures. Un lecteur rattache alors ce
+ * gris à la seule entrée grise qu'on lui propose — « Passé » — et croit voir
+ * des journées écoulées dans des dates à venir. Ce qui occupe l'écran doit être
+ * nommé, sinon la légende oriente vers la mauvaise lecture.
+ */
 function Legend() {
-  const items = [
+  const lessons = [
     { label: "Confirmé", className: "border-primary/40 bg-primary-soft" },
     {
       label: "En attente",
       className: "border-dashed border-warning/60 bg-warning-soft",
     },
-    { label: "Passé", className: "border-border-strong bg-surface-strong" },
-    { label: "Ouvert", className: "border-border bg-background" },
+    { label: "Terminé", className: "border-success/40 bg-success-soft" },
+    { label: "Non honoré", className: "border-danger/40 bg-danger-soft" },
   ];
 
+  const grid = [
+    { label: "Ouvert", className: "border-border bg-background" },
+    { label: "Fermé", className: "border-border bg-surface-strong" },
+    {
+      label: "Congé",
+      className: "border-border bg-background",
+      style: { backgroundImage: HATCH },
+    },
+  ];
+
+  const swatch = (item: {
+    label: string;
+    className: string;
+    style?: React.CSSProperties;
+  }) => (
+    <span key={item.label} className="flex items-center gap-1.5">
+      <span
+        className={cn("h-3 w-3 shrink-0 rounded-xs border", item.className)}
+        style={item.style}
+      />
+      {item.label}
+    </span>
+  );
+
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
-      {items.map((item) => (
-        <span key={item.label} className="flex items-center gap-1.5">
-          <span className={cn("h-3 w-3 rounded-xs border", item.className)} />
-          {item.label}
-        </span>
-      ))}
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted">
+      <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="text-subtle">Cours</span>
+        {lessons.map(swatch)}
+      </span>
+      <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="text-subtle">Grille</span>
+        {grid.map(swatch)}
+      </span>
     </div>
   );
 }
