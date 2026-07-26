@@ -516,6 +516,17 @@ function EventBlock({
   const top = offset(placed.startMinute);
   const height = offset(placed.endMinute) - top;
 
+  /**
+   * L'heure n'est répétée que si la place le permet. La position verticale du
+   * bloc et la gouttière la donnent déjà ; le nom de l'élève, lui, n'est écrit
+   * nulle part ailleurs — dans une colonne partagée, « 18:00 … » tronquait la
+   * seule information que la grille ne porte pas.
+   *
+   * Un bloc qui vient de la veille ne l'affiche jamais : sa minute de départ
+   * dans ce jour vaut 0, et « 00:00 » serait faux.
+   */
+  const showTime = columns === 1 && !placed.continuesBefore;
+
   // Un bloc peut sortir de la grille par le haut ou le bas quand un cours tombe
   // hors des heures affichées ; on le laisse rogné plutôt que d'agrandir la
   // grille, les bornes ayant déjà été calculées pour l'englober.
@@ -539,7 +550,8 @@ function EventBlock({
       }}
     >
       <span className="block truncate font-medium">
-        {formatTime(placed.startMinute)} {event.studentName ?? "Élève"}
+        {showTime ? `${formatTime(placed.startMinute)} ` : ""}
+        {event.studentName ?? "Élève"}
       </span>
       <span className="block truncate opacity-80">{event.instrumentName}</span>
     </button>
