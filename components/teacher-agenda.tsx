@@ -7,8 +7,11 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Globe,
+  Home,
   Info,
   Loader2,
+  MapPin,
   MessageSquare,
   Sparkles,
   X,
@@ -136,6 +139,26 @@ const STATUS_STYLES: Record<AgendaRow["status"], string> = {
   CONFIRMED: "border-primary/40 bg-primary-soft text-primary",
   COMPLETED: "border-success/40 bg-success-soft text-success",
   NO_SHOW: "border-danger/40 bg-danger-soft text-danger",
+};
+
+/**
+ * Barre de statut, à gauche du bloc : un aplat plein de la teinte du statut,
+ * là où le fond n'en est qu'une version douce. Rendue en `<span>` plutôt qu'en
+ * bordure gauche pour rester pleine même quand la demande est en pointillés.
+ * Classes écrites en toutes lettres — Tailwind ne génère pas une classe montée
+ * à l'exécution.
+ */
+const STATUS_BAR: Record<AgendaRow["status"], string> = {
+  PENDING: "bg-warning",
+  CONFIRMED: "bg-primary",
+  COMPLETED: "bg-success",
+  NO_SHOW: "bg-danger",
+};
+
+const MODE_ICONS: Record<AgendaRow["mode"], typeof Globe> = {
+  ONLINE: Globe,
+  TEACHER_PLACE: Home,
+  STUDENT_PLACE: MapPin,
 };
 
 const ACTIONS: {
@@ -574,6 +597,7 @@ function EventBlock({
    * dans ce jour vaut 0, et « 00:00 » serait faux.
    */
   const showTime = columns === 1 && !placed.continuesBefore;
+  const ModeIcon = MODE_ICONS[event.mode];
 
   // Un bloc peut sortir de la grille par le haut ou le bas quand un cours tombe
   // hors des heures affichées ; on le laisse rogné plutôt que d'agrandir la
@@ -582,9 +606,9 @@ function EventBlock({
     <button
       type="button"
       onClick={() => onSelect(event.id)}
-      title={`${event.studentName ?? "Élève"} — ${event.instrumentName}`}
+      title={`${event.studentName ?? "Élève"} — ${event.instrumentName} · ${MODE_LABELS[event.mode]}`}
       className={cn(
-        "absolute overflow-hidden rounded-sm border px-1 py-0.5 text-left text-[11px] leading-tight transition-shadow",
+        "absolute overflow-hidden rounded-sm border py-0.5 pl-2.5 pr-1 text-left text-[11px] leading-tight transition-shadow hover:z-10 hover:shadow-md",
         STATUS_STYLES[event.status],
         placed.continuesBefore && "rounded-t-none border-t-0",
         placed.continuesAfter && "rounded-b-none border-b-0",
@@ -597,11 +621,21 @@ function EventBlock({
         width: `calc(${100 / columns}% - 2px)`,
       }}
     >
+      <span
+        aria-hidden
+        className={cn(
+          "absolute inset-y-0 left-0 w-1",
+          STATUS_BAR[event.status]
+        )}
+      />
       <span className="block truncate font-medium">
         {showTime ? `${formatTime(placed.startMinute)} ` : ""}
         {event.studentName ?? "Élève"}
       </span>
-      <span className="block truncate opacity-80">{event.instrumentName}</span>
+      <span className="flex items-center gap-1 opacity-80">
+        <ModeIcon className="h-3 w-3 shrink-0" />
+        <span className="truncate">{event.instrumentName}</span>
+      </span>
     </button>
   );
 }
