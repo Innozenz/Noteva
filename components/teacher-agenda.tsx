@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/card";
 import { checkTransition, type BookingAction } from "@/lib/bookings/transitions";
 import { postJson, type Failure } from "@/lib/http/failure";
+import { localMinutesInZone } from "@/lib/availability/zone";
 import {
   buildWeekAgenda,
   type AgendaDay,
@@ -85,11 +86,16 @@ type AgendaLesson = Omit<AgendaRow, "startsAt" | "endsAt"> & {
 const HOUR_HEIGHT = 56;
 
 /**
- * Lignes horaires : un dégradé répété plutôt qu'un div par heure et par jour.
- * En style inline, car une valeur à virgules dans une classe Tailwind fait
- * inventer au scanner une règle illisible.
+ * Lignes horaires : des dégradés répétés plutôt qu'un div par heure et par jour.
+ * Deux couches superposées — la ligne pleine à l'heure, une ligne plus pâle à la
+ * demi-heure, pour situer un créneau de 30 min sans compter. En style inline,
+ * car une valeur à virgules dans une classe Tailwind fait inventer au scanner
+ * une règle illisible.
  */
-const HOUR_LINES = `repeating-linear-gradient(to bottom, var(--border) 0, var(--border) 1px, transparent 1px, transparent ${HOUR_HEIGHT}px)`;
+const HOUR_LINES = [
+  `repeating-linear-gradient(to bottom, var(--border) 0, var(--border) 1px, transparent 1px, transparent ${HOUR_HEIGHT}px)`,
+  `repeating-linear-gradient(to bottom, color-mix(in oklab, var(--border) 45%, transparent) 0, color-mix(in oklab, var(--border) 45%, transparent) 1px, transparent 1px, transparent ${HOUR_HEIGHT / 2}px)`,
+].join(", ");
 
 /** Hachures du congé. Partagées avec la légende, pour qu'elles ne divergent pas. */
 const HATCH =
@@ -214,6 +220,16 @@ export function TeacherAgenda({
   /** Position verticale d'une minute locale, en pourcentage de la grille. */
   const offset = (minute: number) =>
     ((minute - agenda.startMinute) / span) * 100;
+
+  // Trait « maintenant » : sur la colonne du jour, à l'heure murale courante.
+  // `now` est figé au montage — le trait ne défile pas en direct, ce qui suffit
+  // pour un repère au chargement et reste cohérent avec le `now` des actions.
+  const todayIndex = agenda.days.findIndex((day) => day.isToday);
+  const nowMinute = localMinutesInZone(now, timezone);
+  const showNow =
+    todayIndex >= 0 &&
+    nowMinute >= agenda.startMinute &&
+    nowMinute <= agenda.endMinute;
 
   const selected = rows.find((row) => row.id === selectedId) ?? null;
 
@@ -383,6 +399,21 @@ export function TeacherAgenda({
                       onSelect={select}
                     />
                   ))}
+
+                  {/* Repère « maintenant », posé par-dessus la colonne du jour. */}
+                  {showNow ? (
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute z-10 h-px bg-accent"
+                      style={{
+                        top: `${offset(nowMinute)}%`,
+                        left: `${(todayIndex / agenda.days.length) * 100}%`,
+                        width: `${100 / agenda.days.length}%`,
+                      }}
+                    >
+                      <span className="absolute -left-[3px] -top-[3px] h-[7px] w-[7px] rounded-full bg-accent" />
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
