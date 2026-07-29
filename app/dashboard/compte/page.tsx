@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import { AccountForm, type IdentityData } from "@/components/account-form";
+import { PageHeader } from "@/components/editorial";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { splitFullName } from "@/lib/user/name";
@@ -44,13 +45,16 @@ export default async function AccountPage() {
   };
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="mb-2 text-2xl font-semibold">Mon compte</h1>
-      <p className="mb-8 text-muted">
-        Votre identité sur Noteva, quel que soit votre rôle.
-      </p>
+    <main className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
+      <PageHeader
+        eyebrow="Compte"
+        title="Mon compte"
+        lead="Votre identité sur Noteva, quel que soit votre rôle."
+      />
 
-      <AccountForm initial={initial} />
+      <div className="mt-10">
+        <AccountForm initial={initial} />
+      </div>
     </main>
   );
 }

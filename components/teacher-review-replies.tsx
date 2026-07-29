@@ -125,7 +125,7 @@ export function TeacherReviewReplies({
 
   if (rows.length === 0) {
     return (
-      <p className="rounded-lg border border-border bg-white p-8 text-center text-muted">
+      <p className="border-t border-border pt-12 text-muted">
         Vous n&apos;avez pas encore reçu d&apos;avis. Ils apparaîtront ici dès
         qu&apos;un élève en laissera un, après un cours que vous aurez clôturé.
       </p>
@@ -139,7 +139,7 @@ export function TeacherReviewReplies({
       {rows.map((row) => (
         <article
           key={row.id}
-          className="flex flex-col gap-3 rounded-lg border border-border bg-white p-4"
+          className="flex flex-col gap-3 rounded-lg border border-border p-4"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">

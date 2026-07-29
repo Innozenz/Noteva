@@ -4,15 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 
+import { SectionTitle } from "@/components/editorial";
 import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { localFailure, postJson, type Failure } from "@/lib/http/failure";
@@ -82,17 +76,17 @@ export function AccountForm({ initial }: { initial: IdentityData }) {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Identité</CardTitle>
-          <CardDescription>
+    <div className="flex flex-col gap-8">
+      <section className="flex flex-col gap-5">
+        <div>
+          <SectionTitle>Identité</SectionTitle>
+          <p className="mt-2 text-sm text-muted">
             Votre nom apparaît sur vos demandes de cours. Les avis que vous
             écrivez sont signés de votre prénom seul.
-          </CardDescription>
-        </CardHeader>
+          </p>
+        </div>
 
-        <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="firstName">Prénom</Label>
@@ -132,8 +126,8 @@ export function AccountForm({ initial }: { initial: IdentityData }) {
               et doit être revérifiée avant d&apos;être remplacée.
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       <FormFailure failure={error} onRetry={save} />
 
@@ -146,7 +140,7 @@ export function AccountForm({ initial }: { initial: IdentityData }) {
 
       {/* Même barre que les autres formulaires : un bouton collant sans fond
           passe par-dessus le contenu qu'il survole. */}
-      <div className="sticky bottom-0 -mx-4 border-t border-border bg-white/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
+      <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
         <div className="flex items-center justify-end gap-3">
           <span className="text-sm text-subtle">
             Les modifications ne sont enregistrées qu&apos;ici.

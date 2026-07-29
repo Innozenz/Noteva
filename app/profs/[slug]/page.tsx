@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { BookingWidget } from "@/components/booking-widget";
+import { Eyebrow, PageTitle, SectionTitle } from "@/components/editorial";
 import { SiteHeader } from "@/components/site-header";
 import { TeacherReviews } from "@/components/teacher-reviews";
 import { Badge } from "@/components/ui/badge";
@@ -188,9 +189,10 @@ export default async function TeacherPublicPage({
             Tous les profs
           </Link>
 
-          <header className="flex flex-col gap-3">
+          <header className="flex flex-col gap-4 border-b border-border pb-8">
+            <Eyebrow>{teacher.city ?? "Professeur"}</Eyebrow>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-3xl font-semibold">{name}</h1>
+              <PageTitle>{name}</PageTitle>
               {teacher.trialLessonOffered ? (
                 <Badge variant="success">
                   <Sparkles className="mr-1 h-3 w-3" />
@@ -223,19 +225,17 @@ export default async function TeacherPublicPage({
             </div>
           </header>
 
-          <Separator />
-
           {teacher.bio ? (
-            <section className="flex flex-col gap-2">
-              <h2 className="text-lg font-medium">À propos</h2>
+            <section className="flex flex-col gap-4">
+              <SectionTitle>À propos</SectionTitle>
               <p className="whitespace-pre-line text-muted">
                 {teacher.bio}
               </p>
             </section>
           ) : null}
 
-          <section className="flex flex-col gap-3">
-            <h2 className="text-lg font-medium">Modalités</h2>
+          <section className="flex flex-col gap-4">
+            <SectionTitle>Modalités</SectionTitle>
             <ul className="flex flex-col gap-2 text-sm text-muted">
               {modes.map(({ icon: Icon, label }) => (
                 <li key={label} className="flex items-center gap-2">

@@ -3,15 +3,9 @@
 import { useState } from "react";
 import { AlertCircle, Check, Loader2 } from "lucide-react";
 
+import { SectionTitle } from "@/components/editorial";
 import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -167,14 +161,14 @@ export function StudentProfileForm({
         </div>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Ce que je pratique</CardTitle>
-          <CardDescription>
+      <section className="flex flex-col gap-5">
+        <div>
+          <SectionTitle>Ce que je pratique</SectionTitle>
+          <p className="mt-2 text-sm text-muted">
             C&apos;est ce qui permet au prof de préparer un premier cours utile.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+          </p>
+        </div>
+        <div className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-2">
             {catalogue.map((item) => {
               const selected = profile.instruments.some(
@@ -291,14 +285,12 @@ export function StudentProfileForm({
             />
             Je lis le solfège
           </label>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Mon projet</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+      <section className="flex flex-col gap-5">
+        <SectionTitle>Mon projet</SectionTitle>
+        <div className="flex flex-col gap-4">
           <div className="space-y-1">
             <Label htmlFor="goals">Ce que je veux atteindre</Label>
             <Textarea
@@ -328,18 +320,18 @@ export function StudentProfileForm({
               onChange={(e) => set("city", e.target.value)}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Responsable légal</CardTitle>
-          <CardDescription>
+      <section className="flex flex-col gap-5">
+        <div>
+          <SectionTitle>Responsable légal</SectionTitle>
+          <p className="mt-2 text-sm text-muted">
             Requis pour un élève mineur : le prof doit pouvoir joindre un
             adulte.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+          </p>
+        </div>
+        <div className="flex flex-col gap-4">
           <div className="space-y-1">
             <Label htmlFor="birthDate">Date de naissance</Label>
             <Input
@@ -378,8 +370,8 @@ export function StudentProfileForm({
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       <FormFailure failure={error} onRetry={save} />
       {message ? <p className="text-sm text-success">{message}</p> : null}
@@ -387,7 +379,7 @@ export function StudentProfileForm({
       {/* Même barre que la fiche prof : un bouton collant sans fond passe
           par-dessus le contenu qu'il survole et en masque les dernières
           lignes. */}
-      <div className="sticky bottom-0 -mx-4 border-t border-border bg-white/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
+      <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
         <div className="flex items-center justify-end gap-3">
           <span className="text-sm text-subtle">
             Les modifications ne sont enregistrées qu&apos;ici.

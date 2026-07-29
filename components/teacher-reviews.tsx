@@ -1,5 +1,6 @@
 import { Quote } from "lucide-react";
 
+import { SectionTitle } from "@/components/editorial";
 import { Separator } from "@/components/ui/separator";
 import { Stars } from "@/components/ui/stars";
 import type { PublicReview } from "@/lib/reviews/queries";
@@ -30,8 +31,8 @@ export function TeacherReviews({
 }) {
   if (count === 0 || average === null) {
     return (
-      <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-medium">Avis</h2>
+      <section className="flex flex-col gap-4">
+        <SectionTitle>Avis</SectionTitle>
         <p className="text-sm text-muted">
           Ce prof n&apos;a pas encore reçu d&apos;avis. Les avis sont écrits par
           des élèves ayant réellement suivi un cours.
@@ -44,9 +45,11 @@ export function TeacherReviews({
 
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="text-lg font-medium">
-        {`Avis (${count})`}
-      </h2>
+      <SectionTitle
+        trailing={<span className="text-sm text-subtle">{count}</span>}
+      >
+        Avis
+      </SectionTitle>
 
       <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
         <div className="flex items-center gap-3">

@@ -5,9 +5,7 @@ import {
   AlertTriangle,
   CalendarX,
   Check,
-  Clock,
   GraduationCap,
-  Inbox,
   Loader2,
   MessageSquare,
   ShieldAlert,
@@ -15,16 +13,10 @@ import {
   X,
 } from "lucide-react";
 
+import { SectionTitle } from "@/components/editorial";
 import { FormFailure } from "@/components/form-failure";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { postJson, type Failure } from "@/lib/http/failure";
 import { groupBookings, isUrgent } from "@/lib/bookings/grouping";
 import { cn } from "@/lib/utils";
@@ -242,21 +234,23 @@ export function TeacherBookings({
     <div className="flex flex-col gap-6">
       <FormFailure failure={error} />
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Inbox className="h-5 w-5 text-primary" />
-            <CardTitle>Demandes en attente</CardTitle>
-            {groups.pending.length > 0 ? (
-              <Badge variant="secondary">{groups.pending.length}</Badge>
-            ) : null}
-          </div>
-          <CardDescription>
+      <section className="flex flex-col gap-4">
+        <div>
+          <SectionTitle
+            trailing={
+              groups.pending.length > 0 ? (
+                <Badge variant="secondary">{groups.pending.length}</Badge>
+              ) : null
+            }
+          >
+            Demandes en attente
+          </SectionTitle>
+          <p className="mt-2 text-sm text-muted">
             Chaque demande bloque son créneau tant que vous n&apos;avez pas
             répondu : personne d&apos;autre ne peut le réserver.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
+          </p>
+        </div>
+        <div className="flex flex-col gap-3">
           {groups.pending.length === 0 ? (
             <p className="text-sm text-subtle">Aucune demande en attente.</p>
           ) : (
@@ -272,17 +266,12 @@ export function TeacherBookings({
               ])
             )
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-success" />
-            <CardTitle>Cours à venir</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
+      <section className="flex flex-col gap-4">
+        <SectionTitle>Cours à venir</SectionTitle>
+        <div className="flex flex-col gap-3">
           {groups.upcoming.length === 0 ? (
             <p className="text-sm text-subtle">Aucun cours confirmé à venir.</p>
           ) : (
@@ -297,19 +286,19 @@ export function TeacherBookings({
               ])
             )
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {groups.toReview.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>À clôturer</CardTitle>
-            <CardDescription>
+        <section className="flex flex-col gap-4">
+          <div>
+            <SectionTitle>À clôturer</SectionTitle>
+            <p className="mt-2 text-sm text-muted">
               Ces cours sont passés. Les marquer comme terminés permettra à
               l&apos;élève de vous laisser un avis.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
             {groups.toReview.map((booking) =>
               renderCard(booking, [
                 { action: "complete", label: "Cours donné", icon: Check },
@@ -321,19 +310,17 @@ export function TeacherBookings({
                 },
               ])
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
       {groups.past.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Historique</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+        <section className="flex flex-col gap-4">
+          <SectionTitle>Historique</SectionTitle>
+          <div className="flex flex-col gap-3">
             {groups.past.slice(0, 20).map((booking) => renderCard(booking, []))}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       ) : null}
     </div>
   );

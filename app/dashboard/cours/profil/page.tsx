@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
+import { PageTitle } from "@/components/editorial";
 import {
   StudentProfileForm,
   type StudentProfileData,
@@ -63,21 +64,25 @@ export default async function StudentProfilePage() {
   };
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
+    <main className="mx-auto max-w-4xl px-4 py-12 sm:py-16">
       <Link
         href="/dashboard/cours"
-        className="mb-6 flex w-fit items-center gap-1 text-sm text-muted hover:underline"
+        className="flex w-fit items-center gap-1 text-sm text-muted hover:underline"
       >
         <ChevronLeft className="h-3 w-3" />
         Mes cours
       </Link>
 
-      <h1 className="mb-2 text-2xl font-semibold">Mon profil</h1>
-      <p className="mb-8 text-muted">
-        Ces informations sont transmises au prof avec vos demandes de cours.
-      </p>
+      <header className="mt-6 flex flex-col gap-3 border-b border-border pb-8">
+        <PageTitle size="page">Mon profil</PageTitle>
+        <p className="text-muted">
+          Ces informations sont transmises au prof avec vos demandes de cours.
+        </p>
+      </header>
 
-      <StudentProfileForm initial={initial} catalogue={catalogue} />
+      <div className="mt-10">
+        <StudentProfileForm initial={initial} catalogue={catalogue} />
+      </div>
     </main>
   );
 }

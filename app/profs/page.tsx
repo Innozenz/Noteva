@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Globe, MapPin, Music, Sparkles } from "lucide-react";
+import { Globe, MapPin } from "lucide-react";
 import { Suspense } from "react";
 
+import { PageHeader, Row, RowList } from "@/components/editorial";
 import { SearchFilters } from "@/components/search-filters";
 import { SiteHeader } from "@/components/site-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { RatingBadge } from "@/components/ui/stars";
 import {
   buildQueryString,
@@ -97,137 +96,127 @@ export default async function SearchPage({
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-5xl px-4 py-10">
-      <header className="mb-8 flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold">
-          {matchedInstrument
+      <main className="mx-auto max-w-5xl px-4 py-12 sm:py-16">
+      <PageHeader
+        title={`${
+          matchedInstrument
             ? `Cours de ${matchedInstrument.name}`
-            : "Trouvez votre prof"}
-          {filters.city ? ` à ${filters.city}` : ""}
-        </h1>
-        <p className="text-muted">
-          {total > 0
-            ? `${total} prof${total > 1 ? "s" : ""} disponible${total > 1 ? "s" : ""}.`
-            : filtered
-              ? "Aucun prof ne correspond à cette recherche."
-              : "Aucun prof n'est encore inscrit sur Noteva."}
-        </p>
-      </header>
+            : "Trouvez votre prof"
+        }${filters.city ? ` à ${filters.city}` : ""}`}
+        titleClassName="uppercase"
+        meta={
+          <p className="text-sm text-muted">
+            {total > 0
+              ? `${total} prof${total > 1 ? "s" : ""} disponible${total > 1 ? "s" : ""}`
+              : filtered
+                ? "Aucun résultat"
+                : "Personne pour l’instant"}
+          </p>
+        }
+      />
 
-      <div className="mb-8">
+      <div className="mt-8">
         <Suspense fallback={null}>
           <SearchFilters instruments={instruments} />
         </Suspense>
       </div>
 
       {results.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-            {unknownInstrument ? (
-              <>
-                <p className="text-muted">
-                  {`Nous ne connaissons pas « ${filters.instrument} » comme instrument.`}
+        <div className="mt-10 flex flex-col items-start gap-4 border-t border-border pt-12">
+          {unknownInstrument ? (
+            <>
+              <p className="text-muted">
+                {`Nous ne connaissons pas « ${filters.instrument} » comme instrument.`}
+              </p>
+              {instruments.length > 0 ? (
+                <p className="text-sm text-subtle">
+                  Choisissez-en un dans la liste ci-dessus.
                 </p>
-                {instruments.length > 0 ? (
-                  <p className="text-sm text-subtle">
-                    Choisissez-en un dans la liste ci-dessus.
-                  </p>
-                ) : null}
-              </>
-            ) : filtered ? (
-              <>
-                <p className="text-muted">
-                  Essayez d&apos;élargir votre recherche : un autre instrument,
-                  une autre ville, ou les cours en visio.
-                </p>
-                <Button variant="outline" asChild>
-                  <Link href="/profs">Voir tous les profs</Link>
-                </Button>
-              </>
-            ) : (
-              // Plateforme vide : rien à élargir. Le seul geste utile est de
-              // recruter, donc l'appel s'adresse aux profs.
-              <>
-                <p className="text-muted">
-                  Les premiers professeurs arrivent. Revenez bientôt — ou
-                  ouvrez votre propre fiche si vous enseignez.
-                </p>
-                <Button asChild>
-                  <Link href="/connexion">Je suis professeur</Link>
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              ) : null}
+            </>
+          ) : filtered ? (
+            <>
+              <p className="text-muted">
+                Essayez d&apos;élargir votre recherche : un autre instrument,
+                une autre ville, ou les cours en visio.
+              </p>
+              <Button variant="outline" asChild>
+                <Link href="/profs">Voir tous les profs</Link>
+              </Button>
+            </>
+          ) : (
+            // Plateforme vide : rien à élargir. Le seul geste utile est de
+            // recruter, donc l'appel s'adresse aux profs.
+            <>
+              <p className="text-muted">
+                Les premiers professeurs arrivent. Revenez bientôt — ou
+                ouvrez votre propre fiche si vous enseignez.
+              </p>
+              <Button asChild>
+                <Link href="/connexion">Je suis professeur</Link>
+              </Button>
+            </>
+          )}
+        </div>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2">
+        <RowList className="mt-10">
           {results.map((teacher) => (
-            <li key={teacher.slug}>
-              <Link href={`/profs/${teacher.slug}`} className="block h-full">
-                <Card className="h-full transition-colors hover:border-border-strong">
-                  <CardContent className="flex flex-col gap-3 pt-6">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-medium">
-                          {teacher.name ?? "Prof de musique"}
-                        </p>
-                        <RatingBadge
-                          average={teacher.rating.average}
-                          count={teacher.rating.count}
-                          className="my-0.5"
-                        />
-                        {teacher.headline ? (
-                          <p className="line-clamp-2 text-sm text-muted">
-                            {teacher.headline}
-                          </p>
-                        ) : null}
-                      </div>
-                      {teacher.hourlyRateCents !== null ? (
-                        <p className="shrink-0 text-sm font-medium">
-                          {`${(teacher.hourlyRateCents / 100).toFixed(0)} €/h`}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5">
-                      {teacher.instruments.slice(0, 4).map((instrument) => (
-                        <Badge key={instrument.slug} variant="secondary">
-                          <Music className="mr-1 h-3 w-3" />
-                          {instrument.name}
-                        </Badge>
-                      ))}
-                      {teacher.trialLessonOffered ? (
-                        <Badge variant="success">
-                          <Sparkles className="mr-1 h-3 w-3" />
-                          Essai
-                        </Badge>
-                      ) : null}
-                    </div>
-
-                    <div className="flex flex-wrap gap-3 text-xs text-muted">
-                      {teacher.teachesOnline ? (
-                        <span className="flex items-center gap-1">
-                          <Globe className="h-3 w-3" />
-                          Visio
-                        </span>
-                      ) : null}
-                      {teacher.city ? (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {teacher.city}
-                        </span>
-                      ) : null}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            </li>
+            <Row
+              key={teacher.slug}
+              href={`/profs/${teacher.slug}`}
+              main={
+                <>
+                  <p className="font-display text-xl font-medium leading-tight text-foreground">
+                    {teacher.name ?? "Prof de musique"}
+                  </p>
+                  <p className="mt-1.5 truncate text-sm text-muted">
+                    {teacher.instruments
+                      .slice(0, 4)
+                      .map((instrument) => instrument.name)
+                      .join(" · ")}
+                    {teacher.trialLessonOffered ? " · Cours d’essai" : ""}
+                  </p>
+                  {teacher.headline ? (
+                    <p className="mt-1 line-clamp-1 text-sm text-subtle">
+                      {teacher.headline}
+                    </p>
+                  ) : null}
+                </>
+              }
+              meta={
+                <>
+                  {teacher.hourlyRateCents !== null ? (
+                    <p className="font-medium text-foreground">
+                      {`${(teacher.hourlyRateCents / 100).toFixed(0)} €`}
+                      <span className="text-muted">/h</span>
+                    </p>
+                  ) : null}
+                  <div className="mt-1.5 flex items-center justify-end gap-3 text-xs text-muted">
+                    <RatingBadge
+                      average={teacher.rating.average}
+                      count={teacher.rating.count}
+                    />
+                    {teacher.city ? (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {teacher.city}
+                      </span>
+                    ) : teacher.teachesOnline ? (
+                      <span className="flex items-center gap-1">
+                        <Globe className="h-3 w-3" />
+                        Visio
+                      </span>
+                    ) : null}
+                  </div>
+                </>
+              }
+            />
           ))}
-        </ul>
+        </RowList>
       )}
 
       {lastPage > 1 ? (
-        <nav className="mt-8 flex items-center justify-center gap-3">
+        <nav className="mt-10 flex items-center justify-between border-t border-border pt-6">
           {/* Rendu conditionnel plutôt qu'un bouton désactivé : `disabled` sur
               un lien produit un <a> toujours cliquable. */}
           <PageLink

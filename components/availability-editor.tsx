@@ -3,15 +3,9 @@
 import { useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
+import { SectionTitle } from "@/components/editorial";
 import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { localFailure, postJson, type Failure } from "@/lib/http/failure";
@@ -126,16 +120,16 @@ export function AvailabilityEditor({
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Semaine type</CardTitle>
-          <CardDescription>
+      <section className="flex flex-col gap-5">
+        <div>
+          <SectionTitle>Semaine type</SectionTitle>
+          <p className="mt-2 text-sm text-muted">
             Vos horaires habituels, exprimés dans votre fuseau ({timezone}).
             Ils se répètent chaque semaine et restent justes au changement
             d&apos;heure.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+          </p>
+        </div>
+        <div className="flex flex-col gap-4">
           {/* Une grille vide n'est pas un état neutre : elle ne propose aucun
               créneau, donc la fiche est publiable mais jamais réservable. Sept
               lignes « Indisponible » ne le disaient pas. */}
@@ -221,8 +215,8 @@ export function AvailabilityEditor({
               Enregistrer la semaine
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       <ExceptionsCard exceptions={exceptions} onChange={setExceptions} />
     </div>
@@ -288,15 +282,15 @@ function ExceptionsCard({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Congés et absences</CardTitle>
-        <CardDescription>
+    <section className="flex flex-col gap-5">
+      <div>
+        <SectionTitle>Congés et absences</SectionTitle>
+        <p className="mt-2 text-sm text-muted">
           Ces journées sont retirées de votre semaine type. Les cours déjà
           réservés ne sont pas annulés pour autant.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+        </p>
+      </div>
+      <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1">
             <Label htmlFor="exception-date">Journée à bloquer</Label>
@@ -344,7 +338,7 @@ function ExceptionsCard({
             ))}
           </ul>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

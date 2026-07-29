@@ -4,8 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CalendarX,
-  Clock,
-  Hourglass,
   Loader2,
   MapPin,
   Search,
@@ -14,17 +12,11 @@ import {
   Video,
 } from "lucide-react";
 
+import { SectionTitle } from "@/components/editorial";
 import { ReviewForm } from "@/components/review-form";
 import { FormFailure } from "@/components/form-failure";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Stars } from "@/components/ui/stars";
 import { postJson, type Failure } from "@/lib/http/failure";
 import { groupBookings } from "@/lib/bookings/grouping";
@@ -302,19 +294,17 @@ export function StudentBookings({
 
   if (rows.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-          <p className="text-muted">
-            Vous n&apos;avez encore réservé aucun cours.
-          </p>
-          <Button asChild>
-            <Link href="/profs">
-              <Search className="mr-2 h-4 w-4" />
-              Trouver un prof
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-start gap-4 border-t border-border pt-12">
+        <p className="text-muted">
+          Vous n&apos;avez encore réservé aucun cours.
+        </p>
+        <Button asChild>
+          <Link href="/profs">
+            <Search className="mr-2 h-4 w-4" />
+            Trouver un prof
+          </Link>
+        </Button>
+      </div>
     );
   }
 
@@ -324,36 +314,30 @@ export function StudentBookings({
       {notice ? <p className="text-sm text-muted">{notice}</p> : null}
 
       {groups.pending.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Hourglass className="h-5 w-5 text-warning" />
-              <CardTitle>En attente de confirmation</CardTitle>
-            </div>
-            <CardDescription>
+        <section className="flex flex-col gap-4">
+          <div>
+            <SectionTitle>En attente de confirmation</SectionTitle>
+            <p className="mt-2 text-sm text-muted">
               Le prof doit accepter ces demandes. Vous serez fixé dès sa
               réponse.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
             {groups.pending.map(renderCard)}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
       {awaitingReview.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-warning" />
-              <CardTitle>Donnez votre avis</CardTitle>
-            </div>
-            <CardDescription>
+        <section className="flex flex-col gap-4">
+          <div>
+            <SectionTitle>Donnez votre avis</SectionTitle>
+            <p className="mt-2 text-sm text-muted">
               Votre retour aide les prochains élèves à choisir. Il apparaîtra
               sur la fiche du prof avec votre prénom.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
             {awaitingReview.map((row) => (
               <div
                 key={row.id}
@@ -399,49 +383,42 @@ export function StudentBookings({
                 )}
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-success" />
-            <CardTitle>Cours à venir</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
+      <section className="flex flex-col gap-4">
+        <SectionTitle>Cours à venir</SectionTitle>
+        <div className="flex flex-col gap-3">
           {groups.upcoming.length === 0 ? (
             <p className="text-sm text-subtle">Aucun cours confirmé à venir.</p>
           ) : (
             groups.upcoming.map(renderCard)
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {groups.toReview.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Cours passés</CardTitle>
-            <CardDescription>
+        <section className="flex flex-col gap-4">
+          <div>
+            <SectionTitle>Cours passés</SectionTitle>
+            <p className="mt-2 text-sm text-muted">
               En attente de clôture par le prof.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
             {groups.toReview.map(renderCard)}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
       {groups.past.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Historique</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+        <section className="flex flex-col gap-4">
+          <SectionTitle>Historique</SectionTitle>
+          <div className="flex flex-col gap-3">
             {groups.past.slice(0, 20).map(renderCard)}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       ) : null}
     </div>
   );

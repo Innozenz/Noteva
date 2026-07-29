@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { PageTitle } from "@/components/editorial";
 import {
   TeacherReviewReplies,
   type TeacherReviewRow,
@@ -81,17 +82,17 @@ export default async function TeacherReviewsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Avis</h1>
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-8">
+        <div className="flex flex-col gap-2">
+          <PageTitle size="page">Avis</PageTitle>
           <p className="text-sm text-muted">
             Écrits par des élèves ayant suivi un cours que vous avez clôturé.
           </p>
         </div>
 
         {summary.average !== null ? (
-          <div className="flex items-center gap-3 rounded-lg border border-border bg-white px-4 py-2">
-            <span className="text-2xl font-semibold">
+          <div className="flex items-center gap-3">
+            <span className="font-display text-3xl font-semibold">
               {formatAverage(summary.average)}
             </span>
             <div className="flex flex-col">

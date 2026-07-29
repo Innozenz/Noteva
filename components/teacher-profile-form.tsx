@@ -3,16 +3,10 @@
 import { useState } from "react";
 import { AlertCircle, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 
+import { PageTitle, SectionTitle } from "@/components/editorial";
 import { FormFailure } from "@/components/form-failure";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -158,39 +152,37 @@ export function TeacherProfileForm({
   const canPublish = profile.publishCheck.ok;
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Bandeau d'état */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <CardTitle>Ma fiche</CardTitle>
-              <Badge variant={isPublished ? "success" : "secondary"}>
-                {isPublished ? "Publiée" : "Brouillon"}
-              </Badge>
-            </div>
-            <Button
-              variant={isPublished ? "outline" : "success"}
-              disabled={isPublishing || (!isPublished && !canPublish)}
-              onClick={togglePublish}
-            >
-              {isPublishing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : isPublished ? (
-                <EyeOff className="mr-2 h-4 w-4" />
-              ) : (
-                <Eye className="mr-2 h-4 w-4" />
-              )}
-              {isPublished ? "Dépublier" : "Publier ma fiche"}
-            </Button>
+    <div className="flex flex-col gap-10">
+      {/* En-tête + état de publication */}
+      <header className="flex flex-col gap-4 border-b border-border pb-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <PageTitle size="page">Ma fiche</PageTitle>
+            <Badge variant={isPublished ? "success" : "secondary"}>
+              {isPublished ? "Publiée" : "Brouillon"}
+            </Badge>
           </div>
-          <CardDescription>
-            Adresse publique : <code>/profs/{profile.slug}</code>
-          </CardDescription>
-        </CardHeader>
+          <Button
+            variant={isPublished ? "outline" : "success"}
+            disabled={isPublishing || (!isPublished && !canPublish)}
+            onClick={togglePublish}
+          >
+            {isPublishing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : isPublished ? (
+              <EyeOff className="mr-2 h-4 w-4" />
+            ) : (
+              <Eye className="mr-2 h-4 w-4" />
+            )}
+            {isPublished ? "Dépublier" : "Publier ma fiche"}
+          </Button>
+        </div>
+        <p className="text-sm text-muted">
+          Adresse publique : <code>/profs/{profile.slug}</code>
+        </p>
 
         {!canPublish || !profile.subscriptionActive ? (
-          <CardContent className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
             {!canPublish ? (
               <div className="rounded-lg bg-warning-soft p-4">
                 <p className="mb-2 flex items-center gap-2 text-sm font-medium">
@@ -211,17 +203,19 @@ export function TeacherProfileForm({
                 abonnement n&apos;est pas actif, même une fois publiée.
               </p>
             ) : null}
-          </CardContent>
+          </div>
         ) : null}
-      </Card>
+      </header>
 
       {/* Présentation */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Présentation</CardTitle>
-          <CardDescription>Ce que voit l&apos;élève en premier.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+      <section className="flex flex-col gap-5">
+        <div>
+          <SectionTitle>Présentation</SectionTitle>
+          <p className="mt-2 text-sm text-muted">
+            Ce que voit l&apos;élève en premier.
+          </p>
+        </div>
+        <div className="flex flex-col gap-4">
           <div className="space-y-1">
             <Label htmlFor="headline">Accroche</Label>
             <Input
@@ -245,56 +239,54 @@ export function TeacherProfileForm({
               {(profile.bio ?? "").length} caractères — 80 minimum pour publier.
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Instruments */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Instruments enseignés</CardTitle>
-          <CardDescription>
+      <section className="flex flex-col gap-5">
+        <div>
+          <SectionTitle>Instruments enseignés</SectionTitle>
+          <p className="mt-2 text-sm text-muted">
             Ce sont eux qui décident dans quelles recherches vous apparaissez.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {catalogue.map((instrument) => {
-              const selected = profile.instruments.some(
-                (i) => i.slug === instrument.slug
-              );
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {catalogue.map((instrument) => {
+            const selected = profile.instruments.some(
+              (i) => i.slug === instrument.slug
+            );
 
-              return (
-                <button
-                  key={instrument.slug}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => toggleInstrument(instrument)}
-                  className={cn(
+            return (
+              <button
+                key={instrument.slug}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => toggleInstrument(instrument)}
+                className={cn(
  "rounded-full border px-3 py-1.5 text-sm transition-colors",
-                    selected
-                      ? "border-primary bg-primary-soft text-primary"
-                      : "border-border text-muted hover:border-border-strong"
-                  )}
-                >
-                  {selected ? <Check className="mr-1 inline h-3 w-3" /> : null}
-                  {instrument.name}
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                  selected
+                    ? "border-primary bg-primary-soft text-primary"
+                    : "border-border text-muted hover:border-border-strong"
+                )}
+              >
+                {selected ? <Check className="mr-1 inline h-3 w-3" /> : null}
+                {instrument.name}
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Modalités et tarif */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Cours et tarif</CardTitle>
-          <CardDescription>
+      <section className="flex flex-col gap-5">
+        <div>
+          <SectionTitle>Cours et tarif</SectionTitle>
+          <p className="mt-2 text-sm text-muted">
             Le règlement se fait directement entre vous et l&apos;élève : Noteva
             n&apos;encaisse rien.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+          </p>
+        </div>
+        <div className="flex flex-col gap-4">
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-1 text-sm font-medium">Modalités</legend>
             <Checkbox
@@ -378,18 +370,18 @@ export function TeacherProfileForm({
               onChange={(v) => set("trialLessonMinutes", v)}
             />
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Règles de réservation */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Règles de réservation</CardTitle>
-          <CardDescription>
+      <section className="flex flex-col gap-5">
+        <div>
+          <SectionTitle>Règles de réservation</SectionTitle>
+          <p className="mt-2 text-sm text-muted">
             Elles filtrent les créneaux proposés aux élèves.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+          </p>
+        </div>
+        <div className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <NumberField
               id="buffer"
@@ -439,8 +431,8 @@ export function TeacherProfileForm({
             durationMin={profile.defaultDurationMin}
             stepMin={profile.slotGranularityMin}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       <FormFailure failure={error} onRetry={save} />
       {message ? <p className="text-sm text-success">{message}</p> : null}
@@ -449,7 +441,7 @@ export function TeacherProfileForm({
           il passait par-dessus la liste d'instruments et masquait les
           dernières lignes. Une barre pleine bordée en haut sépare franchement
           l'action du contenu qu'elle survole. */}
-      <div className="sticky bottom-0 -mx-4 border-t border-border bg-white/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
+      <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
         <div className="flex items-center justify-end gap-3">
           <span className="text-sm text-subtle">
             Les modifications ne sont enregistrées qu&apos;ici.

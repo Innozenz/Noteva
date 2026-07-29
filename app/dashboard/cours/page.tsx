@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Search, UserCog } from "lucide-react";
 
+import { PageHeader } from "@/components/editorial";
 import {
   StudentBookings,
   type StudentBookingRow,
@@ -82,26 +83,31 @@ export default async function StudentBookingsPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
-      <header className="mb-8 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Mes cours</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/dashboard/cours/profil">
-              <UserCog className="mr-2 h-4 w-4" />
-              Mon profil
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/profs">
-              <Search className="mr-2 h-4 w-4" />
-              Trouver un prof
-            </Link>
-          </Button>
-        </div>
-      </header>
+    <main className="mx-auto max-w-4xl px-4 py-12 sm:py-16">
+      <PageHeader
+        eyebrow="Espace élève"
+        title="Mes cours"
+        meta={
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/cours/profil">
+                <UserCog className="mr-2 h-4 w-4" />
+                Mon profil
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/profs">
+                <Search className="mr-2 h-4 w-4" />
+                Trouver un prof
+              </Link>
+            </Button>
+          </div>
+        }
+      />
 
-      <StudentBookings initial={rows} timezone={user.timezone} />
+      <div className="mt-10">
+        <StudentBookings initial={rows} timezone={user.timezone} />
+      </div>
     </main>
   );
 }

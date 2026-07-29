@@ -10,17 +10,18 @@ import {
   UserCog,
 } from "lucide-react";
 
+import { PageHeader, Row, RowList } from "@/components/editorial";
 import {
   TeacherVisibilityNotice,
   visibilityBlocker,
 } from "@/components/teacher-visibility-notice";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { checkPublishable } from "@/lib/teacher/publishable";
 import { isSubscriptionActive } from "@/lib/teacher/visibility";
 import { givenName } from "@/lib/user/name";
+import { cn } from "@/lib/utils";
 
 /**
  * Aiguillage de l'espace connecté.
@@ -169,53 +170,56 @@ export default async function DashboardPage() {
       ];
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-10">
-      <header className="mb-8">
-        <h1 className="text-3xl">
-          {firstName ? `Bonjour ${firstName}` : "Bonjour"}
-        </h1>
-        <p className="mt-1 text-muted">
-          {isTeacher
-            ? "Votre espace professeur."
-            : "Vos cours et votre profil d'élève."}
-        </p>
-      </header>
+    <main className="mx-auto max-w-4xl px-4 py-12 sm:py-16">
+      <PageHeader
+        eyebrow={isTeacher ? "Espace professeur" : "Espace élève"}
+        title={firstName ? `Bonjour ${firstName}` : "Bonjour"}
+      />
 
       {blocker ? (
-        <div className="mb-6">
+        <div className="mt-8">
           <TeacherVisibilityNotice blocker={blocker} />
         </div>
       ) : null}
 
-      <ul className="grid gap-4 sm:grid-cols-2">
+      <RowList className="mt-10">
         {links.map((link) => {
           const Icon = link.icon;
 
           return (
-            <li key={link.href}>
-              <Link href={link.href} className="block h-full">
-                <Card
-                  className={`h-full transition-colors hover:border-border-strong ${
-                    link.highlight ? "border-warning" : ""
-                  }`}
-                >
-                  <CardContent className="flex h-full flex-col gap-2 pt-6">
-                    <div className="flex items-center gap-2">
-                      <Icon
-                        className={`h-5 w-5 ${
-                          link.highlight ? "text-warning" : "text-subtle"
-                        }`}
-                      />
-                      <span className="font-medium">{link.title}</span>
-                    </div>
-                    <p className="text-sm text-muted">{link.text}</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            </li>
+            <Row
+              key={link.href}
+              href={link.href}
+              main={
+                <div className="flex items-start gap-3">
+                  <Icon
+                    className={cn(
+                      "mt-1 h-5 w-5 shrink-0",
+                      link.highlight ? "text-warning" : "text-subtle"
+                    )}
+                  />
+                  <div>
+                    <p className="font-display text-lg font-medium text-foreground">
+                      {link.title}
+                    </p>
+                    <p
+                      className={cn(
+                        "mt-0.5 text-sm",
+                        link.highlight ? "text-warning" : "text-muted"
+                      )}
+                    >
+                      {link.text}
+                    </p>
+                  </div>
+                </div>
+              }
+              meta={
+                <ArrowRight className="mt-1 h-4 w-4 text-subtle transition-transform group-hover:translate-x-0.5" />
+              }
+            />
           );
         })}
-      </ul>
+      </RowList>
 
       {isTeacher ? (
         <div className="mt-8">

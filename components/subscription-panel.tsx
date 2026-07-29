@@ -3,16 +3,10 @@
 import { useState } from "react";
 import { CreditCard, ExternalLink, Loader2, ShieldCheck } from "lucide-react";
 
+import { PageTitle } from "@/components/editorial";
 import { Badge } from "@/components/ui/badge";
 import { FormFailure } from "@/components/form-failure";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { localFailure, postJson, type Failure } from "@/lib/http/failure";
 
@@ -82,39 +76,37 @@ export function SubscriptionPanel({
         </p>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <CardTitle>Abonnement</CardTitle>
-              <Badge variant={isActive ? "success" : "secondary"}>
-                {isActive ? "Actif" : "Inactif"}
-              </Badge>
-            </div>
-            {isActive || hasCustomer ? (
-              <Button
-                variant="outline"
-                disabled={busy !== null}
-                onClick={() => go("portal")}
-              >
-                {busy === "portal" ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                )}
-                Gérer mon abonnement
-              </Button>
-            ) : null}
+      <header className="flex flex-col gap-4 border-b border-border pb-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <PageTitle size="page">Abonnement</PageTitle>
+            <Badge variant={isActive ? "success" : "secondary"}>
+              {isActive ? "Actif" : "Inactif"}
+            </Badge>
           </div>
-          <CardDescription>
-            L&apos;abonnement rend votre fiche visible des élèves. Les cours,
-            eux, vous sont réglés directement : Noteva ne prend aucune
-            commission.
-          </CardDescription>
-        </CardHeader>
+          {isActive || hasCustomer ? (
+            <Button
+              variant="outline"
+              disabled={busy !== null}
+              onClick={() => go("portal")}
+            >
+              {busy === "portal" ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ExternalLink className="mr-2 h-4 w-4" />
+              )}
+              Gérer mon abonnement
+            </Button>
+          ) : null}
+        </div>
+        <p className="text-sm text-muted">
+          L&apos;abonnement rend votre fiche visible des élèves. Les cours, eux,
+          vous sont réglés directement : Noteva ne prend aucune commission.
+        </p>
+      </header>
 
-        <CardContent className="flex flex-col gap-4">
-          {isActive ? (
+      <div className="flex flex-col gap-4">
+        {isActive ? (
             <>
               <div className="flex items-center gap-2 text-sm text-muted">
                 <ShieldCheck className="h-4 w-4 text-success" />
@@ -162,8 +154,7 @@ export function SubscriptionPanel({
           )}
 
           <FormFailure failure={error} />
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }

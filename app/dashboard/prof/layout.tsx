@@ -43,11 +43,11 @@ export default async function TeacherLayout({
   });
 
   return (
-    <div className="min-h-screen bg-surface">
-      <header className="border-b border-border bg-white">
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-elevated">
         <TeacherTabs pendingCount={pendingCount} />
       </header>
-      <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>
+      <main className="mx-auto max-w-4xl px-4 py-10 sm:py-12">{children}</main>
     </div>
   );
 }
