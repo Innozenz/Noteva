@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { TeacherTabs } from "@/components/teacher-tabs";
+import { TeacherNav } from "@/components/teacher-nav";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
@@ -43,11 +43,11 @@ export default async function TeacherLayout({
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-elevated">
-        <TeacherTabs pendingCount={pendingCount} />
-      </header>
-      <main className="mx-auto max-w-4xl px-4 py-10 sm:py-12">{children}</main>
+    // Deux colonnes sur grand écran : navigation à gauche, contenu à droite.
+    // Sur mobile la nav repasse en rangée horizontale au-dessus du contenu.
+    <div className="mx-auto max-w-6xl gap-8 px-4 py-8 lg:flex lg:py-10">
+      <TeacherNav pendingCount={pendingCount} />
+      <main className="min-w-0 flex-1">{children}</main>
     </div>
   );
 }
