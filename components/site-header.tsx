@@ -4,34 +4,21 @@ import { Music4, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
-import prisma from "@/lib/prisma";
 
 /**
  * En-tête des pages publiques.
  *
- * Server Component : le lien vers l'espace connecté dépend du rôle, qui se lit
- * en base. Rendu côté serveur, il n'y a ni clignotement au chargement ni état
- * de session à attendre côté client.
+ * Server Component : l'affichage dépend de la session, lue côté serveur, donc
+ * ni clignotement au chargement ni état à attendre côté client.
+ *
+ * « Mon espace » pointe sur `/dashboard`, le hub, et non sur une sous-page :
+ * c'est /dashboard qui route ensuite selon le rôle (élève/prof, ou /onboarding
+ * si le rôle est nul). Inutile donc de lire le rôle ici — une requête DB de
+ * moins sur chaque page publique.
  */
 export async function SiteHeader() {
   const session = await auth.api.getSession({ headers: await headers() });
-
-  const user = session?.user
-    ? await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { role: true },
-      })
-    : null;
-
-  // Un compte sans rôle n'a pas terminé son onboarding : l'y renvoyer plutôt
-  // que vers un espace qui le redirigerait de toute façon.
-  const target = !user
-    ? null
-    : user.role === "TEACHER"
-      ? "/dashboard/prof"
-      : user.role === "STUDENT"
-        ? "/dashboard/cours"
-        : "/onboarding";
+  const isSignedIn = Boolean(session?.user);
 
   return (
     <header className="border-b border-border bg-white/80 backdrop-blur-md">
@@ -49,9 +36,9 @@ export async function SiteHeader() {
             </Link>
           </Button>
 
-          {target ? (
+          {isSignedIn ? (
             <Button size="sm" asChild>
-              <Link href={target}>Mon espace</Link>
+              <Link href="/dashboard">Mon espace</Link>
             </Button>
           ) : (
             <Button size="sm" asChild>

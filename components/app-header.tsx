@@ -25,18 +25,16 @@ export function AppHeader({
   role: "TEACHER" | "STUDENT" | "ADMIN";
   user: NavUser;
 }) {
-  const home =
-    role === "TEACHER"
-      ? "/dashboard/prof"
-      : role === "ADMIN"
-        ? "/admin/avis"
-        : "/dashboard/cours";
+  // Le logo renvoie au hub `/dashboard`, pas à une sous-page : « chez soi »,
+  // une fois connecté, c'est le tableau de bord, qui route ensuite selon le
+  // rôle. L'admin, lui, n'a pas de hub `/dashboard` (il y serait redirigé) :
+  // on l'envoie droit à son espace.
+  const home = role === "ADMIN" ? "/admin/avis" : "/dashboard";
 
   return (
     <header className="border-b border-border bg-white">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-        {/* Le logo renvoie à l'espace de l'utilisateur, pas à l'accueil : une
-            fois connecté, « chez soi » c'est son tableau de bord. */}
+        {/* Le logo renvoie à l'espace de l'utilisateur, pas à l'accueil public. */}
         <Link href={home} className="flex items-center gap-2 font-semibold">
           <Music4 className="h-5 w-5 text-primary" />
           Noteva
