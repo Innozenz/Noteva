@@ -46,7 +46,7 @@ Tests cover `lib/availability` only, and that's deliberate: it's the one piece o
 
 - `DATABASE_URL` — read by `prisma.config.ts`, not by `schema.prisma` (see Prisma 7 note below).
 - `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` — read by Better Auth itself; they don't appear anywhere in the source.
-- `NEXT_PUBLIC_APP_URL` — Better Auth *client* baseURL (`lib/auth-client.ts`) and the Stripe checkout success/cancel URLs. Separate from `BETTER_AUTH_URL`; keep them in sync.
+- `NEXT_PUBLIC_APP_URL` — root for email links, `metadataBase` (canonical/OG), and the Stripe checkout success/cancel URLs. **In production it must be the real deployed URL**, or emails and canonicals point at localhost. Note it is a `NEXT_PUBLIC_*` var, so it's baked at build — changing it needs a redeploy. It is **no longer** the Better Auth client baseURL: `lib/auth-client.ts` calls `createAuthClient()` with no baseURL, so the browser client follows the current origin (the auth API is same-origin). That was deliberate — reading `NEXT_PUBLIC_APP_URL` there meant a prod build still holding `http://localhost:3000` made the public site fetch the visitor's localhost, which the browser blocks with a "wants to access other services on your device" warning. Separate from `BETTER_AUTH_URL` (read by Better Auth server-side); keep both pointed at the real URL in production.
 - `NEXT_PUBLIC_STRIPE_PRICE_ID` — fallback read by `/api/stripe/checkout` when `STRIPE_PRICE_ID` is absent. Same **teacher** subscription price; keep them equal or drop this one. (`components/subscription-button.tsx`, its former consumer, went with the boilerplate dashboard.)
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — only consumed by `lib/stripe-client.ts`, which nothing imports, so it's currently unused at runtime.
 

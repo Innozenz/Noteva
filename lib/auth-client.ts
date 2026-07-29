@@ -1,5 +1,17 @@
 import { createAuthClient } from "better-auth/react";
 
-export const authClient = createAuthClient({
-    baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-});
+/**
+ * Client Better Auth (navigateur).
+ *
+ * Pas de `baseURL` : l'API d'auth (`/api/auth/*`) est toujours servie depuis le
+ * même domaine que la page, donc le client suit l'origine courante. C'est le
+ * réglage correct et il retire une classe de bug entière — auparavant on lisait
+ * `NEXT_PUBLIC_APP_URL`, et un build de prod où cette variable valait encore
+ * `http://localhost:3000` faisait tenter au site public une requête vers le
+ * localhost du visiteur, ce que le navigateur bloque avec un avertissement
+ * « ce site veut accéder à d'autres services sur votre appareil ».
+ *
+ * `NEXT_PUBLIC_APP_URL` reste utile ailleurs (liens des e-mails, `metadataBase`,
+ * URLs Stripe), mais le client d'auth n'en dépend plus.
+ */
+export const authClient = createAuthClient();
