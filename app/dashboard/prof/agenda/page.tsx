@@ -43,7 +43,10 @@ export default async function TeacherAgendaPage({
 
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: session.user.id },
-    select: { timezone: true, teacherProfile: { select: { id: true } } },
+    select: {
+      timezone: true,
+      teacherProfile: { select: { id: true, slotGranularityMin: true } },
+    },
   });
 
   if (!user.teacherProfile) redirect("/dashboard");
@@ -248,6 +251,7 @@ export default async function TeacherAgendaPage({
       days={days}
       view={view}
       timezone={timezone}
+      granularityMin={user.teacherProfile.slotGranularityMin}
       nav={nav}
     />
   );

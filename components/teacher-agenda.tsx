@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import Link from "next/link";
 import {
   CalendarX,
@@ -33,7 +39,11 @@ import {
 } from "@/components/ui/card";
 import { checkTransition, type BookingAction } from "@/lib/bookings/transitions";
 import { postJson, type Failure } from "@/lib/http/failure";
-import { localMinutesInZone } from "@/lib/availability/zone";
+import {
+  localMinutesInZone,
+  MINUTES_PER_DAY,
+  wallClockToInstant,
+} from "@/lib/availability/zone";
 import {
   buildWeekAgenda,
   type AgendaDay,
@@ -88,6 +98,53 @@ type AgendaLesson = Omit<AgendaRow, "startsAt" | "endsAt"> & {
   startsAt: Date;
   endsAt: Date;
 };
+
+/** Amorce d'un glisser, gardée jusqu'au franchissement du seuil de mouvement. */
+type PendingDrag = {
+  id: string;
+  pointerId: number;
+  durationMin: number;
+  dayIndex: number;
+  startMinute: number;
+  grabClientY: number;
+};
+
+/** Glisser en cours : l'aperçu suit le pointeur, aimanté au pas de créneau. */
+type ActiveDrag = {
+  id: string;
+  durationMin: number;
+  originDayIndex: number;
+  originStartMinute: number;
+  dayIndex: number;
+  startMinute: number;
+  /** Sort de la journée [0, 1440] : dépôt refusé. */
+  invalid: boolean;
+};
+
+/** Au-delà, un appui devient un déplacement plutôt qu'un clic de sélection. */
+const DRAG_THRESHOLD_PX = 5;
+
+/** Gestionnaires de glisser-déposer, passés du parent jusqu'aux blocs. */
+type Dnd = {
+  onPointerDown: (
+    event: ReactPointerEvent,
+    info: {
+      id: string;
+      durationMin: number;
+      dayIndex: number;
+      startMinute: number;
+    }
+  ) => void;
+  onPointerMove: (event: ReactPointerEvent) => void;
+  onPointerUp: () => void;
+  /** Bloc en cours de déplacement, à estomper. */
+  draggingId: string | null;
+};
+
+/** Borne un index de colonne à [0, length). */
+function clampIndex(value: number, length: number): number {
+  return Math.max(0, Math.min(length - 1, value));
+}
 
 /** Hauteur d'une heure de grille. En dessous, un cours de 30 min est illisible. */
 const HOUR_HEIGHT = 56;
@@ -186,6 +243,7 @@ export function TeacherAgenda({
   days,
   view,
   timezone,
+  granularityMin,
   nav,
 }: {
   rows: AgendaRow[];
@@ -197,6 +255,8 @@ export function TeacherAgenda({
   days: number;
   view: "jour" | "semaine";
   timezone: string;
+  /** Pas de départ des créneaux, pour aimanter le glisser-déposer. */
+  granularityMin: number;
   /** Cibles de navigation, calculées côté serveur (l'état vit dans l'URL). */
   nav: AgendaNav;
 }) {
@@ -206,6 +266,16 @@ export function TeacherAgenda({
   const [error, setError] = useState<Failure | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const detailRef = useRef<HTMLDivElement>(null);
+
+  // Glisser-déposer. `bodyRef` sert à convertir la position du pointeur en
+  // (jour, minute) ; `pending` retient l'amorce tant que le seuil n'est pas
+  // franchi (pour ne pas confondre un clic de sélection avec un déplacement) ;
+  // `drag` porte l'aperçu affiché ; `movedRef` neutralise le clic qui suit un
+  // vrai déplacement.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const pendingRef = useRef<PendingDrag | null>(null);
+  const movedRef = useRef(false);
+  const [drag, setDrag] = useState<ActiveDrag | null>(null);
 
   // Figé au montage, comme dans la boîte de réception : recalculer à chaque
   // rendu ferait apparaître et disparaître des boutons pendant que le prof clique.
@@ -327,6 +397,11 @@ export function TeacherAgenda({
   };
 
   const select = (id: string) => {
+    // Un clic qui conclut un vrai déplacement ne doit pas aussi sélectionner.
+    if (movedRef.current) {
+      movedRef.current = false;
+      return;
+    }
     setSelectedId(id);
     setError(null);
     setNotice(null);
@@ -335,6 +410,115 @@ export function TeacherAgenda({
     requestAnimationFrame(() =>
       detailRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
     );
+  };
+
+  // --- Glisser-déposer d'un cours confirmé vers un nouvel horaire ---
+
+  const beginDrag = (
+    event: ReactPointerEvent,
+    info: { id: string; durationMin: number; dayIndex: number; startMinute: number }
+  ) => {
+    if (event.button !== 0) return; // clic gauche / doigt seulement
+    pendingRef.current = {
+      ...info,
+      pointerId: event.pointerId,
+      grabClientY: event.clientY,
+    };
+    movedRef.current = false;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const moveDrag = (event: ReactPointerEvent) => {
+    const pending = pendingRef.current;
+    const body = bodyRef.current;
+    if (!pending || !body) return;
+
+    // Tant que le seuil n'est pas franchi, c'est peut-être un simple clic.
+    if (!drag && Math.abs(event.clientY - pending.grabClientY) < DRAG_THRESHOLD_PX) {
+      return;
+    }
+
+    const rect = body.getBoundingClientRect();
+    const dayIndex = clampIndex(
+      Math.floor((event.clientX - rect.left) / (rect.width / agenda.days.length)),
+      agenda.days.length
+    );
+    // On aimante le **déplacement** (delta) au pas, pas la position absolue :
+    // l'heure d'origine étant un créneau valide, bouger de k×pas garde la même
+    // phase et retombe sur un créneau que le serveur acceptera.
+    const deltaMinutes = ((event.clientY - pending.grabClientY) / rect.height) * span;
+    const snapped = Math.round(deltaMinutes / granularityMin) * granularityMin;
+    const startMinute = pending.startMinute + snapped;
+
+    movedRef.current = true;
+    setDrag({
+      id: pending.id,
+      durationMin: pending.durationMin,
+      originDayIndex: pending.dayIndex,
+      originStartMinute: pending.startMinute,
+      dayIndex,
+      startMinute,
+      invalid: startMinute < 0 || startMinute + pending.durationMin > MINUTES_PER_DAY,
+    });
+  };
+
+  const endDrag = () => {
+    const active = drag;
+    pendingRef.current = null;
+    setDrag(null);
+    if (!active) return;
+
+    const moved =
+      active.dayIndex !== active.originDayIndex ||
+      active.startMinute !== active.originStartMinute;
+
+    if (!moved || active.invalid) {
+      // Rien à reprogrammer ; on laisse le clic éventuel sélectionner.
+      movedRef.current = false;
+      return;
+    }
+
+    const targetDate = agenda.days[active.dayIndex].date;
+    const startsAt = new Date(
+      wallClockToInstant(targetDate, active.startMinute, timezone)
+    );
+    void reschedule(active.id, startsAt);
+  };
+
+  const reschedule = async (id: string, startsAt: Date) => {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const result = await postJson<{ startsAt: string; endsAt: string }>(
+        `/api/bookings/${id}/reschedule`,
+        { method: "POST", body: JSON.stringify({ startsAt: startsAt.toISOString() }) }
+      );
+
+      if (!result.ok) {
+        setError(result.failure);
+        return;
+      }
+
+      setRows((current) =>
+        current.map((row) =>
+          row.id === id
+            ? { ...row, startsAt: result.data.startsAt, endsAt: result.data.endsAt }
+            : row
+        )
+      );
+      setNotice("Cours déplacé. L'élève a été prévenu.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const dnd: Dnd = {
+    onPointerDown: beginDrag,
+    onPointerMove: moveDrag,
+    onPointerUp: endDrag,
+    draggingId: drag?.id ?? null,
   };
 
   return (
@@ -422,16 +606,46 @@ export function TeacherAgenda({
                   )}
                 </div>
 
-                <div className="relative flex flex-1 border-t border-border">
-                  {agenda.days.map((day) => (
+                <div
+                  ref={bodyRef}
+                  className="relative flex flex-1 border-t border-border"
+                >
+                  {agenda.days.map((day, dayIndex) => (
                     <DayColumn
                       key={day.date}
                       day={day}
+                      dayIndex={dayIndex}
                       offset={offset}
                       selectedId={selectedId}
                       onSelect={select}
+                      dnd={dnd}
                     />
                   ))}
+
+                  {/* Aperçu du glisser : où le cours atterrirait, aimanté au pas. */}
+                  {drag ? (
+                    <div
+                      aria-hidden
+                      className={cn(
+                        "pointer-events-none absolute z-20 overflow-hidden rounded-sm border-2 border-dashed",
+                        drag.invalid
+                          ? "border-danger bg-danger-soft/70"
+                          : "border-primary bg-primary-soft/70"
+                      )}
+                      style={{
+                        top: `${offset(drag.startMinute)}%`,
+                        height: `${offset(drag.startMinute + drag.durationMin) - offset(drag.startMinute)}%`,
+                        left: `calc(${(drag.dayIndex / agenda.days.length) * 100}% + 1px)`,
+                        width: `calc(${100 / agenda.days.length}% - 2px)`,
+                      }}
+                    >
+                      {!drag.invalid ? (
+                        <span className="px-1 text-[11px] font-medium text-primary">
+                          {formatTime(drag.startMinute)}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
 
                   {/* Repère « maintenant », posé par-dessus la colonne du jour. */}
                   {showNow ? (
@@ -523,14 +737,18 @@ function DayHeader({ day }: { day: AgendaDay<AgendaLesson> }) {
 
 function DayColumn({
   day,
+  dayIndex,
   offset,
   selectedId,
   onSelect,
+  dnd,
 }: {
   day: AgendaDay<AgendaLesson>;
+  dayIndex: number;
   offset: (minute: number) => number;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  dnd: Dnd;
 }) {
   const band = (start: number, end: number) => ({
     top: `${offset(start)}%`,
@@ -573,9 +791,11 @@ function DayColumn({
         <EventBlock
           key={`${placed.event.id}-${day.date}`}
           placed={placed}
+          dayIndex={dayIndex}
           offset={offset}
           selected={placed.event.id === selectedId}
           onSelect={onSelect}
+          dnd={dnd}
         />
       ))}
     </div>
@@ -584,18 +804,48 @@ function DayColumn({
 
 function EventBlock({
   placed,
+  dayIndex,
   offset,
   selected,
   onSelect,
+  dnd,
 }: {
   placed: PlacedEvent<AgendaLesson>;
+  dayIndex: number;
   offset: (minute: number) => number;
   selected: boolean;
   onSelect: (id: string) => void;
+  dnd: Dnd;
 }) {
   const { event, column, columns } = placed;
   const top = offset(placed.startMinute);
   const height = offset(placed.endMinute) - top;
+
+  // Déplaçable : seuls les cours confirmés, et seulement le bloc entier (pas un
+  // morceau à cheval sur minuit). Le backend n'accepte de toute façon que les
+  // confirmés.
+  const draggable =
+    event.status === "CONFIRMED" &&
+    !placed.continuesBefore &&
+    !placed.continuesAfter;
+  const durationMin = Math.round(
+    (event.endsAt.getTime() - event.startsAt.getTime()) / 60_000
+  );
+  const dragging = dnd.draggingId === event.id;
+
+  const dragHandlers = draggable
+    ? {
+        onPointerDown: (e: ReactPointerEvent) =>
+          dnd.onPointerDown(e, {
+            id: event.id,
+            durationMin,
+            dayIndex,
+            startMinute: placed.startMinute,
+          }),
+        onPointerMove: dnd.onPointerMove,
+        onPointerUp: dnd.onPointerUp,
+      }
+    : {};
 
   /**
    * L'heure n'est répétée que si la place le permet. La position verticale du
@@ -616,12 +866,17 @@ function EventBlock({
     <button
       type="button"
       onClick={() => onSelect(event.id)}
+      {...dragHandlers}
       title={`${event.studentName ?? "Élève"} — ${event.instrumentName} · ${MODE_LABELS[event.mode]}`}
       className={cn(
         "absolute overflow-hidden rounded-sm border py-0.5 pl-2.5 pr-1 text-left text-[11px] leading-tight transition-shadow hover:z-10 hover:shadow-md",
         STATUS_STYLES[event.status],
         placed.continuesBefore && "rounded-t-none border-t-0",
         placed.continuesAfter && "rounded-b-none border-b-0",
+        // Déplaçable : curseur de préhension, pas de sélection de texte, et on
+        // neutralise le défilement tactile pour que le doigt glisse le bloc.
+        draggable && "cursor-grab touch-none select-none",
+        dragging && "opacity-40",
         selected && "ring-2 ring-primary ring-offset-1"
       )}
       style={{
