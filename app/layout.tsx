@@ -1,24 +1,23 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Geist } from "next/font/google";
+import { Fraunces, Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-/** Corps de texte : grotesque neutre, très lisible aux petites tailles. */
-const sans = Geist({
+/** Corps de texte : Inter, grotesque neutre, très lisible aux petites tailles. */
+const sans = Inter({
   variable: "--font-sans-custom",
   subsets: ["latin"],
   display: "swap",
 });
 
 /**
- * Titres : c'est là que vit le caractère de la marque. Une seule police
- * d'affichage, réservée aux h1-h3, suffit à donner une voix sans alourdir le
- * chargement.
+ * Titres : c'est là que vit le caractère de la marque. Fraunces, un serif
+ * d'affichage variable réservé aux h1-h3, suffit à donner une voix sans
+ * alourdir le chargement.
  */
-const display = Bricolage_Grotesque({
+const display = Fraunces({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["600", "700", "800"],
   display: "swap",
 });
 

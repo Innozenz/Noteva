@@ -170,14 +170,14 @@ export default async function HomePage() {
               className="m-drift-a absolute -left-40 -top-56 h-[38rem] w-[38rem] rounded-full"
               style={{
                 background:
-                  "radial-gradient(circle, rgb(15 118 110 / 0.16), transparent 65%)",
+                  "radial-gradient(circle, rgb(45 118 91 / 0.16), transparent 65%)",
               }}
             />
             <div
               className="m-drift-b absolute -right-40 -top-24 h-[32rem] w-[32rem] rounded-full"
               style={{
                 background:
-                  "radial-gradient(circle, rgb(207 75 44 / 0.12), transparent 65%)",
+                  "radial-gradient(circle, rgb(166 111 63 / 0.12), transparent 65%)",
               }}
             />
           </div>
@@ -410,7 +410,7 @@ export default async function HomePage() {
               style={{
                 opacity: "var(--spot-opacity, 0)",
                 background:
-                  "radial-gradient(26rem 26rem at var(--spot-x, 50%) var(--spot-y, 50%), rgb(15 118 110 / 0.3), transparent 70%)",
+                  "radial-gradient(26rem 26rem at var(--spot-x, 50%) var(--spot-y, 50%), rgb(45 118 91 / 0.3), transparent 70%)",
               }}
             />
 

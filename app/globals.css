@@ -1,10 +1,15 @@
 @import "tailwindcss";
 
 /**
- * Système de design Noteva — « encre & accent vif ».
+ * Système de design Noteva — « ReChord » : encre verte sur papier, emphase bronze.
  *
  * Tout passe par des jetons sémantiques : un composant dit `bg-surface`, pas
  * `bg-zinc-50`. L'identité se règle donc en un endroit plutôt qu'en cent.
+ *
+ * Palette issue d'un thème tweakcn, transposée à la main sur ce vocabulaire (et
+ * non appliquée via `shadcn add`, qui aurait remplacé nos jetons — surfaces,
+ * familles, statuts — par ceux de shadcn et ajouté un bloc sombre). Les huit
+ * teintes de familles d'instruments sont conservées telles quelles.
  *
  * Thème clair uniquement, par choix. `color-scheme: light` ci-dessous est
  * indispensable : sans lui, un navigateur réglé en sombre continue de teinter
@@ -15,41 +20,41 @@
 :root {
   color-scheme: light;
 
-  /* Fonds : du papier, pas du gris froid. Ivoire chaud au plus profond,
-     blanc pur réservé aux surfaces élevées (cartes) pour qu'elles ressortent
-     comme une feuille posée dessus. */
-  --background: #faf8f4;
-  --surface: #f1eee7;
-  --surface-strong: #e7e1d6;
+  /* Fonds : du papier légèrement verdi, pas du gris froid. Le plus profond au
+     fond, blanc pur réservé aux surfaces élevées (cartes) pour qu'elles
+     ressortent comme une feuille posée dessus. */
+  --background: #fbfbf9;
+  --surface: #f1f5f3;
+  --surface-strong: #e4ede8;
   --elevated: #ffffff;
 
-  /* Texte : de l'encre chaude, pas du noir bleuté. */
-  --foreground: #1f1b16;
-  --muted: #6e6559;
-  --subtle: #a49a8b;
+  /* Texte : de l'encre verte très sombre, dans le ton du primaire. */
+  --foreground: #0f2419;
+  --muted: #5c7066;
+  --subtle: #93a49b;
 
-  --border: #e8e1d5;
-  --border-strong: #d7d0c0;
+  --border: #dae7e0;
+  --border-strong: #c5d7ce;
 
-  /* Sapin-pétrole : actions, liens, tout ce qui se clique. Volontairement
-     foncé et légèrement bleuté — c'est ce qui le dégage du teal de la famille
-     « vents » (#0f766e) et des verts « succès »/« percussions », alors qu'un
-     sapin franc s'y confondrait. Une teinte ne nomme qu'une chose. */
-  --primary: #0b5a5f;
-  --primary-hover: #094a4d;
-  --primary-soft: #e3f1f0;
-  --primary-foreground: #ffffff;
+  /* Épicéa : actions, liens, tout ce qui se clique. Il vit dans le même arc que
+     les familles vertes (« vents », « percussions », « succès ») — assumé : le
+     primaire habille les boutons et les liens, les familles habillent les puces
+     et les notes, ils se croisent sans se confondre par le contexte. */
+  --primary: #2d765b;
+  --primary-hover: #245f49;
+  --primary-soft: #dceae4;
+  --primary-foreground: #fbfbf9;
 
-  /* Terre cuite : réservé aux mises en avant. Rare, donc efficace, et
-     complémentaire du sapin — l'atelier et l'argile. */
-  --accent: #cf4b2c;
-  --accent-soft: #fbeae3;
+  /* Bronze : réservé aux mises en avant (soulignés, emphase éditoriale). Rare,
+     donc efficace, et chaud — le seul contrepoint chaleureux au vert. */
+  --accent: #a66f3f;
+  --accent-soft: #f3e7d9;
 
   --success: #059669;
   --success-soft: #e9f6ef;
   --warning: #b45309;
   --warning-soft: #faf3e3;
-  --danger: #dc2626;
+  --danger: #d92626;
   --danger-soft: #fbece8;
 
   /**
@@ -86,11 +91,11 @@
   --radius-lg: 1.25rem;
 
   /* Ombres discrètes : la hiérarchie vient du trait, pas du flou. Teintées de
-     l'encre chaude (31 27 22), pas d'un gris bleuté, pour ne pas refroidir le
-     papier. */
-  --shadow-sm: 0 1px 2px 0 rgb(31 27 22 / 0.05);
-  --shadow: 0 1px 3px 0 rgb(31 27 22 / 0.07), 0 1px 2px -1px rgb(31 27 22 / 0.05);
-  --shadow-lg: 0 12px 32px -12px rgb(31 27 22 / 0.2);
+     l'encre verte (15 36 25), dans le ton du papier verdi, pour ne pas y poser
+     un gris étranger. */
+  --shadow-sm: 0 1px 2px 0 rgb(15 36 25 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(15 36 25 / 0.07), 0 1px 2px -1px rgb(15 36 25 / 0.05);
+  --shadow-lg: 0 12px 32px -12px rgb(15 36 25 / 0.2);
 }
 
 @theme inline {
@@ -148,15 +153,18 @@ body {
   /* La police vient du thème. L'ancienne feuille forçait Arial ici, ce qui
      annulait silencieusement la police chargée par next/font. */
   font-family: var(--font-sans-custom), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Titres : la voix de la marque. Grotesque serrée, poids fort. */
+/* Titres : la voix de la marque. Fraunces, un serif d'affichage. L'interlettrage
+   négatif reste léger — un serif ne se resserre pas comme une grotesque sans que
+   ses empattements ne se touchent. */
 h1,
 h2,
 h3 {
-  font-family: var(--font-display), var(--font-sans-custom), sans-serif;
-  letter-spacing: -0.025em;
+  font-family: var(--font-display), var(--font-sans-custom), serif;
+  letter-spacing: -0.015em;
   font-weight: 700;
 }
 
