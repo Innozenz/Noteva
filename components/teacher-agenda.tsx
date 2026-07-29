@@ -179,19 +179,30 @@ export function TeacherAgenda({
   rules,
   exceptions,
   weekStart,
+  days,
+  view,
   timezone,
-  previousWeek,
-  nextWeek,
-  currentWeek,
+  nav,
 }: {
   rows: AgendaRow[];
   rules: AgendaRule[];
   exceptions: AgendaException[];
+  /** Clé civile du premier jour affiché (lundi en semaine, jour choisi en jour). */
   weekStart: string;
+  /** 7 (semaine) ou 1 (jour). */
+  days: number;
+  view: "jour" | "semaine";
   timezone: string;
-  previousWeek: string;
-  nextWeek: string;
-  currentWeek: string;
+  /** Cibles de navigation, calculées côté serveur (l'état vit dans l'URL). */
+  nav: {
+    previousHref: string;
+    nextHref: string;
+    /** « Aujourd'hui » / « Cette semaine », ou `null` si on y est déjà. */
+    currentHref: string | null;
+    currentLabel: string;
+    weekHref: string;
+    dayHref: string;
+  };
 }) {
   const [rows, setRows] = useState(initial);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -216,6 +227,7 @@ export function TeacherAgenda({
       buildWeekAgenda({
         timezone,
         weekStart,
+        days,
         rules: rules.map((rule) => ({
           ...rule,
           validFrom: civilDate(rule.validFrom),
@@ -234,8 +246,13 @@ export function TeacherAgenda({
         ),
         now,
       }),
-    [rows, rules, exceptions, weekStart, timezone, now]
+    [rows, rules, exceptions, weekStart, days, timezone, now]
   );
+
+  const title =
+    view === "jour"
+      ? dayTitle(agenda.days[0]?.date ?? weekStart)
+      : weekLabel(agenda.days);
 
   const span = agenda.endMinute - agenda.startMinute;
   const height = (span / 60) * HOUR_HEIGHT;
@@ -330,40 +347,62 @@ export function TeacherAgenda({
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle>{weekLabel(agenda.days)}</CardTitle>
+              <CardTitle>{title}</CardTitle>
               <CardDescription>
                 {lessons.length === 0
-                  ? "Aucun cours cette semaine."
+                  ? "Aucun cours prévu."
                   : `${lessons.length} cours · ${formatDuration(totalMinutes)}`}
               </CardDescription>
             </div>
 
-            {/* Navigation en liens : la semaine vit dans l'URL, donc elle se
-                partage, se met en favori et répond au bouton retour. */}
-            <div className="flex items-center gap-1">
-              <Button asChild variant="outline" size="sm">
+            {/* Vue et navigation vivent dans l'URL (partageable, favori, retour
+                arrière). Les cibles sont calculées côté serveur. */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex rounded-md border border-border p-0.5">
                 <Link
-                  href={`/dashboard/prof/agenda?semaine=${previousWeek}`}
-                  aria-label="Semaine précédente"
+                  href={nav.dayHref}
+                  aria-current={view === "jour" ? "page" : undefined}
+                  className={cn(
+                    "rounded px-2.5 py-1 text-sm transition-colors",
+                    view === "jour"
+                      ? "bg-surface font-medium text-foreground"
+                      : "text-muted hover:text-foreground"
+                  )}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  Jour
                 </Link>
-              </Button>
-              {/* Le raccourci ne s'affiche que lorsqu'il mène ailleurs : un
-                  bouton grisé occuperait la place sans rien offrir. */}
-              {weekStart !== currentWeek ? (
+                <Link
+                  href={nav.weekHref}
+                  aria-current={view === "semaine" ? "page" : undefined}
+                  className={cn(
+                    "rounded px-2.5 py-1 text-sm transition-colors",
+                    view === "semaine"
+                      ? "bg-surface font-medium text-foreground"
+                      : "text-muted hover:text-foreground"
+                  )}
+                >
+                  Semaine
+                </Link>
+              </div>
+
+              <div className="flex items-center gap-1">
                 <Button asChild variant="outline" size="sm">
-                  <Link href="/dashboard/prof/agenda">Cette semaine</Link>
+                  <Link href={nav.previousHref} aria-label="Précédent">
+                    <ChevronLeft className="h-4 w-4" />
+                  </Link>
                 </Button>
-              ) : null}
-              <Button asChild variant="outline" size="sm">
-                <Link
-                  href={`/dashboard/prof/agenda?semaine=${nextWeek}`}
-                  aria-label="Semaine suivante"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </Button>
+                {/* Le raccourci ne s'affiche que lorsqu'il mène ailleurs. */}
+                {nav.currentHref ? (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={nav.currentHref}>{nav.currentLabel}</Link>
+                  </Button>
+                ) : null}
+                <Button asChild variant="outline" size="sm">
+                  <Link href={nav.nextHref} aria-label="Suivant">
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -389,7 +428,7 @@ export function TeacherAgenda({
               `visible`, donc il coupe court à cette coercition sans rien
               rogner : la hauteur du contenu est fixée par construction. */}
           <div className="-mx-2 overflow-x-auto overflow-y-clip px-2">
-            <div className="min-w-[44rem]">
+            <div className={cn(days > 1 ? "min-w-[44rem]" : "min-w-[18rem]")}>
               <div className="flex">
                 <div className="sticky left-0 z-20 w-12 shrink-0 bg-elevated" />
                 {agenda.days.map((day) => (
@@ -862,6 +901,17 @@ function weekLabel(days: { date: string }[]): string {
   const sameMonth = first.slice(0, 7) === last.slice(0, 7);
 
   return `${render(first, sameMonth ? { day: "numeric" } : { day: "numeric", month: "long" })} – ${render(last, { day: "numeric", month: "long", year: "numeric" })}`;
+}
+
+/** Titre de la vue jour : « Lundi 27 janvier », première lettre en capitale. */
+function dayTitle(dateKey: string): string {
+  const label = new Date(`${dateKey}T00:00:00Z`).toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  });
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 function formatDuration(minutes: number): string {

@@ -92,6 +92,22 @@ describe("weekRange", () => {
 
     expect(hours).toBe(167);
   });
+
+  it("borne une seule journée quand days = 1 (vue jour)", () => {
+    const range = weekRange("2026-01-12", PARIS, 1);
+
+    expect(range.from.toISOString()).toBe("2026-01-11T23:00:00.000Z");
+    expect(range.to.toISOString()).toBe("2026-01-12T23:00:00.000Z");
+  });
+});
+
+describe("buildWeekAgenda — vue jour", () => {
+  it("ne construit qu'un jour quand days = 1", () => {
+    const agenda = build({ days: 1 });
+
+    expect(agenda.days).toHaveLength(1);
+    expect(agenda.days[0].date).toBe("2026-01-12");
+  });
 });
 
 describe("buildWeekAgenda — placement des cours", () => {

@@ -7,12 +7,8 @@ import {
 } from "@/components/teacher-agenda";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { addDays } from "@/lib/availability/zone";
-import {
-  currentWeekStart,
-  startOfWeek,
-  weekRange,
-} from "@/lib/teacher/agenda";
+import { addDays, civilDateKeyInZone } from "@/lib/availability/zone";
+import { startOfWeek, weekRange } from "@/lib/teacher/agenda";
 
 /**
  * Agenda hebdomadaire du prof.
@@ -27,7 +23,7 @@ import {
 export default async function TeacherAgendaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ semaine?: string }>;
+  searchParams: Promise<{ semaine?: string; vue?: string; date?: string }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
 
@@ -42,19 +38,63 @@ export default async function TeacherAgendaPage({
 
   const now = new Date();
   const timezone = user.timezone;
+  const params = await searchParams;
 
-  // La semaine courante se lit dans le fuseau du prof : un prof à Tokyo un
-  // lundi matin ne doit pas atterrir sur la semaine passée du serveur.
-  const currentWeek = currentWeekStart(now, timezone);
-  const requested = (await searchParams).semaine;
+  // Tout se lit dans le fuseau du prof : un prof à Tokyo un lundi matin ne doit
+  // pas atterrir sur la semaine passée du serveur.
+  const todayKey = civilDateKeyInZone(now, timezone);
+  const currentWeek = startOfWeek(todayKey);
+  const view = params.vue === "jour" ? "jour" : "semaine";
 
-  // Une valeur fantaisiste ramène à la semaine courante plutôt qu'à une erreur :
-  // rien de sensible ne se joue ici, et une URL tronquée reste utilisable.
-  const weekStart = isCivilDate(requested)
-    ? startOfWeek(requested)
-    : currentWeek;
+  const AGENDA = "/dashboard/prof/agenda";
 
-  const range = weekRange(weekStart, timezone);
+  // `weekStart` désigne le premier jour affiché : le lundi en vue semaine, le
+  // jour choisi en vue jour. Une valeur fantaisiste ramène à aujourd'hui/la
+  // semaine courante plutôt qu'à une erreur — une URL tronquée reste utilisable.
+  let weekStart: string;
+  let days: number;
+  let nav: {
+    previousHref: string;
+    nextHref: string;
+    currentHref: string | null;
+    currentLabel: string;
+    weekHref: string;
+    dayHref: string;
+  };
+
+  if (view === "jour") {
+    weekStart = isCivilDate(params.date) ? params.date : todayKey;
+    days = 1;
+    nav = {
+      previousHref: `${AGENDA}?vue=jour&date=${addDays(weekStart, -1)}`,
+      nextHref: `${AGENDA}?vue=jour&date=${addDays(weekStart, 1)}`,
+      currentHref: weekStart !== todayKey ? `${AGENDA}?vue=jour` : null,
+      currentLabel: "Aujourd'hui",
+      weekHref: `${AGENDA}?semaine=${startOfWeek(weekStart)}`,
+      dayHref: `${AGENDA}?vue=jour&date=${weekStart}`,
+    };
+  } else {
+    weekStart = isCivilDate(params.semaine)
+      ? startOfWeek(params.semaine)
+      : currentWeek;
+    days = 7;
+    // Depuis la semaine, « Jour » ouvre aujourd'hui si la semaine le contient,
+    // sinon son lundi.
+    const dayTarget =
+      todayKey >= weekStart && todayKey <= addDays(weekStart, 6)
+        ? todayKey
+        : weekStart;
+    nav = {
+      previousHref: `${AGENDA}?semaine=${addDays(weekStart, -7)}`,
+      nextHref: `${AGENDA}?semaine=${addDays(weekStart, 7)}`,
+      currentHref: weekStart !== currentWeek ? AGENDA : null,
+      currentLabel: "Cette semaine",
+      weekHref: `${AGENDA}?semaine=${weekStart}`,
+      dayHref: `${AGENDA}?vue=jour&date=${dayTarget}`,
+    };
+  }
+
+  const range = weekRange(weekStart, timezone, days);
 
   const [rules, exceptions, bookings] = await Promise.all([
     prisma.availabilityRule.findMany({
@@ -74,7 +114,7 @@ export default async function TeacherAgendaPage({
         teacherId: user.teacherProfile.id,
         date: {
           gte: civilDate(weekStart),
-          lte: civilDate(addDays(weekStart, 6)),
+          lte: civilDate(addDays(weekStart, days - 1)),
         },
       },
       select: {
@@ -138,10 +178,10 @@ export default async function TeacherAgendaPage({
         date: toCivilKey(exception.date)!,
       }))}
       weekStart={weekStart}
+      days={days}
+      view={view}
       timezone={timezone}
-      previousWeek={addDays(weekStart, -7)}
-      nextWeek={addDays(weekStart, 7)}
-      currentWeek={currentWeek}
+      nav={nav}
     />
   );
 }

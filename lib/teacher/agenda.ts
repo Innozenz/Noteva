@@ -98,28 +98,33 @@ export function currentWeekStart(now: Date, timezone: string): string {
  */
 export function weekRange(
   weekStart: string,
-  timezone: string
+  timezone: string,
+  days = 7
 ): { from: Date; to: Date } {
   return {
     from: new Date(wallClockToInstant(weekStart, 0, timezone)),
     to: new Date(
-      wallClockToInstant(addDays(weekStart, 6), MINUTES_PER_DAY, timezone)
+      wallClockToInstant(addDays(weekStart, days - 1), MINUTES_PER_DAY, timezone)
     ),
   };
 }
 
 export function buildWeekAgenda<T extends AgendaEvent>(input: {
   timezone: string;
-  /** Clé civile du lundi. */
+  /** Clé civile du premier jour affiché (lundi en vue semaine, jour choisi en vue jour). */
   weekStart: string;
   rules: RuleInput[];
   exceptions: ExceptionInput[];
   events: T[];
   now: Date;
+  /** Nombre de jours affichés : 7 (semaine) ou 1 (jour). Défaut 7. */
+  days?: number;
 }): WeekAgenda<T> {
   const { timezone, weekStart, rules, exceptions, events, now } = input;
 
-  const dayKeys = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const dayKeys = Array.from({ length: input.days ?? 7 }, (_, i) =>
+    addDays(weekStart, i)
+  );
   const todayKey = civilDateKeyInZone(now, timezone);
 
   const placed = new Map<string, PlacedEvent<T>[]>(
