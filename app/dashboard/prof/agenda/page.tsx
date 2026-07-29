@@ -1,14 +1,21 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { type AgendaNav } from "@/components/agenda-view-switch";
 import {
   TeacherAgenda,
   type AgendaRow,
 } from "@/components/teacher-agenda";
+import { TeacherMonth, type MonthLesson } from "@/components/teacher-month";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { addDays, civilDateKeyInZone } from "@/lib/availability/zone";
-import { startOfWeek, weekRange } from "@/lib/teacher/agenda";
+import {
+  buildMonthAgenda,
+  monthRange,
+  startOfWeek,
+  weekRange,
+} from "@/lib/teacher/agenda";
 
 /**
  * Agenda hebdomadaire du prof.
@@ -23,7 +30,12 @@ import { startOfWeek, weekRange } from "@/lib/teacher/agenda";
 export default async function TeacherAgendaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ semaine?: string; vue?: string; date?: string }>;
+  searchParams: Promise<{
+    semaine?: string;
+    vue?: string;
+    date?: string;
+    mois?: string;
+  }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
 
@@ -44,23 +56,76 @@ export default async function TeacherAgendaPage({
   // pas atterrir sur la semaine passée du serveur.
   const todayKey = civilDateKeyInZone(now, timezone);
   const currentWeek = startOfWeek(todayKey);
-  const view = params.vue === "jour" ? "jour" : "semaine";
+  const view =
+    params.vue === "jour"
+      ? "jour"
+      : params.vue === "mois"
+        ? "mois"
+        : "semaine";
 
   const AGENDA = "/dashboard/prof/agenda";
+  const currentMonth = todayKey.slice(0, 7);
+
+  // Vue mois : aperçu en lecture seule, avec sa propre requête et son propre
+  // rendu — le mois ne dessine pas le fond de disponibilité, donc ni règles ni
+  // exceptions à charger.
+  if (view === "mois") {
+    const month = isMonth(params.mois) ? params.mois : currentMonth;
+    const range = monthRange(month, timezone);
+
+    const bookings = await prisma.booking.findMany({
+      where: {
+        teacherId: user.teacherProfile.id,
+        status: { in: ["PENDING", "CONFIRMED", "COMPLETED", "NO_SHOW"] },
+        startsAt: { gte: range.from, lt: range.to },
+      },
+      orderBy: { startsAt: "asc" },
+      select: {
+        id: true,
+        status: true,
+        startsAt: true,
+        endsAt: true,
+        instrument: { select: { name: true } },
+        student: { select: { user: { select: { name: true } } } },
+      },
+    });
+
+    const monthAgenda = buildMonthAgenda<MonthLesson>({
+      timezone,
+      month,
+      now,
+      events: bookings.map((booking) => ({
+        id: booking.id,
+        startsAt: booking.startsAt,
+        endsAt: booking.endsAt,
+        status: booking.status as MonthLesson["status"],
+        studentName: booking.student.user.name,
+        instrumentName: booking.instrument.name,
+      })),
+    });
+
+    // Depuis le mois, « Jour »/« Semaine » ouvrent aujourd'hui si le mois est en
+    // cours, sinon le 1er du mois affiché.
+    const dayAnchor = month === currentMonth ? todayKey : `${month}-01`;
+    const monthNav: AgendaNav = {
+      previousHref: `${AGENDA}?vue=mois&mois=${shiftMonthKey(month, -1)}`,
+      nextHref: `${AGENDA}?vue=mois&mois=${shiftMonthKey(month, 1)}`,
+      currentHref: month !== currentMonth ? `${AGENDA}?vue=mois` : null,
+      currentLabel: "Ce mois",
+      dayHref: `${AGENDA}?vue=jour&date=${dayAnchor}`,
+      weekHref: `${AGENDA}?semaine=${startOfWeek(dayAnchor)}`,
+      monthHref: `${AGENDA}?vue=mois&mois=${month}`,
+    };
+
+    return <TeacherMonth agenda={monthAgenda} nav={monthNav} />;
+  }
 
   // `weekStart` désigne le premier jour affiché : le lundi en vue semaine, le
   // jour choisi en vue jour. Une valeur fantaisiste ramène à aujourd'hui/la
   // semaine courante plutôt qu'à une erreur — une URL tronquée reste utilisable.
   let weekStart: string;
   let days: number;
-  let nav: {
-    previousHref: string;
-    nextHref: string;
-    currentHref: string | null;
-    currentLabel: string;
-    weekHref: string;
-    dayHref: string;
-  };
+  let nav: AgendaNav;
 
   if (view === "jour") {
     weekStart = isCivilDate(params.date) ? params.date : todayKey;
@@ -70,8 +135,9 @@ export default async function TeacherAgendaPage({
       nextHref: `${AGENDA}?vue=jour&date=${addDays(weekStart, 1)}`,
       currentHref: weekStart !== todayKey ? `${AGENDA}?vue=jour` : null,
       currentLabel: "Aujourd'hui",
-      weekHref: `${AGENDA}?semaine=${startOfWeek(weekStart)}`,
       dayHref: `${AGENDA}?vue=jour&date=${weekStart}`,
+      weekHref: `${AGENDA}?semaine=${startOfWeek(weekStart)}`,
+      monthHref: `${AGENDA}?vue=mois&mois=${weekStart.slice(0, 7)}`,
     };
   } else {
     weekStart = isCivilDate(params.semaine)
@@ -89,8 +155,9 @@ export default async function TeacherAgendaPage({
       nextHref: `${AGENDA}?semaine=${addDays(weekStart, 7)}`,
       currentHref: weekStart !== currentWeek ? AGENDA : null,
       currentLabel: "Cette semaine",
-      weekHref: `${AGENDA}?semaine=${weekStart}`,
       dayHref: `${AGENDA}?vue=jour&date=${dayTarget}`,
+      weekHref: `${AGENDA}?semaine=${weekStart}`,
+      monthHref: `${AGENDA}?vue=mois&mois=${weekStart.slice(0, 7)}`,
     };
   }
 
@@ -188,6 +255,17 @@ export default async function TeacherAgendaPage({
 
 function isCivilDate(value: string | undefined): value is string {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function isMonth(value: string | undefined): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}$/.test(value);
+}
+
+/** Décale une clé de mois « AAAA-MM » d'un nombre de mois. */
+function shiftMonthKey(month: string, delta: number): string {
+  const [year, m] = month.split("-").map(Number);
+  const index = year * 12 + (m - 1) + delta;
+  return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`;
 }
 
 /** Clé civile → Date à minuit UTC, la forme d'une colonne `@db.Date`. */

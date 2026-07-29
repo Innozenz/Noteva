@@ -17,6 +17,10 @@ import {
   X,
 } from "lucide-react";
 
+import {
+  AgendaViewSwitch,
+  type AgendaNav,
+} from "@/components/agenda-view-switch";
 import { FormFailure } from "@/components/form-failure";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -194,15 +198,7 @@ export function TeacherAgenda({
   view: "jour" | "semaine";
   timezone: string;
   /** Cibles de navigation, calculées côté serveur (l'état vit dans l'URL). */
-  nav: {
-    previousHref: string;
-    nextHref: string;
-    /** « Aujourd'hui » / « Cette semaine », ou `null` si on y est déjà. */
-    currentHref: string | null;
-    currentLabel: string;
-    weekHref: string;
-    dayHref: string;
-  };
+  nav: AgendaNav;
 }) {
   const [rows, setRows] = useState(initial);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -358,32 +354,7 @@ export function TeacherAgenda({
             {/* Vue et navigation vivent dans l'URL (partageable, favori, retour
                 arrière). Les cibles sont calculées côté serveur. */}
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex rounded-md border border-border p-0.5">
-                <Link
-                  href={nav.dayHref}
-                  aria-current={view === "jour" ? "page" : undefined}
-                  className={cn(
-                    "rounded px-2.5 py-1 text-sm transition-colors",
-                    view === "jour"
-                      ? "bg-surface font-medium text-foreground"
-                      : "text-muted hover:text-foreground"
-                  )}
-                >
-                  Jour
-                </Link>
-                <Link
-                  href={nav.weekHref}
-                  aria-current={view === "semaine" ? "page" : undefined}
-                  className={cn(
-                    "rounded px-2.5 py-1 text-sm transition-colors",
-                    view === "semaine"
-                      ? "bg-surface font-medium text-foreground"
-                      : "text-muted hover:text-foreground"
-                  )}
-                >
-                  Semaine
-                </Link>
-              </div>
+              <AgendaViewSwitch view={view} nav={nav} />
 
               <div className="flex items-center gap-1">
                 <Button asChild variant="outline" size="sm">

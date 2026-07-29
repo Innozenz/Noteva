@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { TZDate } from "@date-fns/tz";
 
 import {
+  buildMonthAgenda,
   buildWeekAgenda,
   currentWeekStart,
+  monthRange,
   startOfWeek,
   weekRange,
   type AgendaEvent,
@@ -107,6 +109,49 @@ describe("buildWeekAgenda — vue jour", () => {
 
     expect(agenda.days).toHaveLength(1);
     expect(agenda.days[0].date).toBe("2026-01-12");
+  });
+});
+
+describe("monthRange", () => {
+  it("couvre la grille du mois en instants, bornée dans le fuseau", () => {
+    const range = monthRange("2026-01", PARIS);
+    // Lundi 29 déc 2025 00:00 à Paris (hiver, UTC+1) = 28 déc 23:00 UTC.
+    expect(range.from.toISOString()).toBe("2025-12-28T23:00:00.000Z");
+    // Exclusif : 2 févr 2026 00:00 Paris = 1er févr 23:00 UTC.
+    expect(range.to.toISOString()).toBe("2026-02-01T23:00:00.000Z");
+  });
+});
+
+describe("buildMonthAgenda", () => {
+  it("découpe le mois en semaines complètes, jours voisins estompés", () => {
+    const agenda = buildMonthAgenda({
+      timezone: PARIS,
+      month: "2026-01",
+      events: [],
+      now: wall("2026-01-15", "10:00"),
+    });
+
+    // Janvier 2026 : du lundi 29 déc au dimanche 1er févr → 5 semaines.
+    expect(agenda.weeks).toHaveLength(5);
+    expect(agenda.weeks[0][0].date).toBe("2025-12-29");
+    expect(agenda.weeks[0][0].inMonth).toBe(false);
+
+    const jan15 = agenda.weeks.flat().find((c) => c.date === "2026-01-15")!;
+    expect(jan15.inMonth).toBe(true);
+    expect(jan15.isToday).toBe(true);
+  });
+
+  it("range chaque cours sous son jour de début", () => {
+    const agenda = buildMonthAgenda({
+      timezone: PARIS,
+      month: "2026-01",
+      events: [lesson("a", wall("2026-01-15", "09:00"), 60)],
+      now: wall("2026-01-15", "10:00"),
+    });
+
+    const jan15 = agenda.weeks.flat().find((c) => c.date === "2026-01-15")!;
+    expect(jan15.events).toHaveLength(1);
+    expect(jan15.events[0].event.id).toBe("a");
   });
 });
 

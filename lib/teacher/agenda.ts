@@ -74,6 +74,111 @@ export type WeekAgenda<T extends AgendaEvent> = {
 /** Grille par défaut quand la semaine est entièrement vide : 8h → 20h. */
 const DEFAULT_BOUNDS = { start: 8 * 60, end: 20 * 60 };
 
+/** Premier jour du mois suivant, en clé civile, pour un mois « AAAA-MM ». */
+function nextMonthFirst(month: string): string {
+  const [year, m] = month.split("-").map(Number);
+  return m === 12
+    ? `${year + 1}-01-01`
+    : `${year}-${String(m + 1).padStart(2, "0")}-01`;
+}
+
+/**
+ * Grille civile d'un mois : du lundi précédant le 1er au dimanche suivant le
+ * dernier jour. Les jours débordant sur les mois voisins remplissent les
+ * semaines complètes d'un calendrier.
+ */
+export function monthGrid(month: string): { gridStart: string; gridEnd: string } {
+  const first = `${month}-01`;
+  const last = addDays(nextMonthFirst(month), -1);
+  return {
+    gridStart: startOfWeek(first),
+    gridEnd: addDays(startOfWeek(last), 6),
+  };
+}
+
+/** Fenêtre d'instants couverte par la grille du mois, pour la requête SQL. */
+export function monthRange(
+  month: string,
+  timezone: string
+): { from: Date; to: Date } {
+  const { gridStart, gridEnd } = monthGrid(month);
+  return {
+    from: new Date(wallClockToInstant(gridStart, 0, timezone)),
+    to: new Date(wallClockToInstant(addDays(gridEnd, 1), 0, timezone)),
+  };
+}
+
+export type MonthCell<T extends AgendaEvent> = {
+  /** Date civile AAAA-MM-JJ, dans le fuseau du prof. */
+  date: string;
+  /** Appartient au mois affiché (les jours des mois voisins sont estompés). */
+  inMonth: boolean;
+  isToday: boolean;
+  /** Cours dont le **début** tombe ce jour-là, du plus tôt au plus tard. */
+  events: { event: T; startMinute: number }[];
+};
+
+export type MonthAgenda<T extends AgendaEvent> = {
+  /** Mois affiché, « AAAA-MM ». */
+  month: string;
+  /** Semaines de 7 jours (lundi → dimanche). */
+  weeks: MonthCell<T>[][];
+};
+
+/**
+ * Aperçu mensuel : une grille semaines × jours, chaque jour portant les cours
+ * qui y commencent. Vue de lecture — elle situe l'activité du mois et renvoie
+ * vers le jour ; le placement horaire fin reste l'affaire des vues jour/semaine.
+ *
+ * Un cours est rangé sous son **jour de début**, lu à l'horloge dans le fuseau
+ * du prof (`civilDateKeyInZone`) — jamais déduit d'un décalage, qui se
+ * tromperait les jours de changement d'heure.
+ */
+export function buildMonthAgenda<T extends AgendaEvent>(input: {
+  timezone: string;
+  month: string;
+  events: T[];
+  now: Date;
+}): MonthAgenda<T> {
+  const { timezone, month, events, now } = input;
+  const { gridStart, gridEnd } = monthGrid(month);
+  const todayKey = civilDateKeyInZone(now, timezone);
+
+  const byDay = new Map<string, { event: T; startMinute: number }[]>();
+  for (const event of events) {
+    const key = civilDateKeyInZone(event.startsAt, timezone);
+    const bucket = byDay.get(key) ?? [];
+    bucket.push({ event, startMinute: localMinutesInZone(event.startsAt, timezone) });
+    byDay.set(key, bucket);
+  }
+
+  const weeks: MonthCell<T>[][] = [];
+  let week: MonthCell<T>[] = [];
+
+  // Garde-fou : au plus 6 semaines, une grille de mois n'en compte jamais plus.
+  for (let date = gridStart, guard = 0; date <= gridEnd && guard < 43; guard++) {
+    const dayEvents = (byDay.get(date) ?? []).sort(
+      (a, b) => a.startMinute - b.startMinute
+    );
+
+    week.push({
+      date,
+      inMonth: date.slice(0, 7) === month,
+      isToday: date === todayKey,
+      events: dayEvents,
+    });
+
+    if (week.length === 7) {
+      weeks.push(week);
+      week = [];
+    }
+
+    date = addDays(date, 1);
+  }
+
+  return { month, weeks };
+}
+
 /**
  * Amplitude minimale affichée. Sans elle, une semaine à un seul cours d'une
  * heure rendrait une grille haute d'une ligne, illisible et fausse à l'œil.
