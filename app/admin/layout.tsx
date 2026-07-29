@@ -10,8 +10,9 @@ import prisma from "@/lib/prisma";
  * Espace d'administration.
  *
  * Troisième porte du même modèle que /dashboard et /dashboard/prof : un Server
- * Component qui lit le rôle en base, parce que le middleware ne le peut pas
- * depuis l'edge.
+ * Component qui lit le rôle en base. Le proxy pourrait le lire aussi (runtime
+ * Node sous Next 16, plus edge-only), mais une lecture DB à chaque requête
+ * interceptée n'a pas sa place là : le layout est le bon endroit.
  *
  * `notFound()` plutôt qu'une redirection : pour qui n'est pas administrateur,
  * cette zone n'existe pas. Une redirection lui apprendrait qu'il y a quelque

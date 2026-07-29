@@ -17,9 +17,10 @@ export const metadata: Metadata = {
 /**
  * Écran de choix du rôle.
  *
- * Server Component : le rôle se lit en base, pas dans la session. Le
- * middleware ne peut pas faire ce contrôle — il ne voit que la présence d'un
- * cookie et n'a pas accès à Prisma depuis l'edge.
+ * Server Component : le rôle se lit en base, pas dans la session. Le proxy ne
+ * fait pas ce contrôle — non qu'il ne le puisse pas (sous Next 16 il tourne sur
+ * Node, plus seulement l'edge), mais une lecture DB à chaque requête
+ * interceptée n'y a pas sa place ; il s'en tient à la présence d'un cookie.
  */
 export default async function OnboardingPage() {
   const session = await auth.api.getSession({ headers: await headers() });

@@ -21,8 +21,10 @@ import prisma from "@/lib/prisma";
  * est une surface d'attaque permanente pour un besoin qui, sur cette
  * plateforme, se produit une fois.
  *
- * Le contrôle se fait ici et pas dans le middleware, pour la même raison que
- * partout ailleurs : l'edge ne voit que le cookie et n'a pas accès à Prisma.
+ * Le contrôle se fait ici et pas dans le proxy, pour la même raison que
+ * partout ailleurs : le proxy pourrait lire la base (runtime Node sous Next 16)
+ * mais ne doit pas le faire à chaque requête interceptée ; le Server Component
+ * est le bon endroit.
  */
 export type AdminSession =
   | { ok: true; userId: string }

@@ -70,7 +70,7 @@ Use **`sslmode=verify-full`**, not `sslmode=require`. With `require`, `pg` print
 - `app/api/auth/[...all]/route.ts` — catch-all that mounts Better Auth's handlers; all auth traffic (sign-in, session, OAuth callback) flows through here. **Keep the segment name a valid JS identifier.** It used to be `[...better-auth]`, and the hyphen made Next 16 crash its dev render worker on *every* `/api/auth/*` request ("Jest worker encountered 2 child process exceptions") — a total auth outage that looked like a Better Auth bug rather than a routing one. Renaming a route directory also requires a dev-server restart; hot reload keeps serving 404s.
 - Server-side session reads (API routes, server components) go through `auth.api.getSession({ headers: await headers() })` — see `app/api/stripe/checkout/route.ts` and `app/api/user/subscription/route.ts`.
 
-Sign-in lives at **`/connexion`** (`AuthButtons`: Zod-validated email/password plus a Google button). It redirects an already-signed-in user to their own area, which needs the role — so that check is in the page, not the middleware. `authRoutes` in `middleware.ts` is consequently empty; unauthenticated hits on protected routes redirect to `/connexion?callbackUrl=…` (nothing consumes `callbackUrl` yet).
+Sign-in lives at **`/connexion`** (`AuthButtons`: Zod-validated email/password plus a Google button). It redirects an already-signed-in user to their own area, which needs the role — so that check is in the page, not the proxy. `authRoutes` in `proxy.ts` is consequently empty; unauthenticated hits on protected routes redirect to `/connexion?callbackUrl=…` (nothing consumes `callbackUrl` yet).
 
 `AuthButtons` is a client component reading the session via `authClient.useSession()`, so `/connexion` server-renders a spinner and fills in after hydration. Fine for a `noindex` page, but don't copy the pattern onto anything public. (Consequence: the "mot de passe oublié" link only exists in the client bundle, not the server HTML.)
 
@@ -92,23 +92,23 @@ Tokens are single-use and expire after an hour (`resetPasswordTokenExpiresIn`). 
 
 **`User.role` is nullable on purpose.** With Google OAuth the account is created before the user can say whether they're a teacher or a student, so `POST /api/onboarding` fills it in and creates the matching profile in one transaction. Treat `role === null` as "onboarding incomplete"; don't assume a role is present.
 
-**The role gate is in `app/dashboard/layout.tsx`, not the middleware** — and it has to be. The middleware runs on the edge, sees only the session cookie, and has no Prisma access, so it cannot read a role. Any new signed-in area needs its own Server Component layout doing the same check, or it will be reachable with `role === null`.
+**The role gate is in `app/dashboard/layout.tsx`, not the proxy** — and it stays there by choice. Next 16's proxy runs on the Node runtime (no longer edge-only, unlike the old `middleware.ts`), so it *could* read a role — but that would mean a Prisma query on every request it intercepts, while the layout reads it once per navigation with proper redirect semantics. Any new signed-in area needs its own Server Component layout doing the same check, or it will be reachable with `role === null`.
 
 `/onboarding` carries the logo and a sign-out link, and both are load-bearing. Every signed-in route redirects here while `role` is null, so without an exit someone who created a Google account by mistake was trapped with no way back.
 
 Choosing a role is **one-way**: `/api/onboarding` answers 409 once `role` is set. A teacher profile carries a public slug, availability and lesson history that a switch to "student" would orphan. Teacher slugs come from `lib/slug.ts` (accent-stripped, reserved words avoided, `-2`/`-3` on collision) and are unit-tested — they end up in indexed public URLs, so they're painful to change later.
 
 **Route gating is two-layer and both layers are shallow:**
-1. `middleware.ts` checks only for the *presence* of the `better-auth.session_token` cookie (no signature/expiry check at the edge). Unauthenticated hits on `protectedRoutes` (`/dashboard`) redirect to `/` with a `callbackUrl` search param — note nothing currently consumes `callbackUrl`.
+1. `proxy.ts` checks only for the *presence* of the `better-auth.session_token` cookie (no signature/expiry check in the proxy). Unauthenticated hits on `protectedRoutes` (`/dashboard`) redirect to `/` with a `callbackUrl` search param — note nothing currently consumes `callbackUrl`.
 2. `app/dashboard/page.tsx` is a `"use client"` component that re-checks `authClient.useSession()` and `router.push("/")` if absent.
 
-Real validation only happens server-side in API routes via `auth.api.getSession`. When adding a protected page, update `protectedRoutes` **and** the `matcher` in `middleware.ts`, and don't rely on either layer for authorization of data — guard in the route handler.
+Real validation only happens server-side in API routes via `auth.api.getSession`. When adding a protected page, update `protectedRoutes` **and** the `matcher` in `proxy.ts`, and don't rely on either layer for authorization of data — guard in the route handler.
 
 This matters more now than it did for the boilerplate: the data is multi-tenant. Every handler touching a booking, a calendar or a profile must check *this user owns this resource*, not merely *this user is logged in* — otherwise any student can read another's lessons through `/api/bookings/[id]`.
 
 ### Security hardening
 
-`next.config.ts` applies `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and a restrictive `Permissions-Policy` to every response. There is deliberately no Content Security Policy yet: a useful CSP for Next needs per-request nonces in the middleware and an inventory of required origins; do not add an untested static policy that breaks hydration.
+`next.config.ts` applies `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and a restrictive `Permissions-Policy` to every response. There is deliberately no Content Security Policy yet: a useful CSP for Next needs per-request nonces in the proxy and an inventory of required origins; do not add an untested static policy that breaks hydration.
 
 Security-sensitive routes fail closed. `/api/webhooks/stripe` returns 503 when `STRIPE_WEBHOOK_SECRET` is missing instead of crashing through a non-null assertion. `/api/cron/reminders` already did the same for `CRON_SECRET` and now compares a supplied secret with `crypto.timingSafeEqual`; preserve the equal-length check before calling it because Node throws when buffer lengths differ.
 
@@ -142,7 +142,7 @@ Anything new behind the login wall goes under this layout. Do not add a second h
 
 **`UserNav` takes its identity from the layout, not from `authClient.useSession()`.** Better Auth caches the session client-side, so after a name change the header kept showing the old one directly above a form that had just said "enregistré" — the app contradicting itself. The layout already reads the user for its role gate, so widening that `select` costs no query, and a `router.refresh()` now updates the header. Same reasoning that makes `SiteHeader` a Server Component. `UserNav` stays a Client Component for the dropdown and sign-out only. Note that `authClient.getSession({ query: { disableCookieCache: true } })` does **not** fix this — it does not feed the `useSession` store.
 
-`/dashboard/compte` edits the person's identity (given name, surname) and is **shared by all three roles**, reached from `UserNav`. It sits under `/dashboard`, so the layout's role gate already covers it and `middleware.ts` needs no change — `protectedRoutes` matches on `startsWith("/dashboard")` and the matcher is `/dashboard/:path*`. Putting these fields inside the teacher and student profile screens instead would have meant writing them twice, with two routes updating one column: a name belongs to the person, not to either profile.
+`/dashboard/compte` edits the person's identity (given name, surname) and is **shared by all three roles**, reached from `UserNav`. It sits under `/dashboard`, so the layout's role gate already covers it and `proxy.ts` needs no change — `protectedRoutes` matches on `startsWith("/dashboard")` and the matcher is `/dashboard/:path*`. Putting these fields inside the teacher and student profile screens instead would have meant writing them twice, with two routes updating one column: a name belongs to the person, not to either profile.
 
 `TeacherTabs` is a Client Component for one reason — marking the current tab needs `usePathname`. Its tab list lives **in the client component**, not in the layout: Lucide icons are components, and a component cannot cross the server→client boundary ("Only plain objects can be passed to Client Components"). The layout passes `pendingCount`, a number.
 

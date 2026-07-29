@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 const protectedRoutes = ["/dashboard", "/onboarding"];
 // `/connexion` gère elle-même la redirection d'un utilisateur déjà connecté :
-// elle a besoin du rôle, que le middleware ne peut pas lire depuis l'edge.
+// elle a besoin du rôle, et le proxy ne lit pas la base — il s'en tient au
+// cookie, sans requête DB à chaque requête interceptée.
 const authRoutes: string[] = [];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const sessionToken =

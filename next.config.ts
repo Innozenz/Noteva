@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
 
   // En-têtes de sécurité appliqués à toutes les réponses. Pas de
   // Content-Security-Policy ici : une CSP utile exige un nonce par requête
-  // (donc le middleware) et une liste des origines réellement utilisées ;
+  // (donc le proxy) et une liste des origines réellement utilisées ;
   // une CSP posée à l'aveugle casserait l'hydratation de Next. Les en-têtes
   // ci-dessous, eux, sont sans risque de régression.
   async headers() {

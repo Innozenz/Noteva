@@ -10,7 +10,7 @@ import prisma from "@/lib/prisma";
  *
  * Deuxième porte, après celle de /dashboard : le layout parent garantit qu'un
  * rôle est posé, celui-ci qu'il s'agit bien d'un prof. Le contrôle ne peut pas
- * remonter dans le middleware, qui n'a pas accès à la base depuis l'edge.
+ * remonter dans le proxy, qui n'a pas accès à la base depuis l'edge.
  */
 export default async function TeacherLayout({
   children,

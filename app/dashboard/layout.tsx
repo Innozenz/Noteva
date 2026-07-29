@@ -8,10 +8,11 @@ import prisma from "@/lib/prisma";
 /**
  * Porte d'entrée de l'espace connecté.
  *
- * C'est ici, et pas dans le middleware, que se fait le contrôle du rôle : le
- * middleware s'exécute sur l'edge, ne voit que la présence du cookie de
- * session et n'a pas accès à Prisma. Un Server Component peut lire la base,
- * donc rediriger vers l'onboarding tant que `role` est nul.
+ * C'est ici, et pas dans le proxy, que se fait le contrôle du rôle. Le proxy
+ * pourrait le faire — sous Next 16 il tourne sur le runtime Node, il n'est plus
+ * cantonné à l'edge —, mais on ne veut pas d'une requête Prisma à chaque
+ * requête `/dashboard/*` qu'il intercepte. Le layout, lui, lit la base une fois
+ * par navigation et redirige vers l'onboarding tant que `role` est nul.
  */
 export default async function DashboardLayout({
   children,
