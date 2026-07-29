@@ -117,7 +117,7 @@ export default async function ActivitePage({
     });
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
       <header className="flex flex-col gap-5 border-b border-border pb-8">
         <div className="flex flex-col gap-2">
           <PageTitle size="page">Activité</PageTitle>

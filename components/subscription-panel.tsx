@@ -61,7 +61,7 @@ export function SubscriptionPanel({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       {/* Le retour de Stripe passe par l'URL : l'état réel, lui, arrive par
           webhook et peut avoir quelques secondes de retard. */}
       {flash === "success" && !isActive ? (

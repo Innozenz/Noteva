@@ -45,7 +45,12 @@ export default async function TeacherLayout({
   return (
     // Deux colonnes sur grand écran : navigation à gauche, contenu à droite.
     // Sur mobile la nav repasse en rangée horizontale au-dessus du contenu.
-    <div className="mx-auto max-w-6xl gap-8 px-4 py-8 lg:flex lg:py-10">
+    //
+    // Le shell prend toute la largeur : c'est chaque page qui se re-plafonne
+    // (formulaires et listes à `max-w-4xl`, activité à `max-w-5xl`), tandis que
+    // l'agenda, lui, s'étale sur tout `main` pour que les sept colonnes
+    // respirent.
+    <div className="gap-8 px-4 py-8 lg:flex lg:py-10">
       <TeacherNav pendingCount={pendingCount} />
       <main className="min-w-0 flex-1">{children}</main>
     </div>

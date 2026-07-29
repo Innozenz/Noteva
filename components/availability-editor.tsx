@@ -119,7 +119,7 @@ export function AvailabilityEditor({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <section className="flex flex-col gap-5">
         <div>
           <SectionTitle>Semaine type</SectionTitle>

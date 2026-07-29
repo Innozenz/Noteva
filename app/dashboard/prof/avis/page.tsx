@@ -81,7 +81,7 @@ export default async function TeacherReviewsPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-8">
         <div className="flex flex-col gap-2">
           <PageTitle size="page">Avis</PageTitle>

@@ -152,7 +152,7 @@ export function TeacherProfileForm({
   const canPublish = profile.publishCheck.ok;
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-10">
       {/* En-tête + état de publication */}
       <header className="flex flex-col gap-4 border-b border-border pb-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
