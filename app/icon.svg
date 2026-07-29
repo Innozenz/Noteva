@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Noteva">
+  <rect width="64" height="64" rx="15" fill="#0b5a5f" />
+  <g fill="#ffffff">
+    <rect x="33.5" y="14" width="4" height="31" rx="2" />
+    <path d="M37.5 14c9 2 13 9 8.5 16.5 1.6-5.7-1.2-10-8.5-10.5z" />
+    <ellipse cx="27" cy="44.5" rx="9" ry="6.6" transform="rotate(-22 27 44.5)" />
+  </g>
+</svg>

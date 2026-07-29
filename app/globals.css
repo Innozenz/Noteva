@@ -15,36 +15,42 @@
 :root {
   color-scheme: light;
 
-  /* Fonds, du plus profond au plus élevé. */
-  --background: #ffffff;
-  --surface: #f6f6f8;
-  --surface-strong: #ececf0;
+  /* Fonds : du papier, pas du gris froid. Ivoire chaud au plus profond,
+     blanc pur réservé aux surfaces élevées (cartes) pour qu'elles ressortent
+     comme une feuille posée dessus. */
+  --background: #faf8f4;
+  --surface: #f1eee7;
+  --surface-strong: #e7e1d6;
   --elevated: #ffffff;
 
-  /* Texte. */
-  --foreground: #0f0f12;
-  --muted: #6b6b76;
-  --subtle: #9a9aa5;
+  /* Texte : de l'encre chaude, pas du noir bleuté. */
+  --foreground: #1f1b16;
+  --muted: #6e6559;
+  --subtle: #a49a8b;
 
-  --border: #e6e6ea;
-  --border-strong: #d3d3da;
+  --border: #e8e1d5;
+  --border-strong: #d7d0c0;
 
-  /* Indigo : actions, liens, tout ce qui se clique. */
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-soft: #eef2ff;
+  /* Sapin-pétrole : actions, liens, tout ce qui se clique. Volontairement
+     foncé et légèrement bleuté — c'est ce qui le dégage du teal de la famille
+     « vents » (#0f766e) et des verts « succès »/« percussions », alors qu'un
+     sapin franc s'y confondrait. Une teinte ne nomme qu'une chose. */
+  --primary: #0b5a5f;
+  --primary-hover: #094a4d;
+  --primary-soft: #e3f1f0;
   --primary-foreground: #ffffff;
 
-  /* Rose : réservé aux mises en avant. Rare, donc efficace. */
-  --accent: #ec4899;
-  --accent-soft: #fdf2f8;
+  /* Terre cuite : réservé aux mises en avant. Rare, donc efficace, et
+     complémentaire du sapin — l'atelier et l'argile. */
+  --accent: #cf4b2c;
+  --accent-soft: #fbeae3;
 
   --success: #059669;
-  --success-soft: #ecfdf5;
+  --success-soft: #e9f6ef;
   --warning: #b45309;
-  --warning-soft: #fffbeb;
+  --warning-soft: #faf3e3;
   --danger: #dc2626;
-  --danger-soft: #fef2f2;
+  --danger-soft: #fbece8;
 
   /**
    * Familles d'instruments.
@@ -79,10 +85,12 @@
   --radius-sm: 0.5rem;
   --radius-lg: 1.25rem;
 
-  /* Ombres discrètes : la hiérarchie vient du trait, pas du flou. */
-  --shadow-sm: 0 1px 2px 0 rgb(15 15 18 / 0.04);
-  --shadow: 0 1px 3px 0 rgb(15 15 18 / 0.06), 0 1px 2px -1px rgb(15 15 18 / 0.04);
-  --shadow-lg: 0 12px 32px -12px rgb(15 15 18 / 0.18);
+  /* Ombres discrètes : la hiérarchie vient du trait, pas du flou. Teintées de
+     l'encre chaude (31 27 22), pas d'un gris bleuté, pour ne pas refroidir le
+     papier. */
+  --shadow-sm: 0 1px 2px 0 rgb(31 27 22 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(31 27 22 / 0.07), 0 1px 2px -1px rgb(31 27 22 / 0.05);
+  --shadow-lg: 0 12px 32px -12px rgb(31 27 22 / 0.2);
 }
 
 @theme inline {

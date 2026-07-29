@@ -35,8 +35,8 @@ export default function GlobalError({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#ffffff",
-          color: "#0f0f12",
+          background: "#faf8f4",
+          color: "#1f1b16",
           fontFamily: "ui-sans-serif, system-ui, sans-serif",
         }}
       >
@@ -44,7 +44,7 @@ export default function GlobalError({
           <h1 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
             Noteva est momentanément indisponible
           </h1>
-          <p style={{ color: "#6b6b76", lineHeight: 1.6 }}>
+          <p style={{ color: "#6e6559", lineHeight: 1.6 }}>
             Une erreur inattendue nous empêche d&apos;afficher la page. Réessayez
             dans un instant.
           </p>
@@ -55,7 +55,7 @@ export default function GlobalError({
               padding: "0.6rem 1.2rem",
               borderRadius: "0.75rem",
               border: "none",
-              background: "#4f46e5",
+              background: "#0b5a5f",
               color: "#ffffff",
               fontSize: "0.95rem",
               cursor: "pointer",
@@ -64,7 +64,7 @@ export default function GlobalError({
             Réessayer
           </button>
           {error.digest ? (
-            <p style={{ marginTop: "1.5rem", fontSize: "0.75rem", color: "#9a9aa5" }}>
+            <p style={{ marginTop: "1.5rem", fontSize: "0.75rem", color: "#a49a8b" }}>
               {`Référence de l'incident : ${error.digest}`}
             </p>
           ) : null}
