@@ -9,6 +9,7 @@ import {
   CreditCard,
   Inbox,
   Star,
+  TrendingUp,
   UserCog,
 } from "lucide-react";
 
@@ -38,6 +39,7 @@ const TABS = [
   // semaine réelle : deux questions distinctes, deux écrans.
   { href: "/dashboard/prof/agenda", icon: CalendarClock, label: "Agenda" },
   { href: "/dashboard/prof/demandes", icon: Inbox, label: "Demandes" },
+  { href: "/dashboard/prof/activite", icon: TrendingUp, label: "Activité" },
   { href: "/dashboard/prof/avis", icon: Star, label: "Avis" },
   {
     href: "/dashboard/prof/abonnement",
