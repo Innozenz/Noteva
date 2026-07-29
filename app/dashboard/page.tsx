@@ -23,6 +23,13 @@ import { isSubscriptionActive } from "@/lib/teacher/visibility";
 import { givenName } from "@/lib/user/name";
 import { cn } from "@/lib/utils";
 
+/** Centimes → euros, sans décimales, séparateur français (« 1 250 € »). */
+function formatEuros(cents: number): string {
+  return `${(cents / 100).toLocaleString("fr-FR", {
+    maximumFractionDigits: 0,
+  })} €`;
+}
+
 /**
  * Aiguillage de l'espace connecté.
  *
@@ -73,18 +80,38 @@ export default async function DashboardPage() {
 
   const firstName = givenName(user);
 
-  // Le compteur de demandes en attente est la seule donnée qui mérite d'être
-  // ici : elle appelle une action, et chaque demande non traitée immobilise un
-  // créneau.
-  const pendingCount = user.teacherProfile
-    ? await prisma.booking.count({
-        where: {
-          teacherId: user.teacherProfile.id,
-          status: "PENDING",
-          endsAt: { gt: new Date() },
-        },
-      })
-    : 0;
+  const now = new Date();
+
+  // Statistiques du prof : ce qui appelle une action (demandes en attente,
+  // chacune immobilise un créneau) et ce qui fait le bilan (cours à venir,
+  // cours donnés, CA). Le CA est un **estimé** — le règlement se fait hors
+  // plateforme — calculé sur les seuls cours clôturés (COMPLETED).
+  const [pendingCount, upcomingCount, completed] = user.teacherProfile
+    ? await Promise.all([
+        prisma.booking.count({
+          where: {
+            teacherId: user.teacherProfile.id,
+            status: "PENDING",
+            endsAt: { gt: now },
+          },
+        }),
+        prisma.booking.count({
+          where: {
+            teacherId: user.teacherProfile.id,
+            status: "CONFIRMED",
+            startsAt: { gt: now },
+          },
+        }),
+        prisma.booking.aggregate({
+          where: { teacherId: user.teacherProfile.id, status: "COMPLETED" },
+          _count: { _all: true },
+          _sum: { priceCents: true },
+        }),
+      ])
+    : [0, 0, null];
+
+  const lessonsGiven = completed?._count._all ?? 0;
+  const caCents = completed?._sum.priceCents ?? 0;
 
   const isTeacher = user.role === "TEACHER";
 
@@ -180,6 +207,42 @@ export default async function DashboardPage() {
         <div className="mt-8">
           <TeacherVisibilityNotice blocker={blocker} />
         </div>
+      ) : null}
+
+      {isTeacher ? (
+        <section className="mt-10">
+          {/* Séparateurs en filet plutôt que des cartes : la grille a un fond
+              `border` et des cellules `background`, l'écart d'un pixel laisse
+              voir le trait entre les chiffres. */}
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4">
+            {[
+              {
+                label: "Demandes en attente",
+                value: String(pendingCount),
+                highlight: pendingCount > 0,
+              },
+              { label: "Cours à venir", value: String(upcomingCount) },
+              { label: "Cours donnés", value: String(lessonsGiven) },
+              { label: "CA estimé", value: formatEuros(caCents) },
+            ].map((stat) => (
+              <div key={stat.label} className="bg-background p-5">
+                <p
+                  className={cn(
+                    "font-display text-3xl font-semibold leading-none",
+                    stat.highlight ? "text-warning" : "text-foreground"
+                  )}
+                >
+                  {stat.value}
+                </p>
+                <p className="mt-2 text-sm text-muted">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-subtle">
+            CA estimé : total des cours que vous avez clôturés. Le règlement se
+            fait directement entre vous et l&apos;élève, hors plateforme.
+          </p>
+        </section>
       ) : null}
 
       <RowList className="mt-10">
