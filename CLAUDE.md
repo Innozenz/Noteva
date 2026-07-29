@@ -72,6 +72,8 @@ Use **`sslmode=verify-full`**, not `sslmode=require`. With `require`, `pg` print
 
 Sign-in lives at **`/connexion`** (`AuthButtons`: Zod-validated email/password). It redirects an already-signed-in user to their own area, which needs the role — so that check is in the page, not the proxy. `authRoutes` in `proxy.ts` is consequently empty; unauthenticated hits on protected routes redirect to `/connexion?callbackUrl=…` (nothing consumes `callbackUrl` yet).
 
+**After a successful sign-in/sign-up, `AuthButtons` does a full-page `window.location` to `/dashboard`, not `router.refresh()`.** `refresh()` relied on the `/connexion` Server Component then issuing its role-based `redirect()` — but refreshing the current route and having it answer with a `redirect()` loops the client router in production ("too many calls to the History API", the navigation never lands). It stayed hidden until the auth client became origin-relative: before that, prod sign-in hit localhost and never succeeded, so the redirect path was never reached. A hard navigation to `/dashboard` sidesteps the client router entirely — the server then routes by role (student/teacher area, or `/onboarding` when `role` is null).
+
 `AuthButtons` is a client component reading the session via `authClient.useSession()`, so `/connexion` server-renders a spinner and fills in after hydration. Fine for a `noindex` page, but don't copy the pattern onto anything public. (Consequence: the "mot de passe oublié" link only exists in the client bundle, not the server HTML.)
 
 **Password reset** is Better Auth's built-in flow, configured in `lib/auth.ts`:

@@ -104,16 +104,27 @@ export function AuthButtons() {
     const onError = (ctx: { error: { status?: number; code?: string } }) =>
       setFailure(authFailure({ error: ctx.error }));
 
+    // Navigation franche vers l'espace connecté, pas `router.refresh()`.
+    // `refresh()` comptait sur la redirection *serveur* de /connexion (qui lit
+    // le rôle pour choisir la destination) ; mais rafraîchir la route courante
+    // puis la voir renvoyer un `redirect()` fait boucler le router client en
+    // production (« Trop d'appels aux API History », navigation qui ne se fait
+    // pas). Un `window.location` recharge la page : /dashboard lit la session
+    // fraîche et route selon le rôle (élève/prof, ou /onboarding si nul).
+    const onSuccess = () => {
+      window.location.href = "/dashboard";
+    };
+
     try {
       if (isSignUp) {
         await authClient.signUp.email(
           { email, password, name: email.split("@")[0] },
-          { onSuccess: () => router.refresh(), onError }
+          { onSuccess, onError }
         );
       } else {
         await authClient.signIn.email(
           { email, password },
-          { onSuccess: () => router.refresh(), onError }
+          { onSuccess, onError }
         );
       }
     } catch (caught) {
