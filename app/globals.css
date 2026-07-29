@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 /**
- * Système de design Noteva — « ReChord » : encre verte sur papier, emphase bronze.
+ * Système de design Noteva — « ReChord » : encre sur papier chaud, épicéa aux
+ * actions, emphase bronze. Les neutres ne portent aucune teinte de marque.
  *
  * Tout passe par des jetons sémantiques : un composant dit `bg-surface`, pas
  * `bg-zinc-50`. L'identité se règle donc en un endroit plutôt qu'en cent.
@@ -20,21 +21,23 @@
 :root {
   color-scheme: light;
 
-  /* Fonds : du papier légèrement verdi, pas du gris froid. Le plus profond au
-     fond, blanc pur réservé aux surfaces élevées (cartes) pour qu'elles
-     ressortent comme une feuille posée dessus. */
-  --background: #fbfbf9;
-  --surface: #f1f5f3;
-  --surface-strong: #e4ede8;
+  /* Fonds : du papier chaud, pas du gris — ni du vert. Les neutres ne portent
+     aucune teinte de marque : le vert vit dans le primaire et les familles, le
+     papier reste neutre chaud. C'est la refonte éditoriale qui l'a imposé — des
+     filets et des libellés gris partout, verdis, badigeonnaient toute la page.
+     Blanc pur réservé aux surfaces élevées (cartes). */
+  --background: #faf8f4;
+  --surface: #f1eee7;
+  --surface-strong: #e7e1d6;
   --elevated: #ffffff;
 
-  /* Texte : de l'encre verte très sombre, dans le ton du primaire. */
-  --foreground: #0f2419;
-  --muted: #5c7066;
-  --subtle: #93a49b;
+  /* Texte : de l'encre chaude, pas du noir bleuté ni du vert. */
+  --foreground: #1f1b16;
+  --muted: #6e6559;
+  --subtle: #a49a8b;
 
-  --border: #dae7e0;
-  --border-strong: #c5d7ce;
+  --border: #e8e1d5;
+  --border-strong: #d7d0c0;
 
   /* Épicéa : actions, liens, tout ce qui se clique. Il vit dans le même arc que
      les familles vertes (« vents », « percussions », « succès ») — assumé : le
@@ -91,11 +94,11 @@
   --radius-lg: 1.25rem;
 
   /* Ombres discrètes : la hiérarchie vient du trait, pas du flou. Teintées de
-     l'encre verte (15 36 25), dans le ton du papier verdi, pour ne pas y poser
-     un gris étranger. */
-  --shadow-sm: 0 1px 2px 0 rgb(15 36 25 / 0.05);
-  --shadow: 0 1px 3px 0 rgb(15 36 25 / 0.07), 0 1px 2px -1px rgb(15 36 25 / 0.05);
-  --shadow-lg: 0 12px 32px -12px rgb(15 36 25 / 0.2);
+     l'encre chaude (31 27 22), pas d'un gris bleuté ni vert, pour rester dans
+     le ton du papier. */
+  --shadow-sm: 0 1px 2px 0 rgb(31 27 22 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(31 27 22 / 0.07), 0 1px 2px -1px rgb(31 27 22 / 0.05);
+  --shadow-lg: 0 12px 32px -12px rgb(31 27 22 / 0.2);
 }
 
 @theme inline {

@@ -18,7 +18,11 @@ import { cn } from "@/lib/utils";
  * contient des virgules qu'une valeur arbitraire Tailwind découperait.
  */
 
-/** Petit intitulé en capitales espacées, au-dessus d'un titre ou d'une section. */
+/**
+ * Petit intitulé en capitales espacées, au-dessus d'un titre ou d'une section.
+ * En bronze : c'est l'un des rares points chauds qui contrebalancent le vert,
+ * et il nomme une chose précise — l'étiquette éditoriale d'une page.
+ */
 export function Eyebrow({
   children,
   className,
@@ -29,7 +33,7 @@ export function Eyebrow({
   return (
     <p
       className={cn(
-        "text-xs font-medium uppercase tracking-[0.2em] text-subtle",
+        "text-xs font-medium uppercase tracking-[0.2em] text-accent",
         className
       )}
     >
