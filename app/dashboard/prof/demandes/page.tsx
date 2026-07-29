@@ -68,21 +68,27 @@ export default async function TeacherBookingsPage() {
       student: {
         select: {
           user: { select: { name: true } },
-          // Ce qui aide le prof à décider : niveau réel sur l'instrument
-          // demandé, projet de l'élève, et contact du responsable s'il est
-          // mineur.
+          // Profil complet : le prof peut le consulter à l'ouverture d'une
+          // demande. Le résumé de carte reste ciblé (niveau sur l'instrument
+          // demandé, objectifs, responsable si mineur) ; la modale montre tout.
           birthDate: true,
+          city: true,
+          goals: true,
+          musicalBackground: true,
+          readsSheetMusic: true,
+          voiceType: true,
+          prefersOnline: true,
+          preferredGenres: true,
           guardianName: true,
           guardianEmail: true,
           guardianPhone: true,
-          goals: true,
-          readsSheetMusic: true,
           instruments: {
             select: {
               instrumentId: true,
               level: true,
               yearsPracticed: true,
               ownsInstrument: true,
+              instrument: { select: { name: true } },
             },
           },
         },
@@ -120,6 +126,29 @@ export default async function TeacherBookingsPage() {
       studentAge: guardian.age,
       guardianContact: guardian.contact,
       studentIsMinor: guardian.isMinor,
+      // Profil complet, pour la modale « Voir le profil ».
+      studentProfile: {
+        age: guardian.age,
+        isMinor: guardian.isMinor,
+        city: student.city,
+        goals: student.goals,
+        background: student.musicalBackground,
+        readsSheetMusic: student.readsSheetMusic,
+        voiceType: student.voiceType,
+        prefersOnline: student.prefersOnline,
+        genres: student.preferredGenres,
+        instruments: student.instruments.map((entry) => ({
+          name: entry.instrument.name,
+          level: entry.level,
+          yearsPracticed: entry.yearsPracticed,
+          ownsInstrument: entry.ownsInstrument,
+        })),
+        guardian: {
+          name: student.guardianName,
+          email: student.guardianEmail,
+          phone: student.guardianPhone,
+        },
+      },
     };
   });
 

@@ -196,7 +196,7 @@ A cancellation inside the teacher's `cancellationWindowHours` comes back with `l
 - A missing `birthDate` does **not** presume a minor — defaulting to blocked would stop every adult who skipped the field.
 - One contact suffices (email *or* phone): demanding both is excessive for a parent who doesn't read email, demanding neither makes the name useless.
 
-The teacher's inbox shows the level **for the requested instrument only** (`StudentInstrument` is per pair — advanced at piano, beginner at singing), plus goals and, for a minor, the guardian contact. Anything else in the profile is not the teacher's business.
+The teacher's inbox card shows a **targeted summary** — the level for the *requested* instrument only (`StudentInstrument` is per pair — advanced at piano, beginner at singing), plus goals and, for a minor, the guardian contact — so a request can be judged at a glance. The **full profile** the student filled in (all instruments, city, background, voice type, online preference, genres, guardian details) is one click away, in a **"Voir le profil"** modal on each request (`StudentProfileDetail` in `components/teacher-bookings.tsx`). Only fields the student actually filled are shown.
 
 `/dashboard` routes each role to its own area from a single banner. Adding a role-specific area means adding it there too, or it stays URL-only.
 
