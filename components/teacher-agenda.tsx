@@ -37,6 +37,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { checkTransition, type BookingAction } from "@/lib/bookings/transitions";
 import { postJson, type Failure } from "@/lib/http/failure";
 import {
@@ -265,7 +272,6 @@ export function TeacherAgenda({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Failure | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const detailRef = useRef<HTMLDivElement>(null);
 
   // Glisser-déposer. `bodyRef` sert à convertir la position du pointeur en
   // (jour, minute) ; `pending` retient l'amorce tant que le seuil n'est pas
@@ -405,11 +411,6 @@ export function TeacherAgenda({
     setSelectedId(id);
     setError(null);
     setNotice(null);
-    // Le détail s'ouvre sous une grille haute : sans ça, un clic en haut de
-    // semaine ne montre rien à l'écran.
-    requestAnimationFrame(() =>
-      detailRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-    );
   };
 
   // --- Glisser-déposer d'un cours confirmé vers un nouvel horaire ---
@@ -686,23 +687,25 @@ export function TeacherAgenda({
         </CardContent>
       </Card>
 
-      <div ref={detailRef}>
-        {selected ? (
-          <BookingDetail
-            row={selected}
-            timezone={timezone}
-            now={now}
-            busy={busy}
-            onAct={act}
-            onClose={() => setSelectedId(null)}
-          />
-        ) : (
-          <p className="text-sm text-subtle">
-            Sélectionnez un cours dans la grille pour le confirmer, l&apos;annuler
-            ou le clôturer.
-          </p>
-        )}
-      </div>
+      <Dialog
+        open={selected !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedId(null);
+        }}
+      >
+        <DialogContent>
+          {selected ? (
+            <BookingDetail
+              row={selected}
+              timezone={timezone}
+              now={now}
+              busy={busy}
+              error={error}
+              onAct={act}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -910,21 +913,22 @@ function BookingDetail({
   timezone,
   now,
   busy,
+  error,
   onAct,
-  onClose,
 }: {
   row: AgendaRow;
   timezone: string;
   now: Date;
   busy: boolean;
+  error: Failure | null;
   onAct: (id: string, action: BookingAction) => void;
-  onClose: () => void;
 }) {
   const startsAt = new Date(row.startsAt);
   const endsAt = new Date(row.endsAt);
 
   // Les actions proposées sortent de la machine à états, pas d'une liste
-  // recopiée : cet écran ne peut donc pas offrir ce que le serveur refuserait.
+  // recopiée : cette modale ne peut donc pas offrir ce que le serveur
+  // refuserait.
   const allowed = ACTIONS.filter(
     (entry) =>
       checkTransition({
@@ -941,93 +945,87 @@ function BookingDetail({
     date.toLocaleString("fr-FR", { ...options, timeZone: timezone });
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <CardTitle>
-              {row.studentName ?? "Élève"} — {row.instrumentName}
-            </CardTitle>
-            <CardDescription>
-              {format(startsAt, {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })}
-              {" · "}
-              {format(startsAt, { hour: "2-digit", minute: "2-digit" })}
-              {" – "}
-              {format(endsAt, { hour: "2-digit", minute: "2-digit" })}
-              {" · "}
-              {MODE_LABELS[row.mode]}
-              {row.priceCents !== null
-                ? ` · ${(row.priceCents / 100).toFixed(2)} €`
-                : ""}
-            </CardDescription>
-          </div>
+    <div className="flex flex-col gap-4">
+      <DialogHeader>
+        <DialogTitle>
+          {row.studentName ?? "Élève"}
+          <span className="text-muted"> — {row.instrumentName}</span>
+        </DialogTitle>
+        <DialogDescription>
+          <span className="first-letter:uppercase">
+            {format(startsAt, {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </span>
+          {" · "}
+          {format(startsAt, { hour: "2-digit", minute: "2-digit" })}
+          {" – "}
+          {format(endsAt, { hour: "2-digit", minute: "2-digit" })}
+        </DialogDescription>
+      </DialogHeader>
 
-          <div className="flex items-center gap-2">
-            {row.isTrial ? (
-              <Badge variant="secondary">
-                <Sparkles className="mr-1 h-3 w-3" />
-                Essai
-              </Badge>
-            ) : null}
-            <Badge variant="secondary">{STATUS_LABELS[row.status]}</Badge>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              aria-label="Fermer le détail"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="flex flex-col gap-3">
-        {row.studentMessage ? (
-          <p className="flex gap-2 rounded-md bg-surface p-3 text-sm text-muted">
-            <MessageSquare className="mt-0.5 h-4 w-4 shrink-0" />
-            {row.studentMessage}
-          </p>
+      {/* Détails en lignes : mode, tarif, statut, essai. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="secondary">{STATUS_LABELS[row.status]}</Badge>
+        <Badge variant="secondary">{MODE_LABELS[row.mode]}</Badge>
+        {row.priceCents !== null ? (
+          <Badge variant="secondary">
+            {`${(row.priceCents / 100).toFixed(2)} €`}
+          </Badge>
         ) : null}
+        {row.isTrial ? (
+          <Badge variant="secondary">
+            <Sparkles className="mr-1 h-3 w-3" />
+            Essai
+          </Badge>
+        ) : null}
+      </div>
 
-        {allowed.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {allowed.map(({ action, label, icon: Icon, variant }) => (
-              <Button
-                key={action}
-                size="sm"
-                variant={variant}
-                disabled={busy}
-                onClick={() => onAct(row.id, action)}
-              >
-                {busy ? (
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                ) : (
-                  <Icon className="mr-2 h-3 w-3" />
-                )}
-                {label}
-              </Button>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-subtle">
-            Ce cours n&apos;attend plus rien de vous.
-          </p>
-        )}
-
-        <p className="text-xs text-subtle">
-          Le profil complet de l&apos;élève est sur{" "}
-          <Link href="/dashboard/prof/demandes" className="underline">
-            vos demandes
-          </Link>
-          .
+      {row.studentMessage ? (
+        <p className="flex gap-2 rounded-md bg-surface p-3 text-sm text-muted">
+          <MessageSquare className="mt-0.5 h-4 w-4 shrink-0" />
+          {row.studentMessage}
         </p>
-      </CardContent>
-    </Card>
+      ) : null}
+
+      <FormFailure failure={error} />
+
+      {allowed.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {allowed.map(({ action, label, icon: Icon, variant }) => (
+            <Button
+              key={action}
+              size="sm"
+              variant={variant}
+              disabled={busy}
+              onClick={() => onAct(row.id, action)}
+            >
+              {busy ? (
+                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+              ) : (
+                <Icon className="mr-2 h-3 w-3" />
+              )}
+              {label}
+            </Button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-subtle">
+          Ce cours n&apos;attend plus rien de vous.
+        </p>
+      )}
+
+      <p className="text-xs text-subtle">
+        Le profil complet de l&apos;élève est sur{" "}
+        <Link href="/dashboard/prof/demandes" className="underline">
+          vos demandes
+        </Link>
+        .
+      </p>
+    </div>
   );
 }
 

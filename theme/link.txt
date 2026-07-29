@@ -1,1 +1,0 @@
-npx shadcn@latest add https://tweakcn.com/r/themes/cms61tvrx000204l4chor5e7x
