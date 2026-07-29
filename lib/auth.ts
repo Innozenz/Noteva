@@ -46,12 +46,6 @@ export const auth = betterAuth({
          */
         revokeSessionsOnPasswordReset: true,
     },
-    socialProviders: {
-        google: {
-            clientId: process.env.GOOGLE_CLIENT_ID as string,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-        },
-    },
     /**
      * Limitation par IP des routes d'authentification. Sans elle, la
      * connexion s'essaie en boucle (force brute) et le reset de mot de passe

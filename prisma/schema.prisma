@@ -34,8 +34,8 @@ model User {
   id            String   @id @default(cuid())
   email         String   @unique
   // Nom d'affichage, au format attendu par Better Auth : c'est lui qu'écrit
-  // l'inscription (formulaire ou profil Google) et que lit tout le reste de
-  // l'application. Il reste donc la source unique du nom complet.
+  // l'inscription et que lit tout le reste de l'application. Il reste donc la
+  // source unique du nom complet.
   name          String?
   emailVerified Boolean  @default(false)
   image         String?
@@ -57,9 +57,9 @@ model User {
   firstName String?
   lastName  String?
 
-  // null tant que l'onboarding n'est pas fait : avec Google OAuth l'utilisateur
-  // est créé avant d'avoir choisi son rôle. Les routes doivent rediriger vers
-  // /onboarding tant que ce champ est nul.
+  // null tant que l'onboarding n'est pas fait : l'inscription crée le compte
+  // avant que l'utilisateur ait choisi son rôle. Les routes doivent rediriger
+  // vers /onboarding tant que ce champ est nul.
   role     Role?
   // Fuseau IANA ("Europe/Paris"). Sert à interpréter les règles de dispo côté
   // prof, et à afficher les créneaux dans l'heure locale côté élève.

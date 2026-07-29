@@ -65,12 +65,12 @@ Use **`sslmode=verify-full`**, not `sslmode=require`. With `require`, `pg` print
 
 ### Auth (Better Auth)
 
-- `lib/auth.ts` — server-side Better Auth instance, wired to Prisma via `prismaAdapter`. Email/password and Google OAuth.
+- `lib/auth.ts` — server-side Better Auth instance, wired to Prisma via `prismaAdapter`. Email/password only for now (Google OAuth was removed; re-adding it is a `socialProviders` block here plus a button in `auth-buttons.tsx`).
 - `lib/auth-client.ts` — browser client (`createAuthClient` from `better-auth/react`); `authClient.useSession()` is how client components read the session.
-- `app/api/auth/[...all]/route.ts` — catch-all that mounts Better Auth's handlers; all auth traffic (sign-in, session, OAuth callback) flows through here. **Keep the segment name a valid JS identifier.** It used to be `[...better-auth]`, and the hyphen made Next 16 crash its dev render worker on *every* `/api/auth/*` request ("Jest worker encountered 2 child process exceptions") — a total auth outage that looked like a Better Auth bug rather than a routing one. Renaming a route directory also requires a dev-server restart; hot reload keeps serving 404s.
+- `app/api/auth/[...all]/route.ts` — catch-all that mounts Better Auth's handlers; all auth traffic (sign-in, session, password reset) flows through here. **Keep the segment name a valid JS identifier.** It used to be `[...better-auth]`, and the hyphen made Next 16 crash its dev render worker on *every* `/api/auth/*` request ("Jest worker encountered 2 child process exceptions") — a total auth outage that looked like a Better Auth bug rather than a routing one. Renaming a route directory also requires a dev-server restart; hot reload keeps serving 404s.
 - Server-side session reads (API routes, server components) go through `auth.api.getSession({ headers: await headers() })` — see `app/api/stripe/checkout/route.ts` and `app/api/user/subscription/route.ts`.
 
-Sign-in lives at **`/connexion`** (`AuthButtons`: Zod-validated email/password plus a Google button). It redirects an already-signed-in user to their own area, which needs the role — so that check is in the page, not the proxy. `authRoutes` in `proxy.ts` is consequently empty; unauthenticated hits on protected routes redirect to `/connexion?callbackUrl=…` (nothing consumes `callbackUrl` yet).
+Sign-in lives at **`/connexion`** (`AuthButtons`: Zod-validated email/password). It redirects an already-signed-in user to their own area, which needs the role — so that check is in the page, not the proxy. `authRoutes` in `proxy.ts` is consequently empty; unauthenticated hits on protected routes redirect to `/connexion?callbackUrl=…` (nothing consumes `callbackUrl` yet).
 
 `AuthButtons` is a client component reading the session via `authClient.useSession()`, so `/connexion` server-renders a spinner and fills in after hydration. Fine for a `noindex` page, but don't copy the pattern onto anything public. (Consequence: the "mot de passe oublié" link only exists in the client bundle, not the server HTML.)
 
@@ -90,11 +90,11 @@ Better Auth's rate limiter is explicitly enabled in `lib/auth.ts`, including in 
 
 Tokens are single-use and expire after an hour (`resetPasswordTokenExpiresIn`). Verified: replaying a token, inventing one, or posting a password under 8 characters all return 400.
 
-**`User.role` is nullable on purpose.** With Google OAuth the account is created before the user can say whether they're a teacher or a student, so `POST /api/onboarding` fills it in and creates the matching profile in one transaction. Treat `role === null` as "onboarding incomplete"; don't assume a role is present.
+**`User.role` is nullable on purpose.** Signup (Better Auth) creates the account before the user can say whether they're a teacher or a student — it only writes `name`, never the custom `role` column — so `POST /api/onboarding` fills it in and creates the matching profile in one transaction. This is why onboarding stays even without Google OAuth: any credentials signup lands with `role === null`. Treat `role === null` as "onboarding incomplete"; don't assume a role is present.
 
 **The role gate is in `app/dashboard/layout.tsx`, not the proxy** — and it stays there by choice. Next 16's proxy runs on the Node runtime (no longer edge-only, unlike the old `middleware.ts`), so it *could* read a role — but that would mean a Prisma query on every request it intercepts, while the layout reads it once per navigation with proper redirect semantics. Any new signed-in area needs its own Server Component layout doing the same check, or it will be reachable with `role === null`.
 
-`/onboarding` carries the logo and a sign-out link, and both are load-bearing. Every signed-in route redirects here while `role` is null, so without an exit someone who created a Google account by mistake was trapped with no way back.
+`/onboarding` carries the logo and a sign-out link, and both are load-bearing. Every signed-in route redirects here while `role` is null, so without an exit someone who created an account by mistake was trapped with no way back.
 
 Choosing a role is **one-way**: `/api/onboarding` answers 409 once `role` is set. A teacher profile carries a public slug, availability and lesson history that a switch to "student" would orphan. Teacher slugs come from `lib/slug.ts` (accent-stripped, reserved words avoided, `-2`/`-3` on collision) and are unit-tested — they end up in indexed public URLs, so they're painful to change later.
 
@@ -262,7 +262,7 @@ The instrument chips only list instruments that are actually taught, so the bloc
 
 `User`/`Session`/`Account`/`Verification` match Better Auth's expected shape and are `@@map`ped to lowercase tables — don't rename fields or mappings without adjusting the adapter config in `lib/auth.ts`. Everything else is Noteva's domain.
 
-**`User` carries three name columns and one invariant.** `name` is Better Auth's display name — signup and Google OAuth write it, and every read site in the app uses it. `firstName`/`lastName` are what the user actually typed, and **every write of the pair recomposes `name` in the same statement** (`PATCH /api/user/identity`). That is what let the pair be added without touching a single read site: there is never a second truth about the full name, and nothing to resynchronise, so nothing can drift.
+**`User` carries three name columns and one invariant.** `name` is Better Auth's display name — signup writes it, and every read site in the app uses it. `firstName`/`lastName` are what the user actually typed, and **every write of the pair recomposes `name` in the same statement** (`PATCH /api/user/identity`). That is what let the pair be added without touching a single read site: there is never a second truth about the full name, and nothing to resynchronise, so nothing can drift.
 
 Two fields rather than one because the split cannot be guessed. "Jean Baptiste Moreau" divides as plausibly into Jean / Baptiste Moreau as into Jean Baptiste / Moreau, and "Dupont Jean" — surname first, which plenty of people type — yields the wrong given name. That mattered because **reviews are signed with the given name alone**: derived at read time it was re-guessed on every render, with no way for the person concerned to correct it. `lib/user/name.ts` is the single implementation (`fullName`, `givenName`, `composeName`, `splitFullName`), and it replaced **four** copies of the same `split(/\s+/)[0]` heuristic — four copies being a guarantee that they would eventually disagree. The split survives only as the seed for accounts that have never filled the pair in, since Better Auth sets `name` alone.
 

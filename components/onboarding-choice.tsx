@@ -151,8 +151,8 @@ export function OnboardingChoice() {
         </p>
 
         {/* Seule sortie de cet écran. Sans elle, quelqu'un qui vient de créer
-            un compte Google par erreur n'a aucun moyen de faire marche
-            arrière : tout l'espace connecté le renvoie ici. */}
+            un compte par erreur n'a aucun moyen de faire marche arrière :
+            tout l'espace connecté le renvoie ici. */}
         <button
           type="button"
           className="text-center text-xs text-subtle hover:underline"

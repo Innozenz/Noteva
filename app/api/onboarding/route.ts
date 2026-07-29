@@ -9,9 +9,9 @@ import { uniqueSlug } from "@/lib/slug";
 /**
  * Choix du rôle après inscription.
  *
- * Nécessaire parce qu'avec Google OAuth le compte existe avant que
- * l'utilisateur ait pu dire ce qu'il vient faire : `User.role` naît nul et
- * c'est cette route qui le renseigne, en créant le profil correspondant.
+ * Nécessaire parce que l'inscription crée le compte avant que l'utilisateur
+ * ait pu dire ce qu'il vient faire : `User.role` naît nul et c'est cette route
+ * qui le renseigne, en créant le profil correspondant.
  *
  * Le rôle n'est pas modifiable ensuite : une fiche prof porte un slug public,
  * des disponibilités et un historique de cours, qu'une bascule vers « élève »
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     }
 
     // Le slug se déduit du nom, avec l'adresse e-mail en repli : un compte
-    // Google sans nom renseigné doit malgré tout obtenir une URL lisible.
+    // sans nom renseigné doit malgré tout obtenir une URL lisible.
     const base = user.name?.trim() || user.email.split("@")[0];
     const slug = await uniqueSlug(base, async (candidate) => {
       const existing = await prisma.teacherProfile.findUnique({

@@ -30,11 +30,7 @@ Ce projet est un boilerplate complet pour Next.js incluant l'authentification, u
    npx prisma db push
    ```
 
-4. **Authentification Google :**
-   Pour utiliser la connexion Google, créez un projet sur [Google Cloud Console](https://console.cloud.google.com/), configurez l'écran de consentement OAuth et créez des identifiants OAuth 2.0. Ajoutez `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET` à votre fichier `.env`.
-   L'URL de redirection sera : `http://localhost:3000/api/auth/callback/google`
-
-5. **Lancement du serveur :**
+4. **Lancement du serveur :**
    ```bash
    npm run dev
    ```

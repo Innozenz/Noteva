@@ -43,7 +43,7 @@ export default async function OnboardingPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-4 py-12">
-      {/* L'écran n'avait ni logo ni sortie : un compte créé via Google qui
+      {/* L'écran n'avait ni logo ni sortie : un compte fraîchement créé qui
           n'arrivait pas à choisir s'y retrouvait enfermé, tout l'espace
           connecté renvoyant ici tant que le rôle est nul. */}
       <Link

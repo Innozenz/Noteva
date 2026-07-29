@@ -33,8 +33,8 @@ export default async function AccountPage() {
     select: { email: true, name: true, firstName: true, lastName: true },
   });
 
-  // Un compte créé avant ces deux champs — ou par Google — n'a que `name` : on
-  // amorce le formulaire avec son découpage plutôt que d'afficher deux champs
+  // Un compte créé avant ces deux champs n'a que `name` : on amorce le
+  // formulaire avec son découpage plutôt que d'afficher deux champs
   // vides à quelqu'un dont l'application connaît déjà le nom.
   const fallback = splitFullName(user.name);
 
