@@ -23,6 +23,7 @@ const ALL_EVENTS: NotificationEvent[] = [
   "booking_confirmed",
   "booking_declined",
   "booking_cancelled",
+  "booking_rescheduled",
   "review_received",
 ];
 
@@ -53,6 +54,27 @@ describe("buildNotification — destinataires", () => {
     expect(buildNotification("booking_cancelled", CONTEXT, "student")?.to).toBe(
       "prof@example.com"
     );
+  });
+
+  it("prévient l'élève d'un cours déplacé, avec l'ancien créneau", () => {
+    const mail = buildNotification(
+      "booking_rescheduled",
+      {
+        ...CONTEXT,
+        startsAt: new Date("2026-08-05T07:00:00Z"),
+        previousStartsAt: new Date("2026-08-03T07:00:00Z"),
+      },
+      "teacher"
+    );
+
+    expect(mail?.to).toBe("eleve@example.com");
+    expect(mail?.subject).toContain("déplacé");
+    expect(mail?.text).toContain("Nouveau créneau");
+    expect(mail?.text).toContain("Ancien créneau");
+    expect(mail?.text).toContain("mercredi 5 août 2026");
+    expect(mail?.text).toContain("lundi 3 août 2026");
+    // Un cours déplacé par le prof : l'élève ne le déclenche pas.
+    expect(buildNotification("booking_rescheduled", CONTEXT, "student")).toBeNull();
   });
 
   it("ne notifie jamais celui qui vient d'agir", () => {

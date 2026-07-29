@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import { computeAvailableSlots } from "@/lib/availability";
+import { overlapConflict } from "@/lib/bookings/overlap";
 import { notifyInBackground } from "@/lib/notifications/send";
 import { buildNotification } from "@/lib/notifications/templates";
 import prisma from "@/lib/prisma";
@@ -436,27 +437,4 @@ function isModeSupported(
   if (mode === "ONLINE") return teacher.teachesOnline;
   if (mode === "TEACHER_PLACE") return teacher.teachesInPerson;
   return teacher.teachesAtHome;
-}
-
-/**
- * Traduit une violation de contrainte d'exclusion en message métier.
- *
- * Le driver adapter ne remonte pas le SQLSTATE 23P01 tel quel : le nom de la
- * contrainte, lui, se retrouve dans l'erreur sérialisée. C'est donc sur lui
- * qu'on s'appuie — d'où l'importance de ne pas renommer ces contraintes sans
- * mettre à jour cette fonction.
- */
-function overlapConflict(error: unknown): string | null {
-  const candidate = error as { meta?: unknown; message?: unknown };
-  const blob = `${JSON.stringify(candidate?.meta ?? {})} ${String(candidate?.message ?? "")}`;
-
-  if (blob.includes("booking_teacher_no_overlap")) {
-    return "Ce créneau vient d'être pris";
-  }
-
-  if (blob.includes("booking_student_no_overlap")) {
-    return "Vous avez déjà un cours confirmé sur ce créneau";
-  }
-
-  return null;
 }

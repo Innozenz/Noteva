@@ -15,6 +15,7 @@ export type NotificationEvent =
   | "booking_confirmed"
   | "booking_declined"
   | "booking_cancelled"
+  | "booking_rescheduled"
   | "review_received";
 
 export type Actor = "teacher" | "student";
@@ -31,6 +32,8 @@ export type BookingContext = {
   isTrial: boolean;
   studentMessage?: string | null;
   cancellationReason?: string | null;
+  /** Ancien créneau, pour `booking_rescheduled` : `startsAt` porte le nouveau. */
+  previousStartsAt?: Date;
   /** Note déposée, pour `review_received`. */
   rating?: number;
   reviewComment?: string | null;
@@ -139,6 +142,26 @@ export function buildNotification(
             ? `Trouver un autre créneau : ${context.appUrl}/profs`
             : `Le créneau est de nouveau ouvert à la réservation.`,
           toStudent ? null : `Votre agenda : ${context.appUrl}/dashboard/prof/demandes`,
+        ]),
+      };
+    }
+
+    case "booking_rescheduled": {
+      // Toujours le prof qui déplace son cours : c'est l'élève qu'on prévient.
+      if (actor !== "teacher") return null;
+
+      return {
+        to: context.studentEmail,
+        subject: `Cours déplacé — ${when.short}`,
+        text: lines([
+          `${teacher} a déplacé votre cours de ${context.instrumentName}.`,
+          ``,
+          `Nouveau créneau : ${when.long}`,
+          context.previousStartsAt
+            ? `Ancien créneau : ${formatWhen(context.previousStartsAt, context.timezone).long}`
+            : null,
+          ``,
+          `Si cela ne vous convient pas, vous pouvez l'annuler : ${context.appUrl}/dashboard/cours`,
         ]),
       };
     }
