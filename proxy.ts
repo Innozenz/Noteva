@@ -1,3 +1,4 @@
+import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
 
 const protectedRoutes = ["/dashboard", "/onboarding"];
@@ -9,8 +10,14 @@ const authRoutes: string[] = [];
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const sessionToken =
-    request.cookies.get("better-auth.session_token")?.value;
+  // Passer par le helper de Better Auth, et pas lire « better-auth.session_token »
+  // en dur : en HTTPS, Better Auth préfixe le cookie en « __Secure-… ». Le nom
+  // codé en dur marchait en localhost (HTTP, sans préfixe) mais échouait en
+  // prod — le proxy croyait alors l'utilisateur déconnecté, redirigeait vers
+  // /connexion qui, elle, trouvait bien la session et renvoyait vers /dashboard :
+  // boucle de redirection infinie. `getSessionCookie` ne lit que le cookie
+  // (aucune requête DB), il vérifie juste sa présence.
+  const sessionToken = getSessionCookie(request);
 
   const isProtected = protectedRoutes.some((route) =>
     pathname.startsWith(route)
