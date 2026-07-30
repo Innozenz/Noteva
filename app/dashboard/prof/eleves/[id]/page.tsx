@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
-import { PageTitle, SectionTitle } from "@/components/editorial";
+import { PageTitle } from "@/components/editorial";
+import { FicheTabs } from "@/components/fiche-tabs";
 import { MessageThread } from "@/components/message-thread";
 import { ReportViewer } from "@/components/report-view";
 import { StudentNoteEditor } from "@/components/student-note-editor";
@@ -30,14 +31,17 @@ const STATUS_LABELS: Record<string, string> = {
 /**
  * Fiche d'un élève, vue par le prof.
  *
- * Agrège tout ce que le prof sait de cet élève : profil, statistiques, cours et
- * comptes rendus, plus une note privée. Accessible seulement si le prof a au
- * moins un cours avec lui — sinon 404, comme partout.
+ * Agrège tout ce que le prof sait de cet élève, organisé en onglets (profil,
+ * historique, comptes rendus, messages, note privée). L'onglet actif vit dans
+ * l'URL. Accessible seulement si le prof a au moins un cours avec lui — sinon
+ * 404, comme partout.
  */
 export default async function StudentFilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ onglet?: string }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
 
@@ -180,6 +184,29 @@ export default async function StudentFilePage({
     timeZone: teacher.user.timezone,
   });
 
+  const reports = student.bookings.filter(
+    (b) =>
+      b.report &&
+      (b.report.content ||
+        b.report.attachments.length > 0 ||
+        b.report.comments.length > 0)
+  );
+  const messages = student.messages.map((m) => ({
+    ...m,
+    createdAt: m.createdAt.toISOString(),
+  }));
+
+  const tabs = [
+    { key: "profil", label: "Profil" },
+    { key: "historique", label: "Historique", badge: student.bookings.length },
+    { key: "comptes-rendus", label: "Comptes rendus", badge: reports.length },
+    { key: "messages", label: "Messages", badge: messages.length },
+    { key: "note", label: "Note privée" },
+  ];
+  const requested = (await searchParams).onglet;
+  const active = tabs.some((t) => t.key === requested) ? requested! : "profil";
+  const basePath = `/dashboard/prof/eleves/${student.id}`;
+
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
       <div className="flex flex-col gap-4">
@@ -218,47 +245,56 @@ export default async function StudentFilePage({
         <Stat value={stats.completed} label="Terminés" />
       </div>
 
-      {/* Profil */}
-      <section className="flex flex-col gap-4">
-        <SectionTitle>Profil de l&apos;élève</SectionTitle>
-        <StudentProfileBody profile={profileView} />
-      </section>
+      <FicheTabs tabs={tabs} active={active} basePath={basePath} />
 
-      {/* Note privée */}
-      <section className="flex flex-col gap-3">
-        <SectionTitle>Note privée</SectionTitle>
+      {active === "profil" ? <StudentProfileBody profile={profileView} /> : null}
+
+      {active === "note" ? (
         <StudentNoteEditor
           studentId={student.id}
           initialContent={student.teacherNotes[0]?.content ?? ""}
         />
-      </section>
+      ) : null}
 
-      {/* Échanges — fil général avec l'élève. */}
-      <section className="flex flex-col gap-3">
-        <SectionTitle>Échanges</SectionTitle>
+      {active === "messages" ? (
         <MessageThread
-          initial={student.messages.map((m) => ({
-            ...m,
-            createdAt: m.createdAt.toISOString(),
-          }))}
+          initial={messages}
           me="TEACHER"
           postUrl={`/api/teacher/students/${student.id}/messages`}
           emptyLabel="Démarrez la conversation avec cet élève."
         />
-      </section>
+      ) : null}
 
-      {/* Cours & comptes rendus */}
-      <section className="flex flex-col gap-4">
-        <SectionTitle>Cours &amp; comptes rendus</SectionTitle>
-        <ul className="flex flex-col gap-3">
-          {student.bookings.map((b) => {
-            const hasReport =
-              b.report &&
-              (b.report.content ||
-                b.report.attachments.length > 0 ||
-                b.report.comments.length > 0);
+      {active === "historique" ? (
+        <ul className="divide-y divide-border border-y border-border">
+          {student.bookings.map((b) => (
+            <li
+              key={b.id}
+              className="flex items-center justify-between gap-2 py-3"
+            >
+              <p className="text-sm">
+                <span className="font-medium">{b.instrument.name}</span>
+                <span className="text-muted">
+                  {" "}
+                  · {dateFormat.format(b.startsAt)}
+                </span>
+              </p>
+              <Badge variant={b.status === "CONFIRMED" ? "success" : "secondary"}>
+                {STATUS_LABELS[b.status] ?? b.status}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
-            return (
+      {active === "comptes-rendus" ? (
+        reports.length === 0 ? (
+          <p className="rounded-lg border border-border bg-surface px-4 py-8 text-center text-sm text-muted">
+            Aucun compte rendu pour cet élève pour l&apos;instant.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {reports.map((b) => (
               <li
                 key={b.id}
                 className="flex flex-col gap-3 rounded-lg border border-border p-4"
@@ -271,38 +307,27 @@ export default async function StudentFilePage({
                       · {dateFormat.format(b.startsAt)}
                     </span>
                   </p>
-                  <Badge
-                    variant={
-                      b.status === "CONFIRMED"
-                        ? "success"
-                        : b.status === "COMPLETED"
-                          ? "secondary"
-                          : "secondary"
-                    }
-                  >
+                  <Badge variant="secondary">
                     {STATUS_LABELS[b.status] ?? b.status}
                   </Badge>
                 </div>
-
-                {hasReport && b.report ? (
-                  <ReportViewer
-                    bookingId={b.id}
-                    me="TEACHER"
-                    report={{
-                      content: b.report.content,
-                      attachments: b.report.attachments,
-                      comments: b.report.comments.map((c) => ({
-                        ...c,
-                        createdAt: c.createdAt.toISOString(),
-                      })),
-                    }}
-                  />
-                ) : null}
+                <ReportViewer
+                  bookingId={b.id}
+                  me="TEACHER"
+                  report={{
+                    content: b.report!.content,
+                    attachments: b.report!.attachments,
+                    comments: b.report!.comments.map((c) => ({
+                      ...c,
+                      createdAt: c.createdAt.toISOString(),
+                    })),
+                  }}
+                />
               </li>
-            );
-          })}
-        </ul>
-      </section>
+            ))}
+          </ul>
+        )
+      ) : null}
     </div>
   );
 }

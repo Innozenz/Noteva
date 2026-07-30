@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
-import { PageTitle, SectionTitle } from "@/components/editorial";
+import { PageTitle } from "@/components/editorial";
+import { FicheTabs } from "@/components/fiche-tabs";
 import { MessageThread } from "@/components/message-thread";
 import { ReportViewer } from "@/components/report-view";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,8 +31,10 @@ const STATUS_LABELS: Record<string, string> = {
  */
 export default async function StudentDossierPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ teacherId: string }>;
+  searchParams: Promise<{ onglet?: string }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
 
@@ -117,6 +120,29 @@ export default async function StudentDossierPage({
     timeZone: teacher.user.timezone,
   });
 
+  const reports = teacher.bookings.filter(
+    (b) =>
+      b.report &&
+      (b.report.content ||
+        b.report.attachments.length > 0 ||
+        b.report.comments.length > 0)
+  );
+  const messages = teacher.messages.map((m) => ({
+    ...m,
+    createdAt: m.createdAt.toISOString(),
+  }));
+
+  const tabs = [
+    { key: "comptes-rendus", label: "Comptes rendus", badge: reports.length },
+    { key: "historique", label: "Historique", badge: teacher.bookings.length },
+    { key: "messages", label: "Messages", badge: messages.length },
+  ];
+  const requested = (await searchParams).onglet;
+  const active = tabs.some((t) => t.key === requested)
+    ? requested!
+    : "comptes-rendus";
+  const basePath = `/dashboard/dossiers/${teacher.id}`;
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       <div className="flex flex-col gap-4">
@@ -151,20 +177,47 @@ export default async function StudentDossierPage({
         <Stat value={stats.completed} label="Terminés" />
       </div>
 
-      {/* Cours & comptes rendus */}
-      <section className="flex flex-col gap-4">
-        <SectionTitle>Cours &amp; comptes rendus</SectionTitle>
-        <ul className="flex flex-col gap-3">
-          {teacher.bookings.map((b) => {
-            const report =
-              b.report &&
-              (b.report.content ||
-                b.report.attachments.length > 0 ||
-                b.report.comments.length > 0)
-                ? b.report
-                : null;
+      <FicheTabs tabs={tabs} active={active} basePath={basePath} />
 
-            return (
+      {active === "messages" ? (
+        <MessageThread
+          initial={messages}
+          me="STUDENT"
+          postUrl={`/api/student/teachers/${teacher.id}/messages`}
+          emptyLabel="Écrivez un message à votre prof."
+        />
+      ) : null}
+
+      {active === "historique" ? (
+        <ul className="divide-y divide-border border-y border-border">
+          {teacher.bookings.map((b) => (
+            <li
+              key={b.id}
+              className="flex items-center justify-between gap-2 py-3"
+            >
+              <p className="text-sm">
+                <span className="font-medium">{b.instrument.name}</span>
+                <span className="text-muted">
+                  {" "}
+                  · {dateFormat.format(b.startsAt)}
+                </span>
+              </p>
+              <Badge variant={b.status === "CONFIRMED" ? "success" : "secondary"}>
+                {STATUS_LABELS[b.status] ?? b.status}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {active === "comptes-rendus" ? (
+        reports.length === 0 ? (
+          <p className="rounded-lg border border-border bg-surface px-4 py-8 text-center text-sm text-muted">
+            Aucun compte rendu pour l&apos;instant.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {reports.map((b) => (
               <li
                 key={b.id}
                 className="flex flex-col gap-3 rounded-lg border border-border p-4"
@@ -177,44 +230,27 @@ export default async function StudentDossierPage({
                       · {dateFormat.format(b.startsAt)}
                     </span>
                   </p>
-                  <Badge variant={b.status === "CONFIRMED" ? "success" : "secondary"}>
+                  <Badge variant="secondary">
                     {STATUS_LABELS[b.status] ?? b.status}
                   </Badge>
                 </div>
-
-                {report ? (
-                  <ReportViewer
-                    bookingId={b.id}
-                    me="STUDENT"
-                    report={{
-                      content: report.content,
-                      attachments: report.attachments,
-                      comments: report.comments.map((c) => ({
-                        ...c,
-                        createdAt: c.createdAt.toISOString(),
-                      })),
-                    }}
-                  />
-                ) : null}
+                <ReportViewer
+                  bookingId={b.id}
+                  me="STUDENT"
+                  report={{
+                    content: b.report!.content,
+                    attachments: b.report!.attachments,
+                    comments: b.report!.comments.map((c) => ({
+                      ...c,
+                      createdAt: c.createdAt.toISOString(),
+                    })),
+                  }}
+                />
               </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      {/* Échanges */}
-      <section className="flex flex-col gap-3">
-        <SectionTitle>Échanges</SectionTitle>
-        <MessageThread
-          initial={teacher.messages.map((m) => ({
-            ...m,
-            createdAt: m.createdAt.toISOString(),
-          }))}
-          me="STUDENT"
-          postUrl={`/api/student/teachers/${teacher.id}/messages`}
-          emptyLabel="Écrivez un message à votre prof."
-        />
-      </section>
+            ))}
+          </ul>
+        )
+      ) : null}
     </div>
   );
 }
