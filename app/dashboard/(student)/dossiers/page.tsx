@@ -85,7 +85,7 @@ export default async function StudentDossiersPage() {
     .sort((a, b) => b.lastActivity - a.lastActivity);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
+    <div className="mx-auto max-w-3xl">
       <PageHeader eyebrow="Espace élève" title="Mes dossiers" />
 
       {rows.length === 0 ? (
@@ -131,6 +131,6 @@ export default async function StudentDossiersPage() {
           ))}
         </ul>
       )}
-    </main>
+    </div>
   );
 }

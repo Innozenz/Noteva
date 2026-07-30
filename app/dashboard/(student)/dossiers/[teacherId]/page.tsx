@@ -118,7 +118,7 @@ export default async function StudentDossierPage({
   });
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12 sm:py-16">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       <div className="flex flex-col gap-4">
         <Link
           href="/dashboard/dossiers"
@@ -215,7 +215,7 @@ export default async function StudentDossierPage({
           emptyLabel="Écrivez un message à votre prof."
         />
       </section>
-    </main>
+    </div>
   );
 }
 

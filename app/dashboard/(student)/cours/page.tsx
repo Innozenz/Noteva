@@ -1,14 +1,11 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { FolderOpen, Search, UserCog } from "lucide-react";
 
 import { PageHeader } from "@/components/editorial";
 import {
   StudentBookings,
   type StudentBookingRow,
 } from "@/components/student-bookings";
-import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
@@ -117,37 +114,12 @@ export default async function StudentBookingsPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-12 sm:py-16">
-      <PageHeader
-        eyebrow="Espace élève"
-        title="Mes cours"
-        meta={
-          <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/dossiers">
-                <FolderOpen className="mr-2 h-4 w-4" />
-                Mes dossiers
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/cours/profil">
-                <UserCog className="mr-2 h-4 w-4" />
-                Mon profil
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/profs">
-                <Search className="mr-2 h-4 w-4" />
-                Trouver un prof
-              </Link>
-            </Button>
-          </div>
-        }
-      />
+    <div className="mx-auto max-w-4xl">
+      <PageHeader eyebrow="Espace élève" title="Mes cours" />
 
       <div className="mt-10">
         <StudentBookings initial={rows} timezone={user.timezone} />
       </div>
-    </main>
+    </div>
   );
 }

@@ -1,7 +1,5 @@
 import { headers } from "next/headers";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 
 import { PageTitle } from "@/components/editorial";
 import {
@@ -64,16 +62,8 @@ export default async function StudentProfilePage() {
   };
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-12 sm:py-16">
-      <Link
-        href="/dashboard/cours"
-        className="flex w-fit items-center gap-1 text-sm text-muted hover:underline"
-      >
-        <ChevronLeft className="h-3 w-3" />
-        Mes cours
-      </Link>
-
-      <header className="mt-6 flex flex-col gap-3 border-b border-border pb-8">
+    <div className="mx-auto max-w-4xl">
+      <header className="flex flex-col gap-3 border-b border-border pb-8">
         <PageTitle size="page">Mon profil</PageTitle>
         <p className="text-muted">
           Ces informations sont transmises au prof avec vos demandes de cours.
@@ -83,6 +73,6 @@ export default async function StudentProfilePage() {
       <div className="mt-10">
         <StudentProfileForm initial={initial} catalogue={catalogue} />
       </div>
-    </main>
+    </div>
   );
 }
