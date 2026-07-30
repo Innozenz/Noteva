@@ -17,7 +17,7 @@ import prisma from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Connexion",
-  description: "Connectez-vous à Noteva pour réserver ou donner des cours.",
+  description: "Connectez-vous à SiNote pour réserver ou donner des cours.",
   robots: { index: false },
 };
 
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
  *
  * Page dédiée : la page d'accueil servait d'écran de connexion, ce qui est un
  * reste du boilerplate — elle doit d'abord expliquer le service à un visiteur
- * qui ne connaît pas Noteva.
+ * qui ne connaît pas SiNote.
  */
 export default async function LoginPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -54,7 +54,7 @@ export default async function LoginPage() {
         className="mb-8 flex items-center justify-center gap-2 text-lg font-semibold"
       >
         <Music4 className="h-5 w-5 text-primary" />
-        Noteva
+        SiNote
       </Link>
 
       <Card>

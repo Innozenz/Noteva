@@ -326,7 +326,7 @@ export function TeacherProfileForm({
         <div>
           <SectionTitle>Cours et tarif</SectionTitle>
           <p className="mt-2 text-sm text-muted">
-            Le règlement se fait directement entre vous et l&apos;élève : Noteva
+            Le règlement se fait directement entre vous et l&apos;élève : SiNote
             n&apos;encaisse rien.
           </p>
         </div>

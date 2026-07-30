@@ -457,7 +457,7 @@ export default async function HomePage() {
         <footer className="border-t border-border py-10">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-4 text-sm text-muted">
             <span className="font-display font-bold uppercase tracking-[0.14em] text-foreground">
-              Noteva
+              SiNote
             </span>
             {/* Pas de lien de connexion ici : l'en-tête l'affiche déjà, et
                 selon l'état de session. Le dupliquer proposerait « Se

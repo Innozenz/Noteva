@@ -42,7 +42,7 @@ export async function generateMetadata({
 
   return {
     title,
-    description: `Parcourez les profs ${subject}${place} sur Noteva et réservez votre premier cours.`,
+    description: `Parcourez les profs ${subject}${place} sur SiNote et réservez votre premier cours.`,
     alternates: { canonical: `/profs${buildQueryString(filters)}` },
     // Instrument et ville sont indexés — ce sont les requêtes qui amènent des
     // élèves. Prix, modalité, essai et pagination ne le sont pas : ils

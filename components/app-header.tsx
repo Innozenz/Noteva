@@ -37,7 +37,7 @@ export function AppHeader({
         {/* Le logo renvoie à l'espace de l'utilisateur, pas à l'accueil public. */}
         <Link href={home} className="flex items-center gap-2 font-semibold">
           <Music4 className="h-5 w-5 text-primary" />
-          Noteva
+          SiNote
         </Link>
 
         <nav className="flex items-center gap-1">

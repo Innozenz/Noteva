@@ -29,14 +29,14 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
   ),
   title: {
-    default: "Noteva — cours de musique et de chant près de chez vous",
+    default: "SiNote — cours de musique et de chant près de chez vous",
     // Les pages publiques ne fixent que leur propre titre.
-    template: "%s | Noteva",
+    template: "%s | SiNote",
   },
   description:
     "Trouvez un prof de musique ou de chant, consultez ses disponibilités et réservez votre cours en ligne. Vous réglez le prof directement, sans commission.",
   openGraph: {
-    siteName: "Noteva",
+    siteName: "SiNote",
     locale: "fr_FR",
     type: "website",
   },

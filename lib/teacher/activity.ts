@@ -8,7 +8,7 @@ import { addDays, civilDateKeyInZone, formatKey, wallClockToInstant } from "@/li
  * ce qui le rend testable au changement d'heure. On charge les réservations
  * dans l'appelant, puis on les agrège ici.
  *
- * Le « revenu » est ce que le prof encaisse **hors plateforme** : Noteva
+ * Le « revenu » est ce que le prof encaisse **hors plateforme** : SiNote
  * n'encaisse rien. Le réalisé ne compte que les cours clôturés (COMPLETED) ;
  * le prévisionnel, les cours confirmés encore à venir.
  */

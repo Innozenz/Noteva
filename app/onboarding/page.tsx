@@ -10,7 +10,7 @@ import prisma from "@/lib/prisma";
 import { givenName } from "@/lib/user/name";
 
 export const metadata: Metadata = {
-  title: "Bienvenue sur Noteva",
+  title: "Bienvenue sur SiNote",
   robots: { index: false },
 };
 
@@ -51,7 +51,7 @@ export default async function OnboardingPage() {
         className="mb-8 flex items-center justify-center gap-2 text-lg font-semibold"
       >
         <Music4 className="h-5 w-5 text-primary" />
-        Noteva
+        SiNote
       </Link>
 
       <div className="mb-8 flex flex-col gap-2">
@@ -59,7 +59,7 @@ export default async function OnboardingPage() {
           {firstName ? `Bienvenue ${firstName}` : "Bienvenue"}
         </h1>
         <p className="text-muted">
-          Dernière étape : dites-nous ce que vous venez faire sur Noteva.
+          Dernière étape : dites-nous ce que vous venez faire sur SiNote.
         </p>
       </div>
 

@@ -25,7 +25,7 @@ export async function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <Music4 className="h-5 w-5 text-primary" />
-          Noteva
+          SiNote
         </Link>
 
         <nav className="flex items-center gap-2">

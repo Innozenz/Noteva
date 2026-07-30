@@ -42,7 +42,7 @@ export default function GlobalError({
       >
         <main style={{ maxWidth: "28rem", padding: "1rem", textAlign: "center" }}>
           <h1 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
-            Noteva est momentanément indisponible
+            SiNote est momentanément indisponible
           </h1>
           <p style={{ color: "#6e6559", lineHeight: 1.6 }}>
             Une erreur inattendue nous empêche d&apos;afficher la page. Réessayez

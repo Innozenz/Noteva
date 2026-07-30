@@ -101,7 +101,7 @@ export function SubscriptionPanel({
         </div>
         <p className="text-sm text-muted">
           L&apos;abonnement rend votre fiche visible des élèves. Les cours, eux,
-          vous sont réglés directement : Noteva ne prend aucune commission.
+          vous sont réglés directement : SiNote ne prend aucune commission.
         </p>
       </header>
 

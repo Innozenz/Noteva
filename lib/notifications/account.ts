@@ -24,7 +24,7 @@ export function buildResetPasswordEmail(
 
   return {
     to: context.email,
-    subject: "Réinitialiser votre mot de passe Noteva",
+    subject: "Réinitialiser votre mot de passe SiNote",
     text: [
       greeting,
       ``,

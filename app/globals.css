@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /**
- * Système de design Noteva — « ReChord » : encre sur papier chaud, épicéa aux
+ * Système de design SiNote — « ReChord » : encre sur papier chaud, épicéa aux
  * actions, emphase bronze. Les neutres ne portent aucune teinte de marque.
  *
  * Tout passe par des jetons sémantiques : un composant dit `bg-surface`, pas
@@ -233,7 +233,7 @@ h3 {
 /* Tête de lecture. Le conteneur fait la largeur de la portée, donc translater
    de 100 % le déplace d'exactement une portée — sans jamais lire la mise en
    page ni connaître la largeur en pixels. */
-@keyframes noteva-playhead {
+@keyframes sinote-playhead {
   from {
     transform: translateX(0);
   }
@@ -251,7 +251,7 @@ h3 {
    l'animation entière est `linear` — il le faut pour que la tête de lecture
    balaie à vitesse constante —, donc c'est cette image-clé qui porte sa propre
    courbe. */
-@keyframes noteva-note-hit {
+@keyframes sinote-note-hit {
   0% {
     scale: 1.45;
     box-shadow: 0 0 11px 2px currentColor;
@@ -268,7 +268,7 @@ h3 {
 }
 
 /* Entrée : monte, se dévoile, se met au net. */
-@keyframes noteva-rise {
+@keyframes sinote-rise {
   from {
     opacity: 0;
     transform: translateY(1.5rem);
@@ -282,7 +282,7 @@ h3 {
 }
 
 /* Ligne de titre qui monte de derrière son masque. */
-@keyframes noteva-unmask {
+@keyframes sinote-unmask {
   from {
     transform: translateY(115%);
   }
@@ -293,7 +293,7 @@ h3 {
 
 /* Aurores. Deux nappes, deux durées premières entre elles : le motif ne se
    répète jamais à l'identique, donc l'œil n'y trouve pas de boucle. */
-@keyframes noteva-drift-a {
+@keyframes sinote-drift-a {
   0%,
   100% {
     transform: translate3d(0, 0, 0) scale(1);
@@ -303,7 +303,7 @@ h3 {
   }
 }
 
-@keyframes noteva-drift-b {
+@keyframes sinote-drift-b {
   0%,
   100% {
     transform: translate3d(0, 0, 0) scale(1.1);
@@ -315,29 +315,29 @@ h3 {
 
 @media (prefers-reduced-motion: no-preference) {
   .m-rise {
-    animation: noteva-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: sinote-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .m-unmask {
-    animation: noteva-unmask 1.05s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: sinote-unmask 1.05s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   /* `--sequence` est porté par la portée : la tête et ses notes partagent
      forcément la même durée, donc elles ne peuvent pas se désynchroniser. */
   .m-playhead {
-    animation: noteva-playhead var(--sequence) linear infinite;
+    animation: sinote-playhead var(--sequence) linear infinite;
   }
 
   .m-note {
-    animation: noteva-note-hit var(--sequence) linear infinite;
+    animation: sinote-note-hit var(--sequence) linear infinite;
   }
 
   .m-drift-a {
-    animation: noteva-drift-a 23s ease-in-out infinite;
+    animation: sinote-drift-a 23s ease-in-out infinite;
   }
 
   .m-drift-b {
-    animation: noteva-drift-b 31s ease-in-out infinite;
+    animation: sinote-drift-b 31s ease-in-out infinite;
   }
 }
 
@@ -365,7 +365,7 @@ h3 {
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     .m-reveal {
-      animation: noteva-rise linear both;
+      animation: sinote-rise linear both;
       animation-timeline: view();
       animation-range: entry var(--reveal-from, 0%) entry
         var(--reveal-to, 65%);

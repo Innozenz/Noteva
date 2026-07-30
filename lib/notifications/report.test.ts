@@ -12,7 +12,7 @@ const context = (overrides: Partial<ReportContext> = {}): ReportContext => ({
   ...overrides,
 });
 
-const APP_URL = "https://noteva.fr";
+const APP_URL = "https://sinote.fr";
 
 describe("notification de signalement", () => {
   it("écrit un message par administrateur", () => {

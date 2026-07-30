@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-**Noteva** — a marketplace where students find music/singing teachers and book lessons with them. Built on a Next.js 16 (App Router) SaaS boilerplate: Better Auth, Prisma 7 + PostgreSQL, Stripe.
+**SiNote** — a marketplace where students find music/singing teachers and book lessons with them. Built on a Next.js 16 (App Router) SaaS boilerplate: Better Auth, Prisma 7 + PostgreSQL, Stripe.
 
 **Business model, because it drives the data model:** teachers subscribe to the platform (Stripe subscription on `TeacherProfile`). Students pay their teacher directly, offline — there is **no student-facing payment**, no Stripe Connect, no escrow. `priceCents` fields exist for display and history only and must never trigger a charge.
 
@@ -262,7 +262,7 @@ The instrument chips only list instruments that are actually taught, so the bloc
 
 ### Domain model (Prisma)
 
-`User`/`Session`/`Account`/`Verification` match Better Auth's expected shape and are `@@map`ped to lowercase tables — don't rename fields or mappings without adjusting the adapter config in `lib/auth.ts`. Everything else is Noteva's domain.
+`User`/`Session`/`Account`/`Verification` match Better Auth's expected shape and are `@@map`ped to lowercase tables — don't rename fields or mappings without adjusting the adapter config in `lib/auth.ts`. Everything else is SiNote's domain.
 
 **`User` carries three name columns and one invariant.** `name` is Better Auth's display name — signup writes it, and every read site in the app uses it. `firstName`/`lastName` are what the user actually typed, and **every write of the pair recomposes `name` in the same statement** (`PATCH /api/user/identity`). That is what let the pair be added without touching a single read site: there is never a second truth about the full name, and nothing to resynchronise, so nothing can drift.
 

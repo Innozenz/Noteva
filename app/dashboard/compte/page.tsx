@@ -49,7 +49,7 @@ export default async function AccountPage() {
       <PageHeader
         eyebrow="Compte"
         title="Mon compte"
-        lead="Votre identité sur Noteva, quel que soit votre rôle."
+        lead="Votre identité sur SiNote, quel que soit votre rôle."
       />
 
       <div className="mt-10">

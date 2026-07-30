@@ -20,7 +20,7 @@ const emailSchema = z.string().email("Adresse e-mail invalide");
  *
  * La réponse est **toujours la même**, que l'adresse existe ou non. Afficher
  * « compte inconnu » transformerait ce formulaire en outil pour savoir qui est
- * inscrit sur Noteva.
+ * inscrit sur SiNote.
  */
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");

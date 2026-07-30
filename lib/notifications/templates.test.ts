@@ -15,7 +15,7 @@ const CONTEXT: BookingContext = {
   startsAt: new Date("2026-08-03T07:00:00Z"),
   timezone: "Europe/Paris",
   isTrial: false,
-  appUrl: "https://noteva.fr",
+  appUrl: "https://sinote.fr",
 };
 
 const ALL_EVENTS: NotificationEvent[] = [
@@ -201,7 +201,7 @@ describe("buildNotification — contenu", () => {
         const mail = buildNotification(event, CONTEXT, actor);
         if (!mail) continue;
 
-        expect(mail.text).toContain("https://noteva.fr/");
+        expect(mail.text).toContain("https://sinote.fr/");
         expect(mail.text).not.toContain("undefined");
       }
     }

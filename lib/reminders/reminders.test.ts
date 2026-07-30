@@ -89,7 +89,7 @@ const CONTEXT: ReminderContext = {
   timezone: "Europe/Paris",
   isTrial: false,
   mode: "ONLINE",
-  appUrl: "https://noteva.fr",
+  appUrl: "https://sinote.fr",
 };
 
 describe("buildReminders", () => {
@@ -172,8 +172,8 @@ describe("buildReminders", () => {
   it("porte un lien absolu vers l'espace de chacun", () => {
     const [student, teacher] = buildReminders(CONTEXT);
 
-    expect(student.text).toContain("https://noteva.fr/dashboard/cours");
-    expect(teacher.text).toContain("https://noteva.fr/dashboard/prof");
+    expect(student.text).toContain("https://sinote.fr/dashboard/cours");
+    expect(teacher.text).toContain("https://sinote.fr/dashboard/prof");
   });
 
   it("reste lisible sans nom renseigné", () => {

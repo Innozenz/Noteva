@@ -69,7 +69,7 @@ export async function GET(request: Request) {
   );
 
   const csv = activityCsv(report.journal, user.timezone);
-  const filename = `noteva-activite-${period.startKey}_${period.endKey}.csv`;
+  const filename = `sinote-activite-${period.startKey}_${period.endKey}.csv`;
 
   // BOM en tête (U+FEFF) : sans lui, Excel lit l'UTF-8 comme du Latin-1 et
   // casse les accents. Séparateur `;` (voir `activityCsv`) qu'Excel FR attend.

@@ -75,7 +75,7 @@ export async function generateMetadata({
   const title = `${name} — cours de ${subjects}${place}`;
   const description =
     teacher.headline ??
-    `Réservez un cours de ${subjects}${place} avec ${name} sur Noteva.`;
+    `Réservez un cours de ${subjects}${place} avec ${name} sur SiNote.`;
 
   return {
     title,

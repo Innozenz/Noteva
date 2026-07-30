@@ -5,7 +5,7 @@ import { buildResetPasswordEmail } from "./account";
 const CONTEXT = {
   email: "eleve@example.com",
   name: "Louis Bernard",
-  url: "https://noteva.fr/api/auth/reset-password/abc123?callbackURL=/reinitialiser-mot-de-passe",
+  url: "https://sinote.fr/api/auth/reset-password/abc123?callbackURL=/reinitialiser-mot-de-passe",
   expiresInMinutes: 60,
 };
 
