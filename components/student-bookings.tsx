@@ -279,7 +279,12 @@ export function StudentBookings({
       (row.report.content ||
         row.report.attachments.length > 0 ||
         row.report.comments.length > 0) ? (
-        <ReportViewer bookingId={row.id} report={row.report} me="STUDENT" />
+        <div className="rounded-md bg-surface p-3">
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-subtle">
+            Compte rendu
+          </p>
+          <ReportViewer bookingId={row.id} report={row.report} me="STUDENT" />
+        </div>
       ) : null}
 
       {canCancel(row) ? (

@@ -13,6 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { AudioPlayer } from "@/components/audio-player";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -310,16 +311,18 @@ function AttachmentTile({
         <img
           src={src}
           alt={attachment.filename}
-          className="h-24 w-24 rounded-md border border-border object-cover"
+          className="h-28 w-28 rounded-lg border border-border object-cover"
         />
       ) : attachment.kind === "AUDIO" ? (
-        <audio controls src={src} className="h-10 w-56" />
+        <div className="flex w-64 items-center rounded-lg border border-border bg-elevated px-3 py-3">
+          <AudioPlayer src={src} className="min-w-0 flex-1" />
+        </div>
       ) : (
         <a
           href={src}
           target="_blank"
           rel="noreferrer"
-          className="flex h-24 w-40 flex-col items-center justify-center gap-1 rounded-md border border-border bg-surface px-2 text-center text-xs text-muted hover:text-foreground"
+          className="flex h-28 w-40 flex-col items-center justify-center gap-1 rounded-lg border border-border bg-elevated px-2 text-center text-xs text-muted hover:text-foreground"
         >
           <FileText className="h-6 w-6 text-subtle" />
           <span className="line-clamp-2 break-all">{attachment.filename}</span>

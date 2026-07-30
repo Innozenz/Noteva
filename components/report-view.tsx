@@ -1,6 +1,6 @@
-import { FileText } from "lucide-react";
+import { Download, FileText, Mic } from "lucide-react";
 
-import { SectionTitle } from "@/components/editorial";
+import { AudioPlayer } from "@/components/audio-player";
 import { MessageThread, type MessageView } from "@/components/message-thread";
 
 export type ReportView = {
@@ -16,11 +16,13 @@ export type ReportView = {
 };
 
 /**
- * Compte rendu vu par l'élève, en lecture seule.
+ * Compte rendu en lecture seule.
  *
- * Les pièces jointes sont servies par la route d'accès (qui vérifie que
- * l'appelant est participant) : l'`src` pointe dessus, jamais sur l'objet privé
- * en direct. Images en aperçu, audio jouable, partition téléchargeable.
+ * Corps « nu » (pas de cadre à lui) : c'est la carte de l'appelant qui encadre,
+ * pour ne pas emboîter deux boîtes. Les pièces jointes sont groupées par type —
+ * vignettes pour les images, documents pour les partitions, lecteur pour l'audio.
+ * Elles sont servies par la route d'accès (qui vérifie le participant) ; l'`src`
+ * pointe dessus, jamais sur l'objet privé en direct.
  */
 export function ReportViewer({
   bookingId,
@@ -33,57 +35,76 @@ export function ReportViewer({
   me: "TEACHER" | "STUDENT";
 }) {
   const base = `/api/bookings/${bookingId}/report/attachments`;
+  const images = report.attachments.filter((a) => a.kind === "IMAGE");
+  const scores = report.attachments.filter((a) => a.kind === "SCORE");
+  const audios = report.attachments.filter((a) => a.kind === "AUDIO");
 
   return (
-    <div className="flex flex-col gap-3 rounded-md bg-surface p-3">
-      <SectionTitle>Compte rendu du cours</SectionTitle>
-
+    <div className="flex flex-col gap-4">
       {report.content ? (
-        <p className="whitespace-pre-line text-sm text-foreground">
+        <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
           {report.content}
         </p>
       ) : null}
 
-      {report.attachments.length > 0 ? (
-        <div className="flex flex-wrap gap-3">
-          {report.attachments.map((a) => {
-            const src = `${base}/${a.id}`;
+      {images.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {images.map((a) => (
+            <a
+              key={a.id}
+              href={`${base}/${a.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="block overflow-hidden rounded-lg border border-border transition hover:border-border-strong"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`${base}/${a.id}`}
+                alt={a.filename}
+                className="h-28 w-28 object-cover transition hover:scale-[1.03]"
+              />
+            </a>
+          ))}
+        </div>
+      ) : null}
 
-            if (a.kind === "IMAGE") {
-              return (
-                <a key={a.id} href={src} target="_blank" rel="noreferrer">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={src}
-                    alt={a.filename}
-                    className="h-24 w-24 rounded-md border border-border object-cover"
-                  />
-                </a>
-              );
-            }
+      {audios.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {audios.map((a) => (
+            <div
+              key={a.id}
+              className="flex items-center gap-3 rounded-lg border border-border bg-elevated px-3 py-2"
+            >
+              <Mic className="h-4 w-4 shrink-0 text-subtle" />
+              <AudioPlayer src={`${base}/${a.id}`} className="min-w-0 flex-1" />
+            </div>
+          ))}
+        </div>
+      ) : null}
 
-            if (a.kind === "AUDIO") {
-              return <audio key={a.id} controls src={src} className="h-10 w-56" />;
-            }
-
-            return (
-              <a
-                key={a.id}
-                href={src}
-                target="_blank"
-                rel="noreferrer"
-                className="flex h-24 w-40 flex-col items-center justify-center gap-1 rounded-md border border-border bg-elevated px-2 text-center text-xs text-muted hover:text-foreground"
-              >
-                <FileText className="h-6 w-6 text-subtle" />
-                <span className="line-clamp-2 break-all">{a.filename}</span>
-              </a>
-            );
-          })}
+      {scores.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {scores.map((a) => (
+            <a
+              key={a.id}
+              href={`${base}/${a.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-3 rounded-lg border border-border bg-elevated px-3 py-2 text-sm transition-colors hover:border-border-strong"
+            >
+              <FileText className="h-5 w-5 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1 truncate">{a.filename}</span>
+              <Download className="h-4 w-4 shrink-0 text-subtle" />
+            </a>
+          ))}
         </div>
       ) : null}
 
       {/* Échanges autour de ce cours. */}
-      <div className="border-t border-border pt-3">
+      <div className="flex flex-col gap-2 border-t border-border pt-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-subtle">
+          Échanges
+        </p>
         <MessageThread
           initial={report.comments}
           me={me}
