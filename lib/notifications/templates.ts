@@ -16,7 +16,8 @@ export type NotificationEvent =
   | "booking_declined"
   | "booking_cancelled"
   | "booking_rescheduled"
-  | "review_received";
+  | "review_received"
+  | "report_published";
 
 export type Actor = "teacher" | "student";
 
@@ -99,6 +100,22 @@ export function buildNotification(
           `Quand : ${when.long}`,
           ``,
           `Détails : ${context.appUrl}/dashboard/cours`,
+        ]),
+      };
+    }
+
+    case "report_published": {
+      // Toujours une action du prof : c'est l'élève qu'on prévient. Sans cet
+      // e-mail, l'élève ne saurait pas qu'un compte rendu l'attend.
+      if (actor !== "teacher") return null;
+
+      return {
+        to: context.studentEmail,
+        subject: `Compte rendu de votre cours de ${context.instrumentName}`,
+        text: lines([
+          `${teacher} a rédigé le compte rendu de votre cours de ${context.instrumentName} du ${when.long}.`,
+          ``,
+          `Le consulter : ${context.appUrl}/dashboard/cours`,
         ]),
       };
     }

@@ -18,6 +18,7 @@ import { FormFailure } from "@/components/form-failure";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Stars } from "@/components/ui/stars";
+import { ReportViewer, type ReportView } from "@/components/report-view";
 import { postJson, type Failure } from "@/lib/http/failure";
 import { groupBookings } from "@/lib/bookings/grouping";
 import { checkReviewable } from "@/lib/reviews/eligibility";
@@ -49,6 +50,8 @@ export type StudentBookingRow = {
     /** Faux si la modération l'a retiré : l'élève doit le savoir. */
     published: boolean;
   } | null;
+  /** Compte rendu rédigé par le prof, s'il existe. */
+  report: ReportView | null;
 };
 
 type Enriched = Omit<StudentBookingRow, "startsAt" | "endsAt"> & {
@@ -270,6 +273,11 @@ export function StudentBookings({
             </p>
           ) : null}
         </div>
+      ) : null}
+
+      {row.report &&
+      (row.report.content || row.report.attachments.length > 0) ? (
+        <ReportViewer bookingId={row.id} report={row.report} />
       ) : null}
 
       {canCancel(row) ? (

@@ -52,6 +52,21 @@ export default async function StudentBookingsPage() {
       // lib/reviews/eligibility.ts s'applique ensuite côté client, comme sur
       // le serveur.
       review: { select: { rating: true, comment: true, publishedAt: true } },
+      report: {
+        select: {
+          content: true,
+          attachments: {
+            orderBy: { createdAt: "asc" },
+            select: {
+              id: true,
+              filename: true,
+              contentType: true,
+              kind: true,
+              sizeBytes: true,
+            },
+          },
+        },
+      },
       instrument: { select: { name: true } },
       teacher: {
         select: { slug: true, user: { select: { name: true } } },
@@ -78,6 +93,12 @@ export default async function StudentBookingsPage() {
           rating: booking.review.rating,
           comment: booking.review.comment,
           published: booking.review.publishedAt !== null,
+        }
+      : null,
+    report: booking.report
+      ? {
+          content: booking.report.content,
+          attachments: booking.report.attachments,
         }
       : null,
   }));

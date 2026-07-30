@@ -1,4 +1,9 @@
-import { DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { s3 } from "./client";
 import { storageConfig } from "./config";
@@ -45,4 +50,56 @@ export async function deletePublic(key: string): Promise<void> {
       Key: key,
     })
   );
+}
+
+// --- Bucket privé (pièces jointes des comptes rendus) -----------------------
+// Jamais d'ACL publique : les objets restent privés, servis par URL signée à
+// expiration après vérification que le demandeur est participant au cours.
+
+/** Téléverse un objet privé (aucun accès public). */
+export async function uploadPrivate(params: {
+  key: string;
+  body: Buffer | Uint8Array;
+  contentType: string;
+}): Promise<void> {
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: storageConfig.bucketPrivate,
+      Key: params.key,
+      Body: params.body,
+      ContentType: params.contentType,
+    })
+  );
+}
+
+/** Supprime un objet du bucket privé. */
+export async function deletePrivate(key: string): Promise<void> {
+  await s3.send(
+    new DeleteObjectCommand({
+      Bucket: storageConfig.bucketPrivate,
+      Key: key,
+    })
+  );
+}
+
+/**
+ * URL signée de lecture d'un objet privé, à expiration courte.
+ *
+ * `inline` : l'image s'affiche, le PDF s'ouvre, l'audio se lit dans le
+ * navigateur. Le nom d'origine est nettoyé des caractères qui casseraient
+ * l'en-tête (injection). Défaut 5 min : assez pour ouvrir, trop court pour
+ * partager durablement.
+ */
+export async function presignView(params: {
+  key: string;
+  filename: string;
+  expiresIn?: number;
+}): Promise<string> {
+  const safe = params.filename.replace(/["\\\r\n]/g, "");
+  const command = new GetObjectCommand({
+    Bucket: storageConfig.bucketPrivate,
+    Key: params.key,
+    ResponseContentDisposition: `inline; filename="${safe}"`,
+  });
+  return getSignedUrl(s3, command, { expiresIn: params.expiresIn ?? 300 });
 }

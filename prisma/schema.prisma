@@ -422,6 +422,7 @@ model Booking {
   completedAt        DateTime?
 
   review    Review?
+  report    LessonReport?
   reminders BookingReminder[]
 
   createdAt DateTime @default(now())
@@ -431,6 +432,55 @@ model Booking {
   @@index([studentId, startsAt])
   @@index([status, startsAt])
   @@map("booking")
+}
+
+// ---------------------------------------------------------------------------
+// Comptes rendus de cours — écrits par le prof, lus par l'élève.
+//
+// Rattaché à un Booking (unique, comme Review) : un compte rendu n'existe que
+// pour un vrai cours. Le texte est optionnel — un compte rendu peut n'être que
+// des pièces jointes (partition annotée, note audio) ou l'inverse.
+// ---------------------------------------------------------------------------
+
+model LessonReport {
+  id        String  @id @default(cuid())
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  content String? // le texte du compte rendu
+
+  attachments ReportAttachment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("lesson_report")
+}
+
+enum AttachmentKind {
+  IMAGE
+  SCORE // partition (PDF)
+  AUDIO // note audio
+}
+
+// Pièce jointe d'un compte rendu. Le fichier vit dans le bucket privé
+// (sinote-private) : jamais public, servi par URL signée à expiration après
+// vérification que le demandeur est bien participant au cours.
+model ReportAttachment {
+  id       String       @id @default(cuid())
+  reportId String
+  report   LessonReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  storageKey  String // clé de l'objet dans le bucket privé
+  filename    String // nom d'origine, pour l'affichage et le téléchargement
+  contentType String
+  sizeBytes   Int
+  kind        AttachmentKind
+
+  createdAt DateTime @default(now())
+
+  @@index([reportId])
+  @@map("report_attachment")
 }
 
 // ---------------------------------------------------------------------------

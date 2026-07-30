@@ -4,9 +4,8 @@
  * Fail-fast à l'évaluation, comme `lib/stripe.ts` : mieux vaut une erreur qui
  * nomme la variable manquante qu'un échec S3 obscur au premier upload.
  *
- * Seules les variables du bucket **public** sont exigées ici : c'est tout ce
- * dont la photo de profil a besoin. Le bucket privé (pièces jointes, audio)
- * viendra avec ses propres besoins, sans bloquer cette fonctionnalité.
+ * Bucket public : photos de profil (lecture publique par ACL objet).
+ * Bucket privé : pièces jointes des comptes rendus (jamais public, URL signées).
  */
 function required(name: string): string {
   const value = process.env[name];
@@ -24,6 +23,7 @@ export const storageConfig = {
   accessKeyId: required("SCALEWAY_ACCESS_KEY"),
   secretAccessKey: required("SCALEWAY_SECRET_KEY"),
   bucketPublic: required("SCALEWAY_BUCKET_PUBLIC"),
+  bucketPrivate: required("SCALEWAY_BUCKET_PRIVATE"),
   // Sans slash final : les clés sont concaténées avec un « / ».
   publicBaseUrl: required("SCALEWAY_PUBLIC_BASE_URL").replace(/\/+$/, ""),
 } as const;

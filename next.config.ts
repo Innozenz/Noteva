@@ -24,10 +24,12 @@ const nextConfig: NextConfig = {
           // L'URL complète (dont callbackUrl, jetons éventuels) ne sort pas
           // vers les sites tiers.
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          // Aucune page n'utilise caméra, micro ou géolocalisation.
+          // Le micro est autorisé pour l'origine même (`self`) : l'enregistrement
+          // des notes audio des comptes rendus en a besoin. Caméra et
+          // géolocalisation restent désactivées.
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(), microphone=(self), geolocation=()",
           },
         ],
       },

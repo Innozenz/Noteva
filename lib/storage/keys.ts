@@ -16,3 +16,19 @@
 export function avatarKey(userId: string): string {
   return `avatars/${userId}.webp`;
 }
+
+/**
+ * Clé d'une pièce jointe de compte rendu, dans le bucket privé.
+ *
+ * Groupée par cours (`reports/{bookingId}/`) et nommée par l'id (cuid) de la
+ * pièce jointe : unique, donc aucune collision, et le préfixe par cours facilite
+ * une purge éventuelle. L'extension vient du type de fichier, pour un
+ * téléchargement lisible.
+ */
+export function reportAttachmentKey(
+  bookingId: string,
+  attachmentId: string,
+  ext: string
+): string {
+  return `reports/${bookingId}/${attachmentId}.${ext}`;
+}

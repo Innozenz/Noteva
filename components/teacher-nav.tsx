@@ -7,6 +7,7 @@ import {
   CalendarClock,
   CalendarDays,
   CreditCard,
+  FileText,
   Inbox,
   LayoutDashboard,
   Star,
@@ -40,6 +41,11 @@ const ITEMS = [
   // semaine réelle : deux questions distinctes, deux écrans.
   { href: "/dashboard/prof/agenda", icon: CalendarClock, label: "Agenda" },
   { href: "/dashboard/prof/demandes", icon: Inbox, label: "Demandes" },
+  {
+    href: "/dashboard/prof/comptes-rendus",
+    icon: FileText,
+    label: "Comptes rendus",
+  },
   { href: "/dashboard/prof/activite", icon: TrendingUp, label: "Activité" },
   { href: "/dashboard/prof/avis", icon: Star, label: "Avis" },
   {
