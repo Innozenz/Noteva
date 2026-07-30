@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { postJson, type Failure } from "@/lib/http/failure";
 import { formatMinute, previewStarts } from "@/lib/teacher/slot-preview";
+import { ageOn } from "@/lib/user/age";
 import { WEEKDAY_LABELS } from "@/lib/teacher/weekly-grid";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,9 @@ export type TeacherProfileData = {
   status: "DRAFT" | "PENDING" | "PUBLISHED" | "SUSPENDED";
   headline: string | null;
   bio: string | null;
+  /** Date civile AAAA-MM-JJ, ou null. Sert au seul affichage de l'âge. */
+  birthDate: string | null;
+  showAge: boolean;
   city: string | null;
   teachesOnline: boolean;
   teachesInPerson: boolean;
@@ -91,6 +95,8 @@ export function TeacherProfileForm({
         body: JSON.stringify({
           headline: profile.headline,
           bio: profile.bio,
+          birthDate: profile.birthDate,
+          showAge: profile.showAge,
           city: profile.city,
           teachesOnline: profile.teachesOnline,
           teachesInPerson: profile.teachesInPerson,
@@ -150,6 +156,12 @@ export function TeacherProfileForm({
 
   const isPublished = profile.status === "PUBLISHED";
   const canPublish = profile.publishCheck.ok;
+
+  // Aperçu de l'âge, calculé comme côté serveur (minuit UTC de la date civile).
+  const today = new Date().toISOString().slice(0, 10);
+  const age = profile.birthDate
+    ? ageOn(new Date(`${profile.birthDate}T00:00:00.000Z`), new Date())
+    : null;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-10">
@@ -239,6 +251,38 @@ export function TeacherProfileForm({
               {(profile.bio ?? "").length} caractères — 80 minimum pour publier.
             </p>
           </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="birthDate">Date de naissance</Label>
+            <Input
+              id="birthDate"
+              type="date"
+              max={today}
+              value={profile.birthDate ?? ""}
+              onChange={(e) => set("birthDate", e.target.value || null)}
+            />
+            <p className="text-xs text-muted">
+              Facultative. Elle ne sert qu&apos;à afficher votre âge, et
+              seulement si vous cochez la case ci-dessous.
+            </p>
+          </div>
+
+          {profile.birthDate ? (
+            <div className="space-y-2">
+              <Checkbox
+                label="Afficher mon âge sur ma fiche publique"
+                checked={profile.showAge}
+                onChange={(v) => set("showAge", v)}
+              />
+              {age !== null ? (
+                <p className="text-xs text-subtle">
+                  {profile.showAge
+                    ? `Votre fiche indiquera « ${age} ans ».`
+                    : `Décoché, votre âge (${age} ans) n'apparaît nulle part.`}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </section>
 

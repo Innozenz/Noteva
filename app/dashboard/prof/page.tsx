@@ -28,6 +28,8 @@ export default async function TeacherProfilePage() {
       status: true,
       headline: true,
       bio: true,
+      birthDate: true,
+      showAge: true,
       city: true,
       teachesOnline: true,
       teachesInPerson: true,
@@ -71,6 +73,11 @@ export default async function TeacherProfilePage() {
     status: profile.status,
     headline: profile.headline,
     bio: profile.bio,
+    // birthDate est à minuit UTC : rendue en date civile pour l'input date.
+    birthDate: profile.birthDate
+      ? profile.birthDate.toISOString().slice(0, 10)
+      : null,
+    showAge: profile.showAge,
     city: profile.city,
     teachesOnline: profile.teachesOnline,
     teachesInPerson: profile.teachesInPerson,

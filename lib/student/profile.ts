@@ -7,6 +7,11 @@
  * qu'ils deviennent obligatoires au bon moment.
  */
 
+import { ageOn } from "@/lib/user/age";
+
+// Réexporté : l'âge est calculé au même endroit pour l'élève et pour le prof.
+export { ageOn };
+
 export const MAJORITY_AGE = 18;
 
 export type GuardianFields = {
@@ -18,28 +23,6 @@ export type GuardianFields = {
 export type StudentProfileInput = GuardianFields & {
   birthDate: Date | null;
 };
-
-/**
- * Âge révolu à une date donnée.
- *
- * `birthDate` vient d'une colonne `@db.Date`, rendue par Prisma à minuit UTC :
- * on la lit donc en UTC. La lire en heure locale du serveur décalerait la date
- * d'un jour pour tout fuseau derrière Greenwich, et ferait basculer d'âge les
- * élèves nés un jour de leur anniversaire.
- */
-export function ageOn(birthDate: Date, now: Date): number {
-  let age = now.getUTCFullYear() - birthDate.getUTCFullYear();
-
-  const monthDiff = now.getUTCMonth() - birthDate.getUTCMonth();
-  const dayDiff = now.getUTCDate() - birthDate.getUTCDate();
-
-  // Anniversaire pas encore passé cette année.
-  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-    age -= 1;
-  }
-
-  return age;
-}
 
 /**
  * Un élève sans date de naissance n'est pas présumé mineur : on ne peut rien

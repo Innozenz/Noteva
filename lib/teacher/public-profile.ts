@@ -24,6 +24,8 @@ export const getPublicTeacher = cache(async (slug: string) => {
       headline: true,
       bio: true,
       videoUrl: true,
+      birthDate: true,
+      showAge: true,
       city: true,
       country: true,
       teachesOnline: true,

@@ -191,6 +191,12 @@ model TeacherProfile {
   videoUrl    String? // vidéo de présentation
   publishedAt DateTime?
 
+  // Âge : la date de naissance ne sert qu'à afficher l'âge sur la fiche
+  // publique, et uniquement si le prof l'a explicitement choisi (showAge).
+  // Rien n'est exposé par défaut — minimisation RGPD.
+  birthDate DateTime? @db.Date
+  showAge   Boolean   @default(false)
+
   // Modalités
   teachesOnline   Boolean  @default(true)
   teachesInPerson Boolean  @default(false)

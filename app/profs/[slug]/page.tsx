@@ -30,6 +30,7 @@ import {
 } from "@/lib/reviews/queries";
 import { summarizeFromCounts } from "@/lib/reviews/summary";
 import { getPublicTeacher } from "@/lib/teacher/public-profile";
+import { ageOn } from "@/lib/user/age";
 
 /**
  * Fiche prof publique.
@@ -108,6 +109,11 @@ export default async function TeacherPublicPage({
 
   const name = teacher.user.name ?? "Prof de musique";
   const instruments = teacher.instruments.map((i) => i.instrument);
+  // Âge affiché seulement si le prof l'a explicitement choisi (showAge).
+  const age =
+    teacher.showAge && teacher.birthDate
+      ? ageOn(teacher.birthDate, new Date())
+      : null;
   const rate =
     teacher.hourlyRateCents === null
       ? null
@@ -208,6 +214,10 @@ export default async function TeacherPublicPage({
               count={summary.count}
               size="md"
             />
+
+            {age !== null ? (
+              <p className="text-sm text-muted">{age} ans</p>
+            ) : null}
 
             {teacher.headline ? (
               <p className="text-lg text-muted">

@@ -35,12 +35,22 @@ const FIELD_LABELS: FieldLabels = {
   minNoticeHours: "Préavis minimum (h)",
   bookingHorizonDays: "Réservable jusqu'à (jours)",
   cancellationWindowHours: "Préavis d'annulation (h)",
+  birthDate: "Date de naissance",
 };
 
 const profileSchema = z.object({
   headline: z.string().max(120).nullable().optional(),
   bio: z.string().max(5000).nullable().optional(),
   videoUrl: z.string().url().max(500).nullable().optional(),
+
+  // Date civile (AAAA-MM-JJ), jamais un instant : @db.Date est stocké à minuit
+  // UTC, un instant décalerait d'un jour un prof à l'ouest de Greenwich.
+  birthDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional(),
+  showAge: z.boolean().optional(),
 
   teachesOnline: z.boolean().optional(),
   teachesInPerson: z.boolean().optional(),
@@ -74,6 +84,8 @@ const profileSelect = {
   headline: true,
   bio: true,
   videoUrl: true,
+  birthDate: true,
+  showAge: true,
   teachesOnline: true,
   teachesInPerson: true,
   teachesAtHome: true,
@@ -140,7 +152,17 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const { instrumentSlugs, ...fields } = parsed.data;
+    const { instrumentSlugs, birthDate, ...rest } = parsed.data;
+
+    // La date civile devient un instant à minuit UTC ; `null` efface le champ.
+    const fields =
+      birthDate === undefined
+        ? rest
+        : {
+            ...rest,
+            birthDate:
+              birthDate === null ? null : new Date(`${birthDate}T00:00:00.000Z`),
+          };
 
     if (instrumentSlugs) {
       const instruments = await prisma.instrument.findMany({
@@ -205,10 +227,13 @@ async function readProfile(teacherId: string) {
     select: profileSelect,
   });
 
-  const { instruments, _count, ...rest } = profile;
+  const { instruments, _count, birthDate, ...rest } = profile;
 
   return {
     ...rest,
+    // birthDate est à minuit UTC : on la rend en date civile (AAAA-MM-JJ), telle
+    // que l'attend l'input date du formulaire.
+    birthDate: birthDate ? birthDate.toISOString().slice(0, 10) : null,
     instruments: instruments.map((i) => i.instrument),
     availabilityRuleCount: _count.rules,
     publishCheck: checkPublishable({
