@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, FileText } from "lucide-react";
 
 import { PageTitle } from "@/components/editorial";
 import { FicheTabs } from "@/components/fiche-tabs";
@@ -190,23 +190,44 @@ export default async function StudentDossierPage({
 
       {active === "historique" ? (
         <ul className="divide-y divide-border border-y border-border">
-          {teacher.bookings.map((b) => (
-            <li
-              key={b.id}
-              className="flex items-center justify-between gap-2 py-3"
-            >
-              <p className="text-sm">
-                <span className="font-medium">{b.instrument.name}</span>
-                <span className="text-muted">
-                  {" "}
-                  · {dateFormat.format(b.startsAt)}
-                </span>
-              </p>
-              <Badge variant={b.status === "CONFIRMED" ? "success" : "secondary"}>
-                {STATUS_LABELS[b.status] ?? b.status}
-              </Badge>
-            </li>
-          ))}
+          {teacher.bookings.map((b) => {
+            const documented =
+              b.report &&
+              (b.report.content ||
+                b.report.attachments.length > 0 ||
+                b.report.comments.length > 0);
+
+            return (
+              <li
+                key={b.id}
+                className="flex items-center justify-between gap-3 py-3"
+              >
+                <p className="min-w-0 text-sm">
+                  <span className="font-medium">{b.instrument.name}</span>
+                  <span className="text-muted">
+                    {" "}
+                    · {dateFormat.format(b.startsAt)}
+                  </span>
+                </p>
+                <div className="flex shrink-0 items-center gap-3">
+                  {documented ? (
+                    <Link
+                      href={`${basePath}?onglet=comptes-rendus#cr-${b.id}`}
+                      className="flex items-center gap-1 text-sm text-primary hover:underline"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      Compte rendu
+                    </Link>
+                  ) : null}
+                  <Badge
+                    variant={b.status === "CONFIRMED" ? "success" : "secondary"}
+                  >
+                    {STATUS_LABELS[b.status] ?? b.status}
+                  </Badge>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       ) : null}
 
@@ -220,7 +241,8 @@ export default async function StudentDossierPage({
             {reports.map((b) => (
               <li
                 key={b.id}
-                className="flex flex-col gap-3 rounded-lg border border-border p-4"
+                id={`cr-${b.id}`}
+                className="flex scroll-mt-20 flex-col gap-3 rounded-lg border border-border p-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm">
