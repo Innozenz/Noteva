@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertCircle, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 
+import { AvatarUploader } from "@/components/avatar-uploader";
 import { PageTitle, SectionTitle } from "@/components/editorial";
 import { FormFailure } from "@/components/form-failure";
 import { Badge } from "@/components/ui/badge";
@@ -59,9 +60,11 @@ export type TeacherProfileData = {
 export function TeacherProfileForm({
   initial,
   catalogue,
+  initialImage,
 }: {
   initial: TeacherProfileData;
   catalogue: Instrument[];
+  initialImage: string | null;
 }) {
   const [profile, setProfile] = useState(initial);
   const [isSaving, setIsSaving] = useState(false);
@@ -218,6 +221,17 @@ export function TeacherProfileForm({
           </div>
         ) : null}
       </header>
+
+      {/* Photo de profil — appartient à l'utilisateur, s'enregistre seule. */}
+      <section className="flex flex-col gap-5">
+        <div>
+          <SectionTitle>Photo de profil</SectionTitle>
+          <p className="mt-2 text-sm text-muted">
+            Un visage rassure : les fiches avec photo sont plus consultées.
+          </p>
+        </div>
+        <AvatarUploader initialImage={initialImage} />
+      </section>
 
       {/* Présentation */}
       <section className="flex flex-col gap-5">

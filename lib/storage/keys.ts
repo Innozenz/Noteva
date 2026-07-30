@@ -1,0 +1,18 @@
+/**
+ * Conventions de nommage des objets stockés.
+ *
+ * Pures et sans dépendance (ni Prisma ni SDK) : testables en isolation, et
+ * c'est le seul endroit qui décide où vit un fichier. Un changement de schéma
+ * de nommage se fait ici, pas dispersé dans les routes.
+ */
+
+/**
+ * Clé de l'avatar d'un utilisateur.
+ *
+ * **Stable** (une par utilisateur) : un nouvel upload écrase l'ancien, donc
+ * aucun orphelin à nettoyer. Le rafraîchissement du cache est géré à l'écriture
+ * de l'URL (paramètre `?v=`), pas par la clé.
+ */
+export function avatarKey(userId: string): string {
+  return `avatars/${userId}.webp`;
+}

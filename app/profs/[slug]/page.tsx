@@ -13,6 +13,7 @@ import {
 
 import { BookingWidget } from "@/components/booking-widget";
 import { Eyebrow, PageTitle, SectionTitle } from "@/components/editorial";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SiteHeader } from "@/components/site-header";
 import { TeacherReviews } from "@/components/teacher-reviews";
 import { Badge } from "@/components/ui/badge";
@@ -196,6 +197,12 @@ export default async function TeacherPublicPage({
           </Link>
 
           <header className="flex flex-col gap-4 border-b border-border pb-8">
+            {teacher.user.image ? (
+              <Avatar className="h-24 w-24 border border-border">
+                <AvatarImage src={teacher.user.image} alt={name} />
+                <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
+              </Avatar>
+            ) : null}
             <Eyebrow>{teacher.city ?? "Professeur"}</Eyebrow>
             <div className="flex flex-wrap items-center gap-3">
               <PageTitle>{name}</PageTitle>

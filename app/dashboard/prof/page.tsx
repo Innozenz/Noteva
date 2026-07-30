@@ -55,6 +55,8 @@ export default async function TeacherProfilePage() {
         select: { weekday: true, startMinute: true, endMinute: true },
       },
       _count: { select: { rules: true } },
+      // Photo de profil : portée par User, éditée dans la section dédiée.
+      user: { select: { image: true } },
     },
   });
 
@@ -110,5 +112,11 @@ export default async function TeacherProfilePage() {
     firstOpening: profile.rules[0] ?? null,
   };
 
-  return <TeacherProfileForm initial={initial} catalogue={catalogue} />;
+  return (
+    <TeacherProfileForm
+      initial={initial}
+      catalogue={catalogue}
+      initialImage={profile.user.image}
+    />
+  );
 }
