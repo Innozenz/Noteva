@@ -13,6 +13,7 @@ import {
   Star,
   TrendingUp,
   UserCog,
+  Users,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ const ITEMS = [
     icon: FileText,
     label: "Comptes rendus",
   },
+  { href: "/dashboard/prof/eleves", icon: Users, label: "Mes élèves" },
   { href: "/dashboard/prof/activite", icon: TrendingUp, label: "Activité" },
   { href: "/dashboard/prof/avis", icon: Star, label: "Avis" },
   {

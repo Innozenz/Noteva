@@ -235,12 +235,13 @@ model TeacherProfile {
   stripePriceId          String?
   stripeCurrentPeriodEnd DateTime?
 
-  instruments TeacherInstrument[]
-  rules       AvailabilityRule[]
-  exceptions  AvailabilityException[]
-  bookings    Booking[]
-  reviews     Review[]
-  reports     ReviewReport[]
+  instruments  TeacherInstrument[]
+  rules        AvailabilityRule[]
+  exceptions   AvailabilityException[]
+  bookings     Booking[]
+  reviews      Review[]
+  reports      ReviewReport[]
+  studentNotes TeacherStudentNote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -292,14 +293,39 @@ model StudentProfile {
   city          String?
   postalCode    String?
 
-  instruments StudentInstrument[]
-  bookings    Booking[]
-  reviews     Review[]
+  instruments  StudentInstrument[]
+  bookings     Booking[]
+  reviews      Review[]
+  teacherNotes TeacherStudentNote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("student_profile")
+}
+
+// ---------------------------------------------------------------------------
+// Fiche élève — note privée du prof sur un élève.
+//
+// Persistante et propre au couple prof↔élève (une par couple), indépendante
+// d'un cours précis : c'est le fil « fiche client » du prof. Jamais visible de
+// l'élève. Le prof n'y accède que s'il a au moins un cours avec cet élève.
+// ---------------------------------------------------------------------------
+
+model TeacherStudentNote {
+  id        String         @id @default(cuid())
+  teacherId String
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  content String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teacherId, studentId])
+  @@map("teacher_student_note")
 }
 
 // Le niveau est porté par le couple élève/instrument : un élève peut être

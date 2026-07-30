@@ -1,0 +1,148 @@
+import { headers } from "next/headers";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+
+import { PageTitle } from "@/components/editorial";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { auth } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { ageOn } from "@/lib/user/age";
+
+/**
+ * Roster des élèves du prof.
+ *
+ * La liste se déduit des réservations : est « mon élève » quiconque a déjà
+ * réservé avec moi. Chaque ligne résume l'essentiel (instruments, nombre de
+ * cours, prochain / dernier), et mène à sa fiche.
+ */
+export default async function TeacherStudentsPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session?.user) redirect("/");
+
+  const teacher = await prisma.teacherProfile.findUnique({
+    where: { userId: session.user.id },
+    select: { id: true, user: { select: { timezone: true } } },
+  });
+
+  if (!teacher) redirect("/dashboard");
+
+  const students = await prisma.studentProfile.findMany({
+    where: { bookings: { some: { teacherId: teacher.id } } },
+    select: {
+      id: true,
+      birthDate: true,
+      user: { select: { name: true, image: true } },
+      bookings: {
+        where: { teacherId: teacher.id },
+        select: {
+          startsAt: true,
+          status: true,
+          instrument: { select: { name: true } },
+        },
+      },
+    },
+  });
+
+  const now = new Date();
+  const dateFormat = new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: teacher.user.timezone,
+  });
+
+  const rows = students
+    .map((student) => {
+      const lessons = student.bookings.filter(
+        (b) => b.status === "CONFIRMED" || b.status === "COMPLETED"
+      );
+      const upcoming = lessons
+        .filter((b) => b.startsAt > now)
+        .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())[0];
+      const lastPast = lessons
+        .filter((b) => b.startsAt <= now)
+        .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0];
+      const instruments = [
+        ...new Set(student.bookings.map((b) => b.instrument.name)),
+      ];
+      const lastActivity = student.bookings
+        .map((b) => b.startsAt.getTime())
+        .reduce((max, t) => Math.max(max, t), 0);
+
+      return {
+        id: student.id,
+        name: student.user.name ?? "Élève",
+        image: student.user.image,
+        age: student.birthDate ? ageOn(student.birthDate, now) : null,
+        instruments,
+        lessonCount: lessons.length,
+        next: upcoming ? dateFormat.format(upcoming.startsAt) : null,
+        last: lastPast ? dateFormat.format(lastPast.startsAt) : null,
+        lastActivity,
+      };
+    })
+    .sort((a, b) => b.lastActivity - a.lastActivity);
+
+  return (
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+      <header className="flex flex-col gap-2 border-b border-border pb-6">
+        <PageTitle size="page">Mes élèves</PageTitle>
+        <p className="text-sm text-muted">
+          {rows.length === 0
+            ? "Vos élèves apparaîtront ici dès votre premier cours réservé."
+            : `${rows.length} élève${rows.length > 1 ? "s" : ""} ont réservé avec vous.`}
+        </p>
+      </header>
+
+      {rows.length > 0 ? (
+        <ul className="divide-y divide-border border-y border-border">
+          {rows.map((row) => (
+            <li key={row.id}>
+              <Link
+                href={`/dashboard/prof/eleves/${row.id}`}
+                className="flex items-center gap-4 px-1 py-4 transition-colors hover:bg-surface"
+              >
+                <Avatar className="h-11 w-11 shrink-0 border border-border">
+                  <AvatarImage src={row.image || undefined} alt={row.name} />
+                  <AvatarFallback>
+                    {row.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">
+                    {row.name}
+                    {row.age !== null ? (
+                      <span className="font-normal text-muted"> · {row.age} ans</span>
+                    ) : null}
+                  </p>
+                  <p className="truncate text-sm text-muted">
+                    {row.instruments.join(", ") || "—"}
+                  </p>
+                </div>
+
+                <div className="hidden shrink-0 text-right text-sm text-muted sm:block">
+                  <p>
+                    {row.lessonCount} cours
+                  </p>
+                  <p className="text-xs text-subtle">
+                    {row.next
+                      ? `Prochain : ${row.next}`
+                      : row.last
+                        ? `Dernier : ${row.last}`
+                        : "—"}
+                  </p>
+                </div>
+
+                <ChevronRight className="h-4 w-4 shrink-0 text-subtle" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
