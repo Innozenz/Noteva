@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { MessageSquare, Search, UserCog } from "lucide-react";
+import { FolderOpen, Search, UserCog } from "lucide-react";
 
 import { PageHeader } from "@/components/editorial";
 import {
@@ -124,9 +124,9 @@ export default async function StudentBookingsPage() {
         meta={
           <div className="flex gap-2">
             <Button variant="outline" asChild>
-              <Link href="/dashboard/messages">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Mes échanges
+              <Link href="/dashboard/dossiers">
+                <FolderOpen className="mr-2 h-4 w-4" />
+                Mes dossiers
               </Link>
             </Button>
             <Button variant="outline" asChild>

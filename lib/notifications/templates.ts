@@ -136,7 +136,7 @@ export function buildNotification(
             : `${student} vous a laissé un message.`,
           ``,
           toStudent
-            ? `Répondre : ${context.appUrl}/dashboard/cours`
+            ? `Répondre : ${context.appUrl}/dashboard/dossiers`
             : `Répondre : ${context.appUrl}/dashboard/prof/eleves`,
         ]),
       };
