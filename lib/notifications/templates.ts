@@ -17,7 +17,8 @@ export type NotificationEvent =
   | "booking_cancelled"
   | "booking_rescheduled"
   | "review_received"
-  | "report_published";
+  | "report_published"
+  | "message_received";
 
 export type Actor = "teacher" | "student";
 
@@ -116,6 +117,27 @@ export function buildNotification(
           `${teacher} a rédigé le compte rendu de votre cours de ${context.instrumentName} du ${when.long}.`,
           ``,
           `Le consulter : ${context.appUrl}/dashboard/cours`,
+        ]),
+      };
+    }
+
+    case "message_received": {
+      // Échange bidirectionnel : on prévient toujours l'autre partie.
+      const toStudent = actor === "teacher";
+
+      return {
+        to: toStudent ? context.studentEmail : context.teacherEmail,
+        subject: toStudent
+          ? `Nouveau message de ${teacher}`
+          : `Nouveau message de ${student}`,
+        text: lines([
+          toStudent
+            ? `${teacher} vous a laissé un message.`
+            : `${student} vous a laissé un message.`,
+          ``,
+          toStudent
+            ? `Répondre : ${context.appUrl}/dashboard/cours`
+            : `Répondre : ${context.appUrl}/dashboard/prof/eleves`,
         ]),
       };
     }

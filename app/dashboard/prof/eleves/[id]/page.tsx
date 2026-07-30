@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
 import { PageTitle, SectionTitle } from "@/components/editorial";
+import { MessageThread } from "@/components/message-thread";
 import { ReportViewer } from "@/components/report-view";
 import { StudentNoteEditor } from "@/components/student-note-editor";
 import {
@@ -96,6 +97,15 @@ export default async function StudentFilePage({
                   sizeBytes: true,
                 },
               },
+              comments: {
+                orderBy: { createdAt: "asc" },
+                select: {
+                  id: true,
+                  sender: true,
+                  content: true,
+                  createdAt: true,
+                },
+              },
             },
           },
         },
@@ -104,6 +114,12 @@ export default async function StudentFilePage({
         where: { teacherId: teacher.id },
         select: { content: true },
         take: 1,
+      },
+      // Fil général du couple (messages hors compte rendu).
+      messages: {
+        where: { teacherId: teacher.id, reportId: null },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, sender: true, content: true, createdAt: true },
       },
     },
   });
@@ -217,6 +233,20 @@ export default async function StudentFilePage({
         />
       </section>
 
+      {/* Échanges — fil général avec l'élève. */}
+      <section className="flex flex-col gap-3">
+        <SectionTitle>Échanges</SectionTitle>
+        <MessageThread
+          initial={student.messages.map((m) => ({
+            ...m,
+            createdAt: m.createdAt.toISOString(),
+          }))}
+          me="TEACHER"
+          postUrl={`/api/teacher/students/${student.id}/messages`}
+          emptyLabel="Démarrez la conversation avec cet élève."
+        />
+      </section>
+
       {/* Cours & comptes rendus */}
       <section className="flex flex-col gap-4">
         <SectionTitle>Cours &amp; comptes rendus</SectionTitle>
@@ -224,7 +254,9 @@ export default async function StudentFilePage({
           {student.bookings.map((b) => {
             const hasReport =
               b.report &&
-              (b.report.content || b.report.attachments.length > 0);
+              (b.report.content ||
+                b.report.attachments.length > 0 ||
+                b.report.comments.length > 0);
 
             return (
               <li
@@ -253,7 +285,18 @@ export default async function StudentFilePage({
                 </div>
 
                 {hasReport && b.report ? (
-                  <ReportViewer bookingId={b.id} report={b.report} />
+                  <ReportViewer
+                    bookingId={b.id}
+                    me="TEACHER"
+                    report={{
+                      content: b.report.content,
+                      attachments: b.report.attachments,
+                      comments: b.report.comments.map((c) => ({
+                        ...c,
+                        createdAt: c.createdAt.toISOString(),
+                      })),
+                    }}
+                  />
                 ) : null}
               </li>
             );

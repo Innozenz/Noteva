@@ -276,8 +276,10 @@ export function StudentBookings({
       ) : null}
 
       {row.report &&
-      (row.report.content || row.report.attachments.length > 0) ? (
-        <ReportViewer bookingId={row.id} report={row.report} />
+      (row.report.content ||
+        row.report.attachments.length > 0 ||
+        row.report.comments.length > 0) ? (
+        <ReportViewer bookingId={row.id} report={row.report} me="STUDENT" />
       ) : null}
 
       {canCancel(row) ? (

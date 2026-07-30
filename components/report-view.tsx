@@ -1,6 +1,7 @@
 import { FileText } from "lucide-react";
 
 import { SectionTitle } from "@/components/editorial";
+import { MessageThread, type MessageView } from "@/components/message-thread";
 
 export type ReportView = {
   content: string | null;
@@ -11,6 +12,7 @@ export type ReportView = {
     kind: "IMAGE" | "SCORE" | "AUDIO";
     sizeBytes: number;
   }[];
+  comments: MessageView[];
 };
 
 /**
@@ -23,9 +25,12 @@ export type ReportView = {
 export function ReportViewer({
   bookingId,
   report,
+  me,
 }: {
   bookingId: string;
   report: ReportView;
+  /** Rôle du lecteur, pour aligner ses propres messages. */
+  me: "TEACHER" | "STUDENT";
 }) {
   const base = `/api/bookings/${bookingId}/report/attachments`;
 
@@ -76,6 +81,16 @@ export function ReportViewer({
           })}
         </div>
       ) : null}
+
+      {/* Échanges autour de ce cours. */}
+      <div className="border-t border-border pt-3">
+        <MessageThread
+          initial={report.comments}
+          me={me}
+          postUrl={`/api/bookings/${bookingId}/report/comments`}
+          emptyLabel="Une question sur ce cours ? Écrivez ici."
+        />
+      </div>
     </div>
   );
 }

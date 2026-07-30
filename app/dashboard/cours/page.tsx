@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Search, UserCog } from "lucide-react";
+import { MessageSquare, Search, UserCog } from "lucide-react";
 
 import { PageHeader } from "@/components/editorial";
 import {
@@ -65,6 +65,15 @@ export default async function StudentBookingsPage() {
               sizeBytes: true,
             },
           },
+          comments: {
+            orderBy: { createdAt: "asc" },
+            select: {
+              id: true,
+              sender: true,
+              content: true,
+              createdAt: true,
+            },
+          },
         },
       },
       instrument: { select: { name: true } },
@@ -99,6 +108,10 @@ export default async function StudentBookingsPage() {
       ? {
           content: booking.report.content,
           attachments: booking.report.attachments,
+          comments: booking.report.comments.map((c) => ({
+            ...c,
+            createdAt: c.createdAt.toISOString(),
+          })),
         }
       : null,
   }));
@@ -110,6 +123,12 @@ export default async function StudentBookingsPage() {
         title="Mes cours"
         meta={
           <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/messages">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Mes échanges
+              </Link>
+            </Button>
             <Button variant="outline" asChild>
               <Link href="/dashboard/cours/profil">
                 <UserCog className="mr-2 h-4 w-4" />

@@ -242,6 +242,7 @@ model TeacherProfile {
   reviews      Review[]
   reports      ReviewReport[]
   studentNotes TeacherStudentNote[]
+  messages     Message[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -297,6 +298,7 @@ model StudentProfile {
   bookings     Booking[]
   reviews      Review[]
   teacherNotes TeacherStudentNote[]
+  messages     Message[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -326,6 +328,43 @@ model TeacherStudentNote {
 
   @@unique([teacherId, studentId])
   @@map("teacher_student_note")
+}
+
+// ---------------------------------------------------------------------------
+// Échanges asynchrones prof↔élève.
+//
+// Un seul modèle pour deux usages : `reportId` renseigné = commentaire sous un
+// compte rendu ; `reportId` nul = fil général du couple prof↔élève. Pas de
+// temps réel — la page se charge à l'ouverture. Tout est persistant, daté et
+// attribué, donc modérable (la visibilité du responsable d'un mineur et le
+// signalement restent à ajouter).
+// ---------------------------------------------------------------------------
+
+enum MessageSender {
+  TEACHER
+  STUDENT
+}
+
+model Message {
+  id        String         @id @default(cuid())
+  teacherId String
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  sender  MessageSender // qui a écrit — jamais déduit du contenu
+  content String
+
+  // Rattache le message à un compte rendu (commentaire contextuel). Nul pour le
+  // fil général du couple.
+  reportId String?
+  report   LessonReport? @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([teacherId, studentId, createdAt])
+  @@index([reportId])
+  @@map("message")
 }
 
 // Le niveau est porté par le couple élève/instrument : un élève peut être
@@ -476,6 +515,7 @@ model LessonReport {
   content String? // le texte du compte rendu
 
   attachments ReportAttachment[]
+  comments    Message[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
