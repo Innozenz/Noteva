@@ -246,59 +246,71 @@ export function MessageThread({
         </div>
       ) : null}
 
-      <div className="flex items-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          aria-label="Joindre une image ou une partition"
-          disabled={busy || recording}
-          onClick={() => fileRef.current?.click()}
-        >
-          <Paperclip className="h-4 w-4" />
-        </Button>
-        {recording ? (
-          <Button
-            type="button"
-            variant="destructive"
-            size="icon"
-            aria-label="Arrêter l'enregistrement"
-            onClick={stopRecording}
-          >
-            <Square className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            aria-label="Enregistrer une note audio"
-            disabled={busy}
-            onClick={startRecording}
-          >
-            <Mic className="h-4 w-4" />
-          </Button>
-        )}
-
+      {/* Zone de saisie pleine largeur, actions en dessous. Aligner le champ et
+          les boutons sur une seule ligne écrasait le champ sur un téléphone. */}
+      <div className="flex flex-col gap-2">
         <Textarea
           rows={2}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Écrire un message…"
-          className="flex-1 resize-y"
+          className="resize-y"
         />
-        <Button
-          size="sm"
-          aria-label="Envoyer"
-          disabled={busy || recording || (!text.trim() && !staged)}
-          onClick={send}
-        >
-          {busy ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="Joindre une image ou une partition"
+            disabled={busy || recording}
+            onClick={() => fileRef.current?.click()}
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
+          {recording ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon"
+              aria-label="Arrêter l'enregistrement"
+              onClick={stopRecording}
+            >
+              <Square className="h-4 w-4" />
+            </Button>
           ) : (
-            <Send className="h-4 w-4" />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Enregistrer une note audio"
+              disabled={busy}
+              onClick={startRecording}
+            >
+              <Mic className="h-4 w-4" />
+            </Button>
           )}
-        </Button>
+
+          {recording ? (
+            <span className="flex items-center gap-1.5 text-sm text-danger">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-danger" />
+              Enregistrement…
+            </span>
+          ) : null}
+
+          <Button
+            className="ml-auto"
+            disabled={busy || recording || (!text.trim() && !staged)}
+            onClick={send}
+          >
+            {busy ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="mr-2 h-4 w-4" />
+            )}
+            Envoyer
+          </Button>
+        </div>
 
         <input
           ref={fileRef}
@@ -308,13 +320,6 @@ export function MessageThread({
           onChange={onPickFile}
         />
       </div>
-
-      {recording ? (
-        <span className="flex items-center gap-1.5 text-sm text-danger">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-danger" />
-          Enregistrement…
-        </span>
-      ) : null}
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
     </div>
@@ -343,7 +348,7 @@ function Attachment({
   }
   if (attachment.kind === "AUDIO") {
     return (
-      <div className="flex w-56 items-center gap-2 rounded-md border border-border bg-elevated px-2 py-1.5">
+      <div className="flex w-56 max-w-full items-center gap-2 rounded-md border border-border bg-elevated px-2 py-1.5">
         <Mic className="h-4 w-4 shrink-0 text-subtle" />
         <AudioPlayer src={src} className="min-w-0 flex-1" />
       </div>

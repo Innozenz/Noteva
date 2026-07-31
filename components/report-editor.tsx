@@ -391,7 +391,7 @@ function AttachmentTile({
           className="h-28 w-28 rounded-lg border border-border object-cover"
         />
       ) : attachment.kind === "AUDIO" ? (
-        <div className="flex w-64 items-center rounded-lg border border-border bg-elevated px-3 py-3">
+        <div className="flex w-64 max-w-full items-center rounded-lg border border-border bg-elevated px-3 py-3">
           <AudioPlayer src={src} className="min-w-0 flex-1" />
         </div>
       ) : (
