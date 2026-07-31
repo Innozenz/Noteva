@@ -1,0 +1,83 @@
+Titre,Type,Domaine,Date,Heure,Commit
+"Initial commit",🌱 Init,🛠️ Infra,2026-07-22,15:57,78b592f
+"Rewrite CLAUDE.md and track .env.example",📝 Docs,🛠️ Infra,2026-07-22,16:06,e1be90e
+"Remove peer dependency flag from use-sync-external-store in package-lock.json",🔧 Config,🛠️ Infra,2026-07-22,16:07,ae84558
+"Modèle de domaine Noteva (profs, dispos, réservations)",✨ Fonctionnalité,🏗️ Fondations,2026-07-22,17:29,8cb4230
+"Moteur de créneaux pur, testé sur les transitions DST",✨ Fonctionnalité,🏗️ Fondations,2026-07-22,17:53,6e5dfba
+"Seed des instruments et route publique de disponibilités",✨ Fonctionnalité,🛠️ Infra,2026-07-22,18:11,ff7fa43
+"Création de réservations, et correctif du montage Better Auth",✨ Fonctionnalité,🛠️ Infra,2026-07-22,18:28,0c481f2
+"Cycle de vie des réservations et liste des cours",✨ Fonctionnalité,🛠️ Infra,2026-07-22,19:43,8500ae1
+"Choix du rôle après inscription",✨ Fonctionnalité,🏗️ Fondations,2026-07-22,20:40,537e874
+"Espace prof, fiche et disponibilités",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-22,20:55,428896e
+"Boîte de réception des demandes",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-22,21:08,0936e99
+"Fiche prof publique et réservation depuis la page",✨ Fonctionnalité,🌍 Public,2026-07-22,21:19,c5a7684
+"Recherche et listing des profs",✨ Fonctionnalité,🌍 Public,2026-07-22,21:32,cc1fabf
+"écran « mes cours »",✨ Fonctionnalité,🎒 Espace élève,2026-07-22,21:47,e395145
+"Abonnement prof de bout en bout",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-22,22:38,fbba5a0
+"Page d'accueil, connexion dédiée et navigation",✨ Fonctionnalité,🌍 Public,2026-07-22,22:54,6eb0ab9
+"E-mails sur le cycle de vie des réservations",✨ Fonctionnalité,🔔 Notifications,2026-07-23,01:53,9c13706
+"Profil élève et transmission au prof",✨ Fonctionnalité,🎒 Espace élève,2026-07-23,02:03,acf02c8
+"Mot de passe oublié",✨ Fonctionnalité,🏗️ Fondations,2026-07-23,02:18,6794d99
+"Refonte graphique — système de jetons « encre & accent vif »",✨ Fonctionnalité,🖌️ Design,2026-07-23,03:06,aba5f49
+"Supprime le motif de classe qui cassait la compilation CSS",🐛 Correctif,🖌️ Design,2026-07-23,03:13,3d9c05b
+"Thème clair uniquement",✨ Fonctionnalité,🖌️ Design,2026-07-23,03:20,ca1e725
+"Lit STRIPE_SECRET_KEY, la variable qui existe réellement",🐛 Correctif,🧑‍🏫 Espace prof,2026-07-23,09:54,b7746c9
+"Stripe vérifié contre de vrais événements, plus des charges fabriquées",📝 Docs,🧑‍🏫 Espace prof,2026-07-23,10:05,fc105a0
+"Notation des cours, affichage public et droit de réponse",✨ Fonctionnalité,🛡️ Modération,2026-07-23,10:22,9838082
+"E-mail aux deux parties 24 h avant le cours",✨ Fonctionnalité,🔔 Notifications,2026-07-23,10:32,53410d1
+"L'espace connecté a une identité, et dit où l'on est",🐛 Correctif,🖌️ Design,2026-07-23,10:52,2223dad
+"Les états vides disent la cause et la suite",🐛 Correctif,🖌️ Design,2026-07-23,11:18,097f572
+"Les erreurs disent ce qui s'est passé, et ne coûtent pas la saisie",🐛 Correctif,🖌️ Design,2026-07-23,13:05,3b45437
+"Sslmode=verify-full explicite, pour taire l'avertissement pg",📝 Docs,🏗️ Fondations,2026-07-23,13:15,14b8ac1
+"Pas de grille réglable par prof, séparé de la durée du cours",✨ Fonctionnalité,🏗️ Fondations,2026-07-23,13:41,e0684a4
+"Grille ancrée sur les ouvertures, et vérifiée à la réservation",🐛 Correctif,🏗️ Fondations,2026-07-23,13:59,6eff8d5
+"Bornes visibles, erreurs qui nomment le champ, aperçu des départs",🐛 Correctif,🧑‍🏫 Espace prof,2026-07-23,16:34,1e3e248
+"Les écrans d'authentification ne restent plus muets",🐛 Correctif,🏗️ Fondations,2026-07-23,16:47,04b75c8
+"Classement par note, tempéré par une moyenne bayésienne",✨ Fonctionnalité,🌍 Public,2026-07-23,16:56,e5293d4
+"Modération a posteriori, et première zone d'administration",✨ Fonctionnalité,🛡️ Modération,2026-07-23,17:07,bb3a58e
+"En-têtes durcis, routes qui échouent fermées, limites d'auth",✨ Fonctionnalité,🛠️ Infra,2026-07-23,20:56,2d24cac
+"Signalement par le prof, et file de modération priorisée",✨ Fonctionnalité,🛡️ Modération,2026-07-24,03:45,faaf310
+"La semaine du prof, ouvertures et cours sur une même grille",✨ Fonctionnalité,📅 Agenda,2026-07-26,12:05,469f743
+"Sur colonne étroite, le nom de l'élève passe avant l'heure",🐛 Correctif,📅 Agenda,2026-07-26,12:13,e8a32b8
+"Les neutres à la grille, les teintes aux cours",🐛 Correctif,📅 Agenda,2026-07-26,12:54,5e34ffd
+"Direction éditoriale, la portée en fil conducteur",✨ Fonctionnalité,🌍 Public,2026-07-26,17:24,8d2596a
+"Créneaux groupés par matin, après-midi et soir",✨ Fonctionnalité,🏗️ Fondations,2026-07-26,17:24,f8fcfdb
+"Prénom et nom modifiables, et un prénom qui cesse d'être deviné",✨ Fonctionnalité,🏗️ Fondations,2026-07-26,23:20,bdb121d
+"« Atelier » — encre sapin sur papier, accent terre cuite",🎨 Refonte,🖌️ Design,2026-07-29,09:23,7fe3c6a
+"« ReChord » — épicéa & bronze, Inter + Fraunces",🎨 Refonte,🖌️ Design,2026-07-29,14:37,74688c4
+"Filets et titres démesurés partout, plus de grilles de cartes",🎨 Refonte,🖌️ Design,2026-07-29,16:18,677b85d
+"Sortir le vert des neutres, papier chaud, plus de bronze",🎨 Refonte,🖌️ Design,2026-07-29,16:28,7f1143f
+"Middleware → proxy",🎨 Refonte,🛠️ Infra,2026-07-29,18:50,95a89a0
+"Générer le client Prisma en postinstall (Vercel)",🐛 Correctif,🛠️ Infra,2026-07-29,18:58,ed4ee60
+"Retirer la connexion Google, garder email + mot de passe",✨ Fonctionnalité,🏗️ Fondations,2026-07-29,19:12,bdb9ab9
+"Client Better Auth relatif à l'origine, plus NEXT_PUBLIC_APP_URL",🐛 Correctif,🏗️ Fondations,2026-07-29,19:20,7f40916
+"Navigation franche après connexion, plus de boucle de redirection",🐛 Correctif,🏗️ Fondations,2026-07-29,19:31,ccc1551
+"Lire le cookie de session via getSessionCookie (préfixe __Secure- en prod)",🐛 Correctif,🏗️ Fondations,2026-07-29,19:37,dcd0883
+"« Mon espace » et le logo pointent sur /dashboard, pas la sous-page",✨ Fonctionnalité,🖌️ Design,2026-07-29,19:43,7ae8686
+"Bande de stats prof (demandes, cours, CA estimé)",✨ Fonctionnalité,🖌️ Design,2026-07-29,19:55,d713760
+"Page « Activité » — suivi des revenus par période, avec filtres et export",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-29,22:39,8651173
+"Navigation en sidebar + lien vers le tableau de bord",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-29,22:46,e59ef59
+"Lignes de demi-heure et repère « maintenant »",✨ Fonctionnalité,📅 Agenda,2026-07-29,22:59,3806880
+"Blocs de cours enrichis",✨ Fonctionnalité,📅 Agenda,2026-07-29,23:03,251d2ba
+"Bascule jour / semaine",✨ Fonctionnalité,📅 Agenda,2026-07-29,23:14,d56eedf
+"Vue mois + sélecteur de vue partagé",✨ Fonctionnalité,📅 Agenda,2026-07-30,00:08,9e92a9a
+"Backend de reprogrammation d'un cours (5a)",✨ Fonctionnalité,📅 Agenda,2026-07-30,00:20,7639f87
+"Glisser-déposer d'un cours confirmé (5b)",✨ Fonctionnalité,📅 Agenda,2026-07-30,00:38,45ab11e
+"Agenda pleine largeur (le reste re-plafonné)",✨ Fonctionnalité,📅 Agenda,2026-07-30,01:17,8469c55
+"Détail du cours en modale au clic",✨ Fonctionnalité,📅 Agenda,2026-07-30,01:24,9d258bd
+"Retirer la référence à theme/ (fichiers supprimés du dépôt)",📝 Docs,🖌️ Design,2026-07-30,01:26,0157de4
+"Le profil complet de l'élève à portée d'un clic",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-30,01:48,443b5f2
+"âge optionnel sur la fiche publique, opt-in explicite",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-30,10:35,890a7c9
+"Renommage Noteva → SiNote (marque + projet)",🔧 Config,🖌️ Design,2026-07-30,18:27,125c055
+"Photo de profil prof via Scaleway Object Storage",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-30,18:53,5718a55
+"Compte rendu de cours écrit par le prof, lu par l'élève",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-30,20:36,57137d9
+"Fiche élève façon CRM pour le prof",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-30,21:45,a8c3824
+"Messagerie asynchrone prof↔élève (commentaires + fil général)",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-30,22:16,b1e2bd6
+"Dossier partagé accessible côté élève",✨ Fonctionnalité,🎒 Espace élève,2026-07-30,22:24,31b7e92
+"Sidebar de navigation, symétrique du prof",✨ Fonctionnalité,🎒 Espace élève,2026-07-30,23:04,5237ffc
+"Réorganisation en onglets (profil, historique, comptes rendus, messages)",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-30,23:29,04c84d7
+"Mise en page soignée + lecteur audio custom",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-31,00:15,8f84242
+"Lien vers le compte rendu depuis l'historique des cours",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-31,01:32,f617875
+"En-tête marqué, horodatage des messages, intitulé « Cours de … »",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-31,09:45,2d0424c
+"Filtrer les élèves et les comptes rendus",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-31,10:09,bb14dc0
+"Visionneuse plein écran des images",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-31,10:21,cd2acd6
