@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
   ChevronDown,
   FileText,
   Loader2,
+  MessageSquare,
   Mic,
   Paperclip,
   Square,
@@ -14,6 +15,8 @@ import {
 } from "lucide-react";
 
 import { AudioPlayer } from "@/components/audio-player";
+import { type MessageView } from "@/components/message-thread";
+import { ReportComments } from "@/components/report-comments";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,12 +49,32 @@ export type ReportEditorLesson = {
  * jointes (images, partitions PDF, notes audio enregistrées au micro). Chaque
  * pièce part vers le bucket privé via la route dédiée, et s'affiche par une URL
  * signée servie par cette même route.
+ *
+ * Sur la fiche élève, on lui passe en plus le fil d'échanges (`comments`/`me`)
+ * et une ancre (`hashId`) : le prof peut alors compléter ou modifier le compte
+ * rendu **et** dialoguer au même endroit, sans repasser par l'atelier global.
+ * Le lien « Compte rendu » de l'historique ouvre directement le bon via l'ancre.
  */
-export function ReportEditor({ lesson }: { lesson: ReportEditorLesson }) {
+export function ReportEditor({
+  lesson,
+  comments,
+  me,
+  hashId,
+  defaultOpen = false,
+}: {
+  lesson: ReportEditorLesson;
+  /** Fil d'échanges rattaché au cours ; rendu sous l'éditeur si fourni. */
+  comments?: MessageView[];
+  me?: "TEACHER" | "STUDENT";
+  /** Ancre `#…` : ouvre et fait défiler jusqu'à ce compte rendu au chargement. */
+  hashId?: string;
+  defaultOpen?: boolean;
+}) {
   const router = useRouter();
   const base = `/api/bookings/${lesson.bookingId}/report`;
 
-  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(defaultOpen);
   const [content, setContent] = useState(lesson.content);
   const [saved, setSaved] = useState(lesson.content);
   const [savingContent, setSavingContent] = useState(false);
@@ -63,6 +86,16 @@ export function ReportEditor({ lesson }: { lesson: ReportEditorLesson }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const [recording, setRecording] = useState(false);
+
+  useEffect(() => {
+    // Synchronisation avec l'URL : l'ancre n'est connue que côté client, après
+    // hydratation. Serveur et client rendent d'abord `defaultOpen` à l'identique
+    // (pas de divergence) ; on ouvre ensuite le compte rendu visé.
+    if (hashId && window.location.hash === `#${hashId}`) {
+      setOpen(true);
+      rootRef.current?.scrollIntoView({ block: "start" });
+    }
+  }, [hashId]);
 
   const dirty = content !== saved;
   const documented = saved.trim().length > 0 || attachments.length > 0;
@@ -175,12 +208,22 @@ export function ReportEditor({ lesson }: { lesson: ReportEditorLesson }) {
     setRecording(false);
   };
 
+  const commentCount = comments?.length ?? 0;
+
   return (
-    <div className="rounded-lg border border-border bg-elevated">
+    <div
+      ref={rootRef}
+      id={hashId}
+      className={cn(
+        "rounded-lg border border-border bg-elevated",
+        hashId && "scroll-mt-20"
+      )}
+    >
       {/* En-tête cliquable */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
         className="flex w-full items-center gap-3 px-4 py-3 text-left"
       >
         <div className="min-w-0 flex-1">
@@ -190,6 +233,24 @@ export function ReportEditor({ lesson }: { lesson: ReportEditorLesson }) {
           </p>
           <p className="truncate text-xs text-muted">{lesson.dateLabel}</p>
         </div>
+
+        {!open && (attachments.length > 0 || commentCount > 0) ? (
+          <span className="hidden shrink-0 items-center gap-2 text-xs text-subtle sm:flex">
+            {attachments.length > 0 ? (
+              <span className="flex items-center gap-1">
+                <Paperclip className="h-3.5 w-3.5" />
+                {attachments.length}
+              </span>
+            ) : null}
+            {commentCount > 0 ? (
+              <span className="flex items-center gap-1">
+                <MessageSquare className="h-3.5 w-3.5" />
+                {commentCount}
+              </span>
+            ) : null}
+          </span>
+        ) : null}
+
         <Badge variant={documented ? "success" : "secondary"}>
           {documented ? "Documenté" : "À documenter"}
         </Badge>
@@ -299,6 +360,15 @@ export function ReportEditor({ lesson }: { lesson: ReportEditorLesson }) {
           </div>
 
           {error ? <p className="text-sm text-danger">{error}</p> : null}
+
+          {/* Échanges autour de ce cours, quand la fiche les fournit. */}
+          {comments && me ? (
+            <ReportComments
+              bookingId={lesson.bookingId}
+              comments={comments}
+              me={me}
+            />
+          ) : null}
           </div>
         </div>
       </div>

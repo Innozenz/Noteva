@@ -3,12 +3,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ChevronLeft, FileText } from "lucide-react";
 
-import { CollapsibleReport } from "@/components/collapsible-report";
 import { PageTitle } from "@/components/editorial";
 import { FicheTabs } from "@/components/fiche-tabs";
 import { ListFilters } from "@/components/list-filters";
 import { MessageThread } from "@/components/message-thread";
-import { ReportViewer } from "@/components/report-view";
+import { ReportEditor } from "@/components/report-editor";
 import { StudentNoteEditor } from "@/components/student-note-editor";
 import {
   StudentProfileBody,
@@ -218,12 +217,13 @@ export default async function StudentFilePage({
     timeZone: teacher.user.timezone,
   });
 
-  const reports = student.bookings.filter(
+  // Cours documentables : confirmés/terminés et déjà commencés. C'est l'atelier
+  // de rédaction scopé à cet élève — le prof y complète ou modifie chaque compte
+  // rendu (les cours sans compte rendu y figurent aussi, « À documenter »).
+  const documentable = student.bookings.filter(
     (b) =>
-      b.report &&
-      (b.report.content ||
-        b.report.attachments.length > 0 ||
-        b.report.comments.length > 0)
+      (b.status === "CONFIRMED" || b.status === "COMPLETED") &&
+      b.startsAt <= now
   );
   const messages = student.messages.map((m) => ({
     ...m,
@@ -233,7 +233,11 @@ export default async function StudentFilePage({
   const tabs = [
     { key: "profil", label: "Profil" },
     { key: "historique", label: "Historique", badge: student.bookings.length },
-    { key: "comptes-rendus", label: "Comptes rendus", badge: reports.length },
+    {
+      key: "comptes-rendus",
+      label: "Comptes rendus",
+      badge: documentable.length,
+    },
     { key: "messages", label: "Messages", badge: messages.length },
     { key: "note", label: "Note privée" },
   ];
@@ -246,11 +250,11 @@ export default async function StudentFilePage({
   const crFrom = sp.cr_from ?? "";
   const crTo = sp.cr_to ?? "";
   const reportInstruments = [
-    ...new Set(reports.map((b) => b.instrument.name)),
+    ...new Set(documentable.map((b) => b.instrument.name)),
   ]
     .sort((a, b) => a.localeCompare(b, "fr"))
     .map((name) => ({ value: name, label: name }));
-  const visibleReports = reports.filter((b) => {
+  const visibleReports = documentable.filter((b) => {
     const day = isoDate.format(b.startsAt);
     return (
       (!crInstrument || b.instrument.name === crInstrument) &&
@@ -366,9 +370,10 @@ export default async function StudentFilePage({
       ) : null}
 
       {active === "comptes-rendus" ? (
-        reports.length === 0 ? (
+        documentable.length === 0 ? (
           <p className="rounded-lg border border-border bg-surface px-4 py-8 text-center text-sm text-muted">
-            Aucun compte rendu pour cet élève pour l&apos;instant.
+            Aucun cours à documenter pour cet élève pour l&apos;instant. Un
+            compte rendu s&apos;ouvre dès qu&apos;un cours confirmé a commencé.
           </p>
         ) : (
           <div className="flex flex-col gap-4">
@@ -391,43 +396,33 @@ export default async function StudentFilePage({
 
             {visibleReports.length === 0 ? (
               <p className="rounded-lg border border-border bg-surface px-4 py-8 text-center text-sm text-muted">
-                Aucun compte rendu ne correspond à ces filtres.
+                Aucun cours ne correspond à ces filtres.
               </p>
             ) : null}
 
-            <ul className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3">
               {visibleReports.map((b, i) => (
-                <li
+                <ReportEditor
                   key={b.id}
-                  id={`cr-${b.id}`}
-                  className="scroll-mt-20 overflow-hidden rounded-lg border border-border"
-                >
-                  <CollapsibleReport
-                    title={lessonTitle(b.instrument.name, b.isTrial)}
-                    dateLabel={dateFormat.format(b.startsAt)}
-                    statusLabel={STATUS_LABELS[b.status] ?? b.status}
-                    statusVariant={b.status === "CONFIRMED" ? "success" : "secondary"}
-                    hashId={`cr-${b.id}`}
-                    attachmentCount={b.report!.attachments.length}
-                    commentCount={b.report!.comments.length}
-                    defaultOpen={i === 0}
-                  >
-                    <ReportViewer
-                      bookingId={b.id}
-                      me="TEACHER"
-                      report={{
-                        content: b.report!.content,
-                        attachments: b.report!.attachments,
-                        comments: b.report!.comments.map((c) => ({
-                          ...c,
-                          createdAt: c.createdAt.toISOString(),
-                        })),
-                      }}
-                    />
-                  </CollapsibleReport>
-                </li>
+                  hashId={`cr-${b.id}`}
+                  defaultOpen={i === 0}
+                  me="TEACHER"
+                  lesson={{
+                    bookingId: b.id,
+                    dateLabel: dateFormat.format(b.startsAt),
+                    studentName: name,
+                    instrumentName: b.instrument.name,
+                    isTrial: b.isTrial,
+                    content: b.report?.content ?? "",
+                    attachments: b.report?.attachments ?? [],
+                  }}
+                  comments={(b.report?.comments ?? []).map((c) => ({
+                    ...c,
+                    createdAt: c.createdAt.toISOString(),
+                  }))}
+                />
               ))}
-            </ul>
+            </div>
           </div>
         )
       ) : null}

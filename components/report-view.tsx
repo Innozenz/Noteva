@@ -1,7 +1,8 @@
 import { Download, FileText, Mic } from "lucide-react";
 
 import { AudioPlayer } from "@/components/audio-player";
-import { MessageThread, type MessageView } from "@/components/message-thread";
+import { type MessageView } from "@/components/message-thread";
+import { ReportComments } from "@/components/report-comments";
 import { ReportImages } from "@/components/report-images";
 
 export type ReportView = {
@@ -88,17 +89,7 @@ export function ReportViewer({
       ) : null}
 
       {/* Échanges autour de ce cours. */}
-      <div className="flex flex-col gap-2 border-t border-border pt-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-subtle">
-          Échanges
-        </p>
-        <MessageThread
-          initial={report.comments}
-          me={me}
-          postUrl={`/api/bookings/${bookingId}/report/comments`}
-          emptyLabel="Une question sur ce cours ? Écrivez ici."
-        />
-      </div>
+      <ReportComments bookingId={bookingId} comments={report.comments} me={me} />
     </div>
   );
 }
