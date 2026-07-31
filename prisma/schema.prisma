@@ -360,6 +360,10 @@ model Message {
   reportId String?
   report   LessonReport? @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
+  // Un message peut porter une pièce jointe (image, partition, note audio) au
+  // lieu ou en plus du texte : `content` peut alors être vide.
+  attachments MessageAttachment[]
+
   createdAt DateTime @default(now())
 
   @@index([teacherId, studentId, createdAt])
@@ -547,6 +551,26 @@ model ReportAttachment {
 
   @@index([reportId])
   @@map("report_attachment")
+}
+
+// Pièce jointe d'un message (fil général ou commentaire de compte rendu). Même
+// stockage que les pièces d'un compte rendu : bucket privé, servi par URL signée
+// après vérification que le demandeur est le prof ou l'élève du fil.
+model MessageAttachment {
+  id        String  @id @default(cuid())
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  storageKey  String // clé de l'objet dans le bucket privé
+  filename    String // nom d'origine, pour l'affichage et le téléchargement
+  contentType String
+  sizeBytes   Int
+  kind        AttachmentKind
+
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
+  @@map("message_attachment")
 }
 
 // ---------------------------------------------------------------------------

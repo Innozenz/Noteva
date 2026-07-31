@@ -201,9 +201,18 @@ export function ReportEditor({ lesson }: { lesson: ReportEditorLesson }) {
         />
       </button>
 
-      {open ? (
-        <div className="flex flex-col gap-4 border-t border-border px-4 py-4">
-          {/* Texte */}
+      {/* Pliage animé : ligne de grille 0fr → 1fr, hauteur animée jusqu'à
+          `auto` sans mesure JS. Le corps reste monté (brouillon de texte et
+          pièces jointes conservés) mais devient `inert` quand il est replié. */}
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none",
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        )}
+      >
+        <div className="overflow-hidden" inert={!open}>
+          <div className="flex flex-col gap-4 border-t border-border px-4 py-4">
+            {/* Texte */}
           <div className="flex flex-col gap-2">
             <Textarea
               rows={5}
@@ -290,8 +299,9 @@ export function ReportEditor({ lesson }: { lesson: ReportEditorLesson }) {
           </div>
 
           {error ? <p className="text-sm text-danger">{error}</p> : null}
+          </div>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }

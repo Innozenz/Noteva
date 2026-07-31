@@ -32,3 +32,20 @@ export function reportAttachmentKey(
 ): string {
   return `reports/${bookingId}/${attachmentId}.${ext}`;
 }
+
+/**
+ * Clé d'une pièce jointe de message, dans le bucket privé.
+ *
+ * Groupée par couple prof/élève (`messages/{teacherId}/{studentId}/`) plutôt que
+ * par message : un message n'a pas encore d'id au moment de choisir la clé, et le
+ * préfixe par fil facilite une purge éventuelle. Le composant final est un
+ * identifiant unique (uuid), sans lien avec la ligne en base.
+ */
+export function messageAttachmentKey(
+  teacherId: string,
+  studentId: string,
+  attachmentId: string,
+  ext: string
+): string {
+  return `messages/${teacherId}/${studentId}/${attachmentId}.${ext}`;
+}

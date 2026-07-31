@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ChevronLeft, FileText } from "lucide-react";
 
+import { CollapsibleReport } from "@/components/collapsible-report";
 import { PageTitle } from "@/components/editorial";
 import { FicheTabs } from "@/components/fiche-tabs";
 import { ListFilters } from "@/components/list-filters";
@@ -43,7 +44,13 @@ export default async function StudentFilePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ onglet?: string; cr_q?: string; cr_instrument?: string }>;
+  searchParams: Promise<{
+    onglet?: string;
+    cr_q?: string;
+    cr_instrument?: string;
+    cr_from?: string;
+    cr_to?: string;
+  }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
 
@@ -111,6 +118,14 @@ export default async function StudentFilePage({
                   sender: true,
                   content: true,
                   createdAt: true,
+                  attachments: {
+                    select: {
+                      id: true,
+                      filename: true,
+                      contentType: true,
+                      kind: true,
+                    },
+                  },
                 },
               },
             },
@@ -126,7 +141,15 @@ export default async function StudentFilePage({
       messages: {
         where: { teacherId: teacher.id, reportId: null },
         orderBy: { createdAt: "asc" },
-        select: { id: true, sender: true, content: true, createdAt: true },
+        select: {
+          id: true,
+          sender: true,
+          content: true,
+          createdAt: true,
+          attachments: {
+            select: { id: true, filename: true, contentType: true, kind: true },
+          },
+        },
       },
     },
   });
@@ -186,6 +209,14 @@ export default async function StudentFilePage({
     year: "numeric",
     timeZone: teacher.user.timezone,
   });
+  // Date civile (AAAA-MM-JJ) dans le fuseau du prof, pour comparer au filtre de
+  // dates sans arithmétique de fuseau : la comparaison de chaînes ISO suffit.
+  const isoDate = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: teacher.user.timezone,
+  });
 
   const reports = student.bookings.filter(
     (b) =>
@@ -212,18 +243,24 @@ export default async function StudentFilePage({
 
   const crNeedle = (sp.cr_q ?? "").trim().toLowerCase();
   const crInstrument = sp.cr_instrument ?? "";
+  const crFrom = sp.cr_from ?? "";
+  const crTo = sp.cr_to ?? "";
   const reportInstruments = [
     ...new Set(reports.map((b) => b.instrument.name)),
   ]
     .sort((a, b) => a.localeCompare(b, "fr"))
     .map((name) => ({ value: name, label: name }));
-  const visibleReports = reports.filter(
-    (b) =>
+  const visibleReports = reports.filter((b) => {
+    const day = isoDate.format(b.startsAt);
+    return (
       (!crInstrument || b.instrument.name === crInstrument) &&
+      (!crFrom || day >= crFrom) &&
+      (!crTo || day <= crTo) &&
       (!crNeedle ||
         (b.report?.content ?? "").toLowerCase().includes(crNeedle) ||
         b.instrument.name.toLowerCase().includes(crNeedle))
-  );
+    );
+  });
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
@@ -347,6 +384,7 @@ export default async function StudentFilePage({
                     }
                   : undefined
               }
+              dateRange={{ fromKey: "cr_from", toKey: "cr_to" }}
             />
 
             {visibleReports.length === 0 ? (
@@ -356,47 +394,36 @@ export default async function StudentFilePage({
             ) : null}
 
             <ul className="flex flex-col gap-3">
-              {visibleReports.map((b) => (
-              <li
-                key={b.id}
-                id={`cr-${b.id}`}
-                className="scroll-mt-20 overflow-hidden rounded-lg border border-border"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
-                      <FileText className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-medium leading-tight">
-                        {lessonTitle(b.instrument.name, b.isTrial)}
-                      </p>
-                      <p className="text-xs text-muted">
-                        {dateFormat.format(b.startsAt)}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge
-                    variant={b.status === "CONFIRMED" ? "success" : "secondary"}
+              {visibleReports.map((b, i) => (
+                <li
+                  key={b.id}
+                  id={`cr-${b.id}`}
+                  className="scroll-mt-20 overflow-hidden rounded-lg border border-border"
+                >
+                  <CollapsibleReport
+                    title={lessonTitle(b.instrument.name, b.isTrial)}
+                    dateLabel={dateFormat.format(b.startsAt)}
+                    statusLabel={STATUS_LABELS[b.status] ?? b.status}
+                    statusVariant={b.status === "CONFIRMED" ? "success" : "secondary"}
+                    hashId={`cr-${b.id}`}
+                    attachmentCount={b.report!.attachments.length}
+                    commentCount={b.report!.comments.length}
+                    defaultOpen={i === 0}
                   >
-                    {STATUS_LABELS[b.status] ?? b.status}
-                  </Badge>
-                </div>
-                <div className="p-4">
-                  <ReportViewer
-                    bookingId={b.id}
-                    me="TEACHER"
-                    report={{
-                      content: b.report!.content,
-                      attachments: b.report!.attachments,
-                      comments: b.report!.comments.map((c) => ({
-                        ...c,
-                        createdAt: c.createdAt.toISOString(),
-                      })),
-                    }}
-                  />
-                </div>
-              </li>
+                    <ReportViewer
+                      bookingId={b.id}
+                      me="TEACHER"
+                      report={{
+                        content: b.report!.content,
+                        attachments: b.report!.attachments,
+                        comments: b.report!.comments.map((c) => ({
+                          ...c,
+                          createdAt: c.createdAt.toISOString(),
+                        })),
+                      }}
+                    />
+                  </CollapsibleReport>
+                </li>
               ))}
             </ul>
           </div>

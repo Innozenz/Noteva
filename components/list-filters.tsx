@@ -22,16 +22,26 @@ export function ListFilters({
   searchKey,
   searchPlaceholder,
   chip,
+  dateRange,
 }: {
   searchKey: string;
   searchPlaceholder: string;
   chip?: { key: string; label: string; options: Chip[] };
+  /** Filtre par plage de dates (civiles, `AAAA-MM-JJ`), bornes incluses. */
+  dateRange?: { fromKey: string; toKey: string };
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 
   const [text, setText] = useState(params.get(searchKey) ?? "");
+
+  const managedKeys = [
+    searchKey,
+    chip?.key,
+    dateRange?.fromKey,
+    dateRange?.toKey,
+  ].filter(Boolean) as string[];
 
   const pushWith = (next: URLSearchParams) => {
     const query = next.toString();
@@ -56,16 +66,16 @@ export function ListFilters({
   }, [text]);
 
   const activeChip = chip ? params.get(chip.key) : null;
-  const hasFilters =
-    (params.get(searchKey) ?? "") !== "" || (chip ? activeChip !== null : false);
+  const hasFilters = managedKeys.some((key) => (params.get(key) ?? "") !== "");
 
   const clearAll = () => {
     setText("");
     const next = new URLSearchParams(params.toString());
-    next.delete(searchKey);
-    if (chip) next.delete(chip.key);
+    managedKeys.forEach((key) => next.delete(key));
     pushWith(next);
   };
+
+  const showControls = Boolean(chip) || Boolean(dateRange) || hasFilters;
 
   return (
     <div className="flex flex-col gap-3">
@@ -79,29 +89,58 @@ export function ListFilters({
         />
       </div>
 
-      {chip && chip.options.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {chip.options.map((option) => {
-            const active = activeChip === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={active}
-                onClick={() =>
-                  setParam(chip.key, active ? null : option.value)
+      {showControls ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {chip
+            ? chip.options.map((option) => {
+                const active = activeChip === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() =>
+                      setParam(chip.key, active ? null : option.value)
+                    }
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                      active
+                        ? "border-primary bg-primary-soft text-primary"
+                        : "border-border text-muted hover:border-border-strong"
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })
+            : null}
+
+          {dateRange ? (
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <span>Du</span>
+              <Input
+                type="date"
+                aria-label="Date de début"
+                value={params.get(dateRange.fromKey) ?? ""}
+                max={params.get(dateRange.toKey) || undefined}
+                onChange={(event) =>
+                  setParam(dateRange.fromKey, event.target.value || null)
                 }
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-sm transition-colors",
-                  active
-                    ? "border-primary bg-primary-soft text-primary"
-                    : "border-border text-muted hover:border-border-strong"
-                )}
-              >
-                {option.label}
-              </button>
-            );
-          })}
+                className="h-9 w-auto"
+              />
+              <span>au</span>
+              <Input
+                type="date"
+                aria-label="Date de fin"
+                value={params.get(dateRange.toKey) ?? ""}
+                min={params.get(dateRange.fromKey) || undefined}
+                onChange={(event) =>
+                  setParam(dateRange.toKey, event.target.value || null)
+                }
+                className="h-9 w-auto"
+              />
+            </div>
+          ) : null}
 
           {hasFilters ? (
             <button
@@ -114,15 +153,6 @@ export function ListFilters({
             </button>
           ) : null}
         </div>
-      ) : hasFilters ? (
-        <button
-          type="button"
-          onClick={clearAll}
-          className="flex w-fit items-center gap-1 text-sm text-muted hover:underline"
-        >
-          <X className="h-3 w-3" />
-          Effacer
-        </button>
       ) : null}
     </div>
   );

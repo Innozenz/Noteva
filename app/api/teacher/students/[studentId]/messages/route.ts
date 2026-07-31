@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
+import { createThreadMessage } from "@/lib/messages/create";
 import { notifyThreadMessage } from "@/lib/messages/notify";
 import prisma from "@/lib/prisma";
 import { requireTeacher } from "@/lib/teacher/session";
@@ -9,10 +9,9 @@ import { requireTeacher } from "@/lib/teacher/session";
  * Fil général prof→élève (hors compte rendu).
  *
  * `reportId` nul : c'est le fil du couple, pas un commentaire de cours. Le prof
- * n'écrit qu'à un élève avec qui il a au moins un cours — sinon 404.
+ * n'écrit qu'à un élève avec qui il a au moins un cours — sinon 404. Le corps est
+ * en `multipart/form-data` : `content` (texte) et/ou `file` (pièce jointe).
  */
-const schema = z.object({ content: z.string().min(1).max(3000) });
-
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ studentId: string }> }
@@ -27,15 +26,6 @@ export async function POST(
       );
     }
 
-    const parsed = schema.safeParse(await request.json());
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Message vide ou trop long." },
-        { status: 400 }
-      );
-    }
-
     const { studentId } = await params;
 
     const relation = await prisma.booking.findFirst({
@@ -47,15 +37,19 @@ export async function POST(
       return NextResponse.json({ error: "Élève introuvable." }, { status: 404 });
     }
 
-    const message = await prisma.message.create({
-      data: {
-        teacherId: teacher.teacherId,
-        studentId,
-        sender: "TEACHER",
-        content: parsed.data.content.trim(),
-      },
-      select: { id: true, sender: true, content: true, createdAt: true },
+    const form = await request.formData();
+    const file = form.get("file");
+    const result = await createThreadMessage({
+      teacherId: teacher.teacherId,
+      studentId,
+      sender: "TEACHER",
+      content: typeof form.get("content") === "string" ? (form.get("content") as string) : "",
+      file: file instanceof File ? file : null,
     });
+
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: result.status });
+    }
 
     await notifyThreadMessage({
       teacherId: teacher.teacherId,
@@ -63,7 +57,7 @@ export async function POST(
       actor: "teacher",
     });
 
-    return NextResponse.json(message);
+    return NextResponse.json(result.message);
   } catch (error) {
     console.error("[TEACHER_MESSAGE_POST_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
