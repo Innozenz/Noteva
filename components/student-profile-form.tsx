@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { postJson, type Failure } from "@/lib/http/failure";
+import { notifySuccess } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type Level = "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | "PROFESSIONAL";
@@ -66,7 +67,6 @@ export function StudentProfileForm({
 }) {
   const [profile, setProfile] = useState(initial);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<Failure | null>(null);
 
   const set = <K extends keyof StudentProfileData>(
@@ -108,7 +108,6 @@ export function StudentProfileForm({
   const save = async () => {
     setIsSaving(true);
     setError(null);
-    setMessage(null);
 
     try {
       const result = await postJson<StudentProfileData>("/api/student/profile", {
@@ -139,7 +138,7 @@ export function StudentProfileForm({
       }
 
       setProfile(result.data);
-      setMessage("Profil enregistré");
+      notifySuccess("Profil enregistré.");
     } finally {
       setIsSaving(false);
     }
@@ -374,7 +373,6 @@ export function StudentProfileForm({
       </section>
 
       <FormFailure failure={error} onRetry={save} />
-      {message ? <p className="text-sm text-success">{message}</p> : null}
 
       {/* Même barre que la fiche prof : un bouton collant sans fond passe
           par-dessus le contenu qu'il survole et en masque les dernières

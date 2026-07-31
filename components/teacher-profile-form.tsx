@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { postJson, type Failure } from "@/lib/http/failure";
 import { formatMinute, previewStarts } from "@/lib/teacher/slot-preview";
+import { notifySuccess } from "@/lib/toast";
 import { ageOn } from "@/lib/user/age";
 import { WEEKDAY_LABELS } from "@/lib/teacher/weekly-grid";
 import { cn } from "@/lib/utils";
@@ -69,7 +70,6 @@ export function TeacherProfileForm({
   const [profile, setProfile] = useState(initial);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<Failure | null>(null);
 
   const set = <K extends keyof TeacherProfileData>(
@@ -90,7 +90,6 @@ export function TeacherProfileForm({
   const save = async () => {
     setIsSaving(true);
     setError(null);
-    setMessage(null);
 
     try {
       const result = await postJson<TeacherProfileData>("/api/teacher/profile", {
@@ -123,7 +122,7 @@ export function TeacherProfileForm({
       }
 
       setProfile(result.data);
-      setMessage("Fiche enregistrée");
+      notifySuccess("Fiche enregistrée.");
     } finally {
       setIsSaving(false);
     }
@@ -132,7 +131,6 @@ export function TeacherProfileForm({
   const togglePublish = async () => {
     setIsPublishing(true);
     setError(null);
-    setMessage(null);
 
     try {
       const result = await postJson<{ status: TeacherProfileData["status"] }>(
@@ -149,8 +147,10 @@ export function TeacherProfileForm({
       }
 
       set("status", result.data.status);
-      setMessage(
-        result.data.status === "PUBLISHED" ? "Fiche publiée" : "Fiche dépubliée"
+      notifySuccess(
+        result.data.status === "PUBLISHED"
+          ? "Fiche publiée."
+          : "Fiche dépubliée."
       );
     } finally {
       setIsPublishing(false);
@@ -493,7 +493,6 @@ export function TeacherProfileForm({
       </section>
 
       <FormFailure failure={error} onRetry={save} />
-      {message ? <p className="text-sm text-success">{message}</p> : null}
 
       {/* Barre d'enregistrement collante. Le bouton flottait seul, sans fond :
           il passait par-dessus la liste d'instruments et masquait les
