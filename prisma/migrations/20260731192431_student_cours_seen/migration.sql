@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "student_profile" ADD COLUMN     "coursSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

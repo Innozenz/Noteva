@@ -8,6 +8,7 @@ import {
 } from "@/components/student-bookings";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { MarkCoursSeen } from "./mark-seen";
 
 /**
  * Cours de l'élève.
@@ -115,6 +116,7 @@ export default async function StudentBookingsPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
+      <MarkCoursSeen />
       <PageHeader eyebrow="Espace élève" title="Mes cours" />
 
       <div className="mt-10">

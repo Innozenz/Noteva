@@ -300,6 +300,13 @@ model StudentProfile {
   teacherNotes TeacherStudentNote[]
   messages     Message[]
 
+  // Dernière consultation de « Mes cours » : repère du signal in-app (pastille
+  // sur la nav). Un cours dont la décision du prof — confirmation, refus,
+  // annulation — est postérieure est « nouveau » pour l'élève. Avancée à chaque
+  // visite de la page. Défaut = now() : à la création comme à la migration, un
+  // profil part « à jour », rien n'est signalé tant que rien ne change après.
+  coursSeenAt DateTime @default(now())
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

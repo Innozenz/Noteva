@@ -73,11 +73,12 @@ const ITEM_CLASS =
 export function DashboardSidebar({
   role,
   user,
-  pendingCount,
+  badges,
 }: {
   role: "TEACHER" | "STUDENT" | "ADMIN";
   user: NavUser;
-  pendingCount: number;
+  /** Compteur par href (demandes en attente, cours avec du nouveau…). */
+  badges: Record<string, number>;
 }) {
   const pathname = usePathname();
   const activeRef = useRef<HTMLAnchorElement>(null);
@@ -104,7 +105,7 @@ export function DashboardSidebar({
   const renderItem = (item: Item) => {
     const Icon = item.icon;
     const active = isActive(item);
-    const badge = item.href === "/dashboard/prof/demandes" ? pendingCount : 0;
+    const badge = badges[item.href] ?? 0;
 
     return (
       <Link

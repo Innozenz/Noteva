@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { isStudentNews } from "@/lib/bookings/student-news";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
@@ -43,6 +44,7 @@ export default async function DashboardLayout({
       email: true,
       image: true,
       teacherProfile: { select: { id: true } },
+      studentProfile: { select: { id: true, coursSeenAt: true } },
     },
   });
 
@@ -50,8 +52,8 @@ export default async function DashboardLayout({
     redirect("/onboarding");
   }
 
-  // Pastille de l'onglet « Demandes » : une demande non traitée immobilise un
-  // créneau, elle ne doit pas pouvoir passer inaperçue. Prof uniquement.
+  // Pastille de l'onglet « Demandes » (prof) : une demande non traitée
+  // immobilise un créneau, elle ne doit pas passer inaperçue.
   const pendingCount = user.teacherProfile
     ? await prisma.booking.count({
         where: {
@@ -62,12 +64,37 @@ export default async function DashboardLayout({
       })
     : 0;
 
+  // Pastille de « Mes cours » (élève) : le prof a tranché une demande depuis la
+  // dernière visite. Même règle que le marqueur « Nouveau » des cartes — on lit
+  // le minimum et on filtre en mémoire pour n'avoir qu'une seule définition.
+  let studentNewsCount = 0;
+  if (user.studentProfile) {
+    const recent = await prisma.booking.findMany({
+      where: { studentId: user.studentProfile.id },
+      take: 200,
+      select: {
+        status: true,
+        confirmedAt: true,
+        cancelledAt: true,
+        cancelledById: true,
+        updatedAt: true,
+      },
+    });
+    const seenAt = user.studentProfile.coursSeenAt;
+    studentNewsCount = recent.filter((b) =>
+      isStudentNews(b, seenAt, session.user.id)
+    ).length;
+  }
+
   return (
     <div className="lg:flex">
       <DashboardSidebar
         role={user.role}
         user={{ name: user.name, email: user.email, image: user.image }}
-        pendingCount={pendingCount}
+        badges={{
+          "/dashboard/prof/demandes": pendingCount,
+          "/dashboard/cours": studentNewsCount,
+        }}
       />
       <main className="min-w-0 flex-1 px-4 py-8 lg:py-10">{children}</main>
     </div>
