@@ -7,6 +7,7 @@ import { CollapsibleReport } from "@/components/collapsible-report";
 import { PageTitle } from "@/components/editorial";
 import { FicheTabs } from "@/components/fiche-tabs";
 import { ListFilters } from "@/components/list-filters";
+import { MarkThreadRead } from "@/components/mark-thread-read";
 import { MessageThread } from "@/components/message-thread";
 import { ReportViewer } from "@/components/report-view";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -235,12 +236,15 @@ export default async function StudentDossierPage({
       <FicheTabs tabs={tabs} active={active} basePath={basePath} />
 
       {active === "messages" ? (
-        <MessageThread
-          initial={messages}
-          me="STUDENT"
-          postUrl={`/api/student/teachers/${teacher.id}/messages`}
-          emptyLabel="Écrivez un message à votre prof."
-        />
+        <>
+          <MarkThreadRead teacherId={teacher.id} studentId={student.id} />
+          <MessageThread
+            initial={messages}
+            me="STUDENT"
+            postUrl={`/api/student/teachers/${teacher.id}/messages`}
+            emptyLabel="Écrivez un message à votre prof."
+          />
+        </>
       ) : null}
 
       {active === "historique" ? (

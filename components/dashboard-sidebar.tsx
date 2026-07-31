@@ -12,6 +12,7 @@ import {
   Inbox,
   LayoutDashboard,
   type LucideIcon,
+  MessageSquare,
   Music4,
   Search,
   ShieldCheck,
@@ -51,6 +52,7 @@ const TEACHER_ITEMS: Item[] = [
   { href: "/dashboard/prof/demandes", icon: Inbox, label: "Demandes" },
   { href: "/dashboard/prof/comptes-rendus", icon: FileText, label: "Comptes rendus" },
   { href: "/dashboard/prof/eleves", icon: Users, label: "Mes élèves" },
+  { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },
   { href: "/dashboard/prof/activite", icon: TrendingUp, label: "Activité" },
   { href: "/dashboard/prof/avis", icon: Star, label: "Avis" },
   { href: "/dashboard/prof/abonnement", icon: CreditCard, label: "Abonnement" },
@@ -60,6 +62,7 @@ const STUDENT_ITEMS: Item[] = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", exact: true },
   { href: "/dashboard/cours", icon: CalendarClock, label: "Mes cours", exact: true },
   { href: "/dashboard/dossiers", icon: FolderOpen, label: "Mes dossiers" },
+  { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },
   { href: "/dashboard/cours/profil", icon: UserCog, label: "Mon profil" },
 ];
 

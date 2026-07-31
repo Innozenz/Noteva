@@ -235,14 +235,15 @@ model TeacherProfile {
   stripePriceId          String?
   stripeCurrentPeriodEnd DateTime?
 
-  instruments  TeacherInstrument[]
-  rules        AvailabilityRule[]
-  exceptions   AvailabilityException[]
-  bookings     Booking[]
-  reviews      Review[]
-  reports      ReviewReport[]
-  studentNotes TeacherStudentNote[]
-  messages     Message[]
+  instruments    TeacherInstrument[]
+  rules          AvailabilityRule[]
+  exceptions     AvailabilityException[]
+  bookings       Booking[]
+  reviews        Review[]
+  reports        ReviewReport[]
+  studentNotes   TeacherStudentNote[]
+  messages       Message[]
+  messageThreads MessageThreadState[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -294,11 +295,12 @@ model StudentProfile {
   city          String?
   postalCode    String?
 
-  instruments  StudentInstrument[]
-  bookings     Booking[]
-  reviews      Review[]
-  teacherNotes TeacherStudentNote[]
-  messages     Message[]
+  instruments    StudentInstrument[]
+  bookings       Booking[]
+  reviews        Review[]
+  teacherNotes   TeacherStudentNote[]
+  messages       Message[]
+  messageThreads MessageThreadState[]
 
   // Dernière consultation de « Mes cours » : repère du signal in-app (pastille
   // sur la nav). Un cours dont la décision du prof — confirmation, refus,
@@ -376,6 +378,30 @@ model Message {
   @@index([teacherId, studentId, createdAt])
   @@index([reportId])
   @@map("message")
+}
+
+// ---------------------------------------------------------------------------
+// État de lecture du fil général (reportId nul) d'un couple prof↔élève.
+//
+// Une ligne par couple, deux repères — un par participant. Un message est « non
+// lu » pour un participant s'il a été écrit par l'autre après son propre
+// `*ReadAt`. Nul = jamais ouvert, donc tout est non lu. Avancé quand l'onglet
+// Messages du couple est consulté. Dérivé, jamais dénormalisé en compteur : la
+// pastille et l'inbox recomputent à la lecture (cf. lib/messages/inbox.ts).
+// ---------------------------------------------------------------------------
+
+model MessageThreadState {
+  id        String         @id @default(cuid())
+  teacherId String
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  teacherReadAt DateTime?
+  studentReadAt DateTime?
+
+  @@unique([teacherId, studentId])
+  @@map("message_thread_state")
 }
 
 // Le niveau est porté par le couple élève/instrument : un élève peut être

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { isStudentNews } from "@/lib/bookings/student-news";
+import { countUnread, type InboxMessage } from "@/lib/messages/inbox";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
@@ -86,6 +87,46 @@ export default async function DashboardLayout({
     ).length;
   }
 
+  // Pastille « Messages » : fils généraux avec des messages de l'autre
+  // participant postérieurs à mon repère de lecture. Même règle que l'inbox.
+  let messagesUnread = 0;
+  const profile = user.teacherProfile ?? user.studentProfile;
+  if (profile) {
+    const isTeacher = Boolean(user.teacherProfile);
+    const [incoming, reads] = await Promise.all([
+      prisma.message.findMany({
+        where: isTeacher
+          ? { teacherId: profile.id, reportId: null, sender: "STUDENT" }
+          : { studentId: profile.id, reportId: null, sender: "TEACHER" },
+        take: 500,
+        select: {
+          teacherId: true,
+          studentId: true,
+          sender: true,
+          createdAt: true,
+        },
+      }),
+      prisma.messageThreadState.findMany({
+        where: isTeacher ? { teacherId: profile.id } : { studentId: profile.id },
+        select: {
+          teacherId: true,
+          studentId: true,
+          teacherReadAt: true,
+          studentReadAt: true,
+        },
+      }),
+    ]);
+    const messages: InboxMessage[] = incoming.map((m) => ({
+      teacherId: m.teacherId,
+      studentId: m.studentId,
+      sender: m.sender,
+      content: "",
+      hasAttachment: false,
+      createdAt: m.createdAt,
+    }));
+    messagesUnread = countUnread(messages, reads, isTeacher ? "TEACHER" : "STUDENT");
+  }
+
   return (
     <div className="lg:flex">
       <DashboardSidebar
@@ -94,6 +135,7 @@ export default async function DashboardLayout({
         badges={{
           "/dashboard/prof/demandes": pendingCount,
           "/dashboard/cours": studentNewsCount,
+          "/dashboard/messages": messagesUnread,
         }}
       />
       <main className="min-w-0 flex-1 px-4 py-8 lg:py-10">{children}</main>

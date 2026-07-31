@@ -6,6 +6,7 @@ import { ChevronLeft, FileText } from "lucide-react";
 import { PageTitle } from "@/components/editorial";
 import { FicheTabs } from "@/components/fiche-tabs";
 import { ListFilters } from "@/components/list-filters";
+import { MarkThreadRead } from "@/components/mark-thread-read";
 import { MessageThread } from "@/components/message-thread";
 import { ReportEditor } from "@/components/report-editor";
 import { StudentNoteEditor } from "@/components/student-note-editor";
@@ -316,12 +317,15 @@ export default async function StudentFilePage({
       ) : null}
 
       {active === "messages" ? (
-        <MessageThread
-          initial={messages}
-          me="TEACHER"
-          postUrl={`/api/teacher/students/${student.id}/messages`}
-          emptyLabel="Démarrez la conversation avec cet élève."
-        />
+        <>
+          <MarkThreadRead teacherId={teacher.id} studentId={student.id} />
+          <MessageThread
+            initial={messages}
+            me="TEACHER"
+            postUrl={`/api/teacher/students/${student.id}/messages`}
+            emptyLabel="Démarrez la conversation avec cet élève."
+          />
+        </>
       ) : null}
 
       {active === "historique" ? (
