@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { localFailure, postJson, type Failure } from "@/lib/http/failure";
+import { notifySuccess } from "@/lib/toast";
 import {
   formatTime,
   parseTime,
@@ -46,7 +47,6 @@ export function AvailabilityEditor({
   );
   const [exceptions, setExceptions] = useState(initialExceptions);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<Failure | null>(null);
 
   const addRow = (weekday: number) =>
@@ -63,7 +63,6 @@ export function AvailabilityEditor({
   const save = async () => {
     setIsSaving(true);
     setError(null);
-    setMessage(null);
 
     const slots: GridSlot[] = [];
 
@@ -112,7 +111,7 @@ export function AvailabilityEditor({
           end: formatTime(slot.endMinute),
         }))
       );
-      setMessage("Disponibilités enregistrées");
+      notifySuccess("Disponibilités enregistrées.");
     } finally {
       setIsSaving(false);
     }
@@ -205,7 +204,6 @@ export function AvailabilityEditor({
           })}
 
           <FormFailure failure={error} onRetry={save} />
-          {message ? <p className="text-sm text-success">{message}</p> : null}
 
           <div className="flex justify-end">
             <Button disabled={isSaving} onClick={save}>
@@ -257,6 +255,7 @@ function ExceptionsCard({
 
       onChange([...exceptions, { ...result.data, date }]);
       setDate("");
+      notifySuccess("Journée bloquée.");
     } finally {
       setIsSaving(false);
     }
@@ -279,6 +278,7 @@ function ExceptionsCard({
     }
 
     onChange(exceptions.filter((e) => e.id !== id));
+    notifySuccess("Absence retirée.");
   };
 
   return (

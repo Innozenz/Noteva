@@ -27,7 +27,6 @@ import {
   AgendaViewSwitch,
   type AgendaNav,
 } from "@/components/agenda-view-switch";
-import { FormFailure } from "@/components/form-failure";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +44,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { checkTransition, type BookingAction } from "@/lib/bookings/transitions";
-import { postJson, type Failure } from "@/lib/http/failure";
+import { postJson } from "@/lib/http/failure";
+import { notifyFailure, notifySuccess } from "@/lib/toast";
 import {
   localMinutesInZone,
   MINUTES_PER_DAY,
@@ -242,6 +242,16 @@ const ACTIONS: {
   { action: "cancel", label: "Annuler", icon: CalendarX, variant: "outline" },
 ];
 
+// Confirmation en toast des actions qui gardent le cours à l'agenda. Annuler et
+// refuser libèrent le créneau et sont annoncés à part (préavis, réservable).
+const ACTION_SUCCESS: Record<BookingAction, string> = {
+  confirm: "Cours confirmé.",
+  decline: "Demande refusée.",
+  cancel: "Cours annulé.",
+  complete: "Cours marqué comme donné.",
+  no_show: "Élève marqué absent.",
+};
+
 export function TeacherAgenda({
   rows: initial,
   rules,
@@ -270,8 +280,6 @@ export function TeacherAgenda({
   const [rows, setRows] = useState(initial);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<Failure | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   // Glisser-déposer. `bodyRef` sert à convertir la position du pointeur en
   // (jour, minute) ; `pending` retient l'amorce tant que le seuil n'est pas
@@ -362,8 +370,6 @@ export function TeacherAgenda({
 
   const act = async (id: string, action: BookingAction) => {
     setBusy(true);
-    setError(null);
-    setNotice(null);
 
     try {
       const result = await postJson<{
@@ -375,7 +381,7 @@ export function TeacherAgenda({
       });
 
       if (!result.ok) {
-        setError(result.failure);
+        notifyFailure(result.failure, { onRetry: () => act(id, action) });
         return;
       }
 
@@ -386,17 +392,24 @@ export function TeacherAgenda({
       if (status === "CANCELLED" || status === "DECLINED") {
         setRows((current) => current.filter((row) => row.id !== id));
         setSelectedId(null);
-        setNotice(
-          result.data.lateCancellation
-            ? "Cours annulé. C'était dans votre délai de prévenance : pensez à prévenir l'élève."
-            : "Cours retiré de votre agenda. Le créneau est de nouveau réservable."
-        );
+        if (result.data.lateCancellation) {
+          notifySuccess(
+            "Cours annulé.",
+            "C'était dans votre délai de prévenance : pensez à prévenir l'élève."
+          );
+        } else {
+          notifySuccess(
+            status === "DECLINED" ? "Demande refusée." : "Cours annulé.",
+            "Le créneau est de nouveau réservable."
+          );
+        }
         return;
       }
 
       setRows((current) =>
         current.map((row) => (row.id === id ? { ...row, status } : row))
       );
+      notifySuccess(ACTION_SUCCESS[action]);
     } finally {
       setBusy(false);
     }
@@ -409,8 +422,6 @@ export function TeacherAgenda({
       return;
     }
     setSelectedId(id);
-    setError(null);
-    setNotice(null);
   };
 
   // --- Glisser-déposer d'un cours confirmé vers un nouvel horaire ---
@@ -488,8 +499,6 @@ export function TeacherAgenda({
 
   const reschedule = async (id: string, startsAt: Date) => {
     setBusy(true);
-    setError(null);
-    setNotice(null);
 
     try {
       const result = await postJson<{ startsAt: string; endsAt: string }>(
@@ -498,7 +507,7 @@ export function TeacherAgenda({
       );
 
       if (!result.ok) {
-        setError(result.failure);
+        notifyFailure(result.failure, { onRetry: () => reschedule(id, startsAt) });
         return;
       }
 
@@ -509,7 +518,7 @@ export function TeacherAgenda({
             : row
         )
       );
-      setNotice("Cours déplacé. L'élève a été prévenu.");
+      notifySuccess("Cours déplacé.", "L'élève a été prévenu.");
     } finally {
       setBusy(false);
     }
@@ -564,15 +573,6 @@ export function TeacherAgenda({
         </CardHeader>
 
         <CardContent className="flex flex-col gap-4">
-          <FormFailure failure={error} />
-
-          {notice ? (
-            <p className="flex items-start gap-2 rounded-md bg-primary-soft p-3 text-sm text-primary">
-              <Info className="mt-0.5 h-4 w-4 shrink-0" />
-              {notice}
-            </p>
-          ) : null}
-
           {/* Sept colonnes horaires ne tiennent pas sur un téléphone : la
               grille défile horizontalement plutôt que de se comprimer. La
               colonne des heures reste épinglée à gauche — sans elle, un bloc
@@ -700,7 +700,6 @@ export function TeacherAgenda({
               timezone={timezone}
               now={now}
               busy={busy}
-              error={error}
               onAct={act}
             />
           ) : null}
@@ -913,14 +912,12 @@ function BookingDetail({
   timezone,
   now,
   busy,
-  error,
   onAct,
 }: {
   row: AgendaRow;
   timezone: string;
   now: Date;
   busy: boolean;
-  error: Failure | null;
   onAct: (id: string, action: BookingAction) => void;
 }) {
   const startsAt = new Date(row.startsAt);
@@ -990,8 +987,6 @@ function BookingDetail({
           {row.studentMessage}
         </p>
       ) : null}
-
-      <FormFailure failure={error} />
 
       {allowed.length > 0 ? (
         <div className="flex flex-wrap gap-2">

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { SectionTitle } from "@/components/editorial";
 import { FormFailure } from "@/components/form-failure";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { localFailure, postJson, type Failure } from "@/lib/http/failure";
+import { notifySuccess } from "@/lib/toast";
 
 export type IdentityData = {
   email: string;
@@ -28,11 +29,9 @@ export function AccountForm({ initial }: { initial: IdentityData }) {
   const [identity, setIdentity] = useState(initial);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Failure | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const save = async () => {
     setError(null);
-    setMessage(null);
 
     // Vérifié ici aussi : le serveur refuserait, mais faire l'aller-retour pour
     // apprendre qu'un champ vide est vide n'apprend rien à personne.
@@ -62,7 +61,7 @@ export function AccountForm({ initial }: { initial: IdentityData }) {
       }
 
       setIdentity(result.data);
-      setMessage("Nom enregistré");
+      notifySuccess("Nom enregistré.");
 
       // L'en-tête affiche le nom et ses initiales. Il les reçoit du layout, un
       // Server Component, donc `refresh()` suffit à les remettre à jour. Tant
@@ -130,13 +129,6 @@ export function AccountForm({ initial }: { initial: IdentityData }) {
       </section>
 
       <FormFailure failure={error} onRetry={save} />
-
-      {message ? (
-        <p className="flex items-center gap-2 text-sm text-success">
-          <Check className="h-4 w-4" />
-          {message}
-        </p>
-      ) : null}
 
       {/* Même barre que les autres formulaires : un bouton collant sans fond
           passe par-dessus le contenu qu'il survole. */}

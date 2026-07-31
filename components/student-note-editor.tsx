@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Loader2, Lock } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { notifySuccess } from "@/lib/toast";
 
 /**
  * Note privée du prof sur un élève.
@@ -23,14 +24,12 @@ export function StudentNoteEditor({
   const [saved, setSaved] = useState(initialContent);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [justSaved, setJustSaved] = useState(false);
 
   const dirty = content !== saved;
 
   const save = async () => {
     setBusy(true);
     setError(null);
-    setJustSaved(false);
     try {
       const res = await fetch(`/api/teacher/students/${studentId}/note`, {
         method: "PUT",
@@ -43,7 +42,7 @@ export function StudentNoteEditor({
         return;
       }
       setSaved(content);
-      setJustSaved(true);
+      notifySuccess("Note enregistrée.");
     } catch {
       setError("Impossible de joindre le serveur.");
     } finally {
@@ -68,11 +67,6 @@ export function StudentNoteEditor({
           {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Enregistrer la note
         </Button>
-        {justSaved && !dirty ? (
-          <span className="flex items-center gap-1 text-xs text-success">
-            <Check className="h-3.5 w-3.5" /> Enregistré
-          </span>
-        ) : null}
       </div>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
     </div>
