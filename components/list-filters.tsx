@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 type Chip = { value: string; label: string };
+type ChipGroup = { key: string; label: string; options: Chip[] };
 
 /**
  * Barre de filtres d'une liste interne (roster, comptes rendus…).
@@ -17,16 +18,20 @@ type Chip = { value: string; label: string };
  * filtre. L'état reste ainsi partageable et correct au retour arrière. Les
  * autres paramètres (`onglet`, ancre…) sont préservés, si bien qu'on peut poser
  * ces filtres à l'intérieur d'un onglet de fiche sans en sortir.
+ *
+ * `chips` accepte plusieurs groupes de pastilles (p. ex. élève *et* instrument
+ * sur la page comptes rendus). Le libellé du groupe ne s'affiche que lorsqu'il
+ * y en a plus d'un — un groupe seul se passe d'étiquette.
  */
 export function ListFilters({
   searchKey,
   searchPlaceholder,
-  chip,
+  chips,
   dateRange,
 }: {
   searchKey: string;
   searchPlaceholder: string;
-  chip?: { key: string; label: string; options: Chip[] };
+  chips?: ChipGroup[];
   /** Filtre par plage de dates (civiles, `AAAA-MM-JJ`), bornes incluses. */
   dateRange?: { fromKey: string; toKey: string };
 }) {
@@ -36,9 +41,10 @@ export function ListFilters({
 
   const [text, setText] = useState(params.get(searchKey) ?? "");
 
+  const chipGroups = chips ?? [];
   const managedKeys = [
     searchKey,
-    chip?.key,
+    ...chipGroups.map((group) => group.key),
     dateRange?.fromKey,
     dateRange?.toKey,
   ].filter(Boolean) as string[];
@@ -65,7 +71,6 @@ export function ListFilters({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text]);
 
-  const activeChip = chip ? params.get(chip.key) : null;
   const hasFilters = managedKeys.some((key) => (params.get(key) ?? "") !== "");
 
   const clearAll = () => {
@@ -75,7 +80,7 @@ export function ListFilters({
     pushWith(next);
   };
 
-  const showControls = Boolean(chip) || Boolean(dateRange) || hasFilters;
+  const showControls = chipGroups.length > 0 || Boolean(dateRange) || hasFilters;
 
   return (
     <div className="flex flex-col gap-3">
@@ -91,29 +96,40 @@ export function ListFilters({
 
       {showControls ? (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          {chip
-            ? chip.options.map((option) => {
-                const active = activeChip === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() =>
-                      setParam(chip.key, active ? null : option.value)
-                    }
-                    className={cn(
-                      "rounded-full border px-3 py-1.5 text-sm transition-colors",
-                      active
-                        ? "border-primary bg-primary-soft text-primary"
-                        : "border-border text-muted hover:border-border-strong"
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })
-            : null}
+          {chipGroups.map((group) => {
+            const activeChip = params.get(group.key);
+            return (
+              <div
+                key={group.key}
+                className="flex flex-wrap items-center gap-x-2 gap-y-2"
+              >
+                {chipGroups.length > 1 ? (
+                  <span className="text-sm text-subtle">{group.label} :</span>
+                ) : null}
+                {group.options.map((option) => {
+                  const active = activeChip === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() =>
+                        setParam(group.key, active ? null : option.value)
+                      }
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                        active
+                          ? "border-primary bg-primary-soft text-primary"
+                          : "border-border text-muted hover:border-border-strong"
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
 
           {dateRange ? (
             <div className="flex items-center gap-2 text-sm text-muted">

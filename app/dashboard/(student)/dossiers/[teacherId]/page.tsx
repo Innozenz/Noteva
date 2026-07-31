@@ -298,13 +298,15 @@ export default async function StudentDossierPage({
             <ListFilters
               searchKey="cr_q"
               searchPlaceholder="Rechercher dans les comptes rendus…"
-              chip={
+              chips={
                 reportInstruments.length >= 2
-                  ? {
-                      key: "cr_instrument",
-                      label: "Instrument",
-                      options: reportInstruments,
-                    }
+                  ? [
+                      {
+                        key: "cr_instrument",
+                        label: "Instrument",
+                        options: reportInstruments,
+                      },
+                    ]
                   : undefined
               }
               dateRange={{ fromKey: "cr_from", toKey: "cr_to" }}

@@ -121,9 +121,9 @@ export default async function TeacherStudentsPage({
         <ListFilters
           searchKey="q"
           searchPlaceholder="Rechercher un élève…"
-          chip={
+          chips={
             instrumentOptions.length >= 2
-              ? { key: "instrument", label: "Instrument", options: instrumentOptions }
+              ? [{ key: "instrument", label: "Instrument", options: instrumentOptions }]
               : undefined
           }
         />
