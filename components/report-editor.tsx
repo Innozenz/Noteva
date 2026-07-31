@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Check,
   ChevronDown,
   FileText,
   Loader2,
@@ -22,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { lessonTitle } from "@/lib/bookings/title";
 import { FILE_ACCEPT } from "@/lib/reports/attachments";
+import { notifySuccess } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 export type ReportAttachmentView = {
@@ -81,7 +81,6 @@ export function ReportEditor({
   const [attachments, setAttachments] = useState(lesson.attachments);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [justSaved, setJustSaved] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -103,7 +102,6 @@ export function ReportEditor({
   const saveContent = async () => {
     setSavingContent(true);
     setError(null);
-    setJustSaved(false);
     try {
       const res = await fetch(base, {
         method: "PUT",
@@ -116,7 +114,7 @@ export function ReportEditor({
         return;
       }
       setSaved(content);
-      setJustSaved(true);
+      notifySuccess("Compte rendu enregistré.");
       router.refresh();
     } catch {
       setError("Impossible de joindre le serveur.");
@@ -167,6 +165,7 @@ export function ReportEditor({
         return;
       }
       setAttachments((list) => list.filter((a) => a.id !== id));
+      notifySuccess("Pièce jointe supprimée.");
       router.refresh();
     } catch {
       setError("Impossible de joindre le serveur.");
@@ -288,11 +287,6 @@ export function ReportEditor({
                 ) : null}
                 Enregistrer le texte
               </Button>
-              {justSaved && !dirty ? (
-                <span className="flex items-center gap-1 text-xs text-success">
-                  <Check className="h-3.5 w-3.5" /> Enregistré
-                </span>
-              ) : null}
             </div>
           </div>
 

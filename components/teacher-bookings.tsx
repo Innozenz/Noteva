@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 
 import { SectionTitle } from "@/components/editorial";
-import { FormFailure } from "@/components/form-failure";
 import {
   LEVEL_LABELS,
   StudentProfileBody,
@@ -31,8 +30,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { postJson, type Failure } from "@/lib/http/failure";
+import { postJson } from "@/lib/http/failure";
 import { groupBookings, isUrgent } from "@/lib/bookings/grouping";
+import { notifyFailure, notifySuccess } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 export type BookingRow = {
@@ -69,6 +69,15 @@ export type BookingRow = {
 
 type Action = "confirm" | "decline" | "cancel" | "complete" | "no_show";
 
+// Confirmation affichée en toast selon l'action réussie.
+const ACTION_SUCCESS: Record<Action, string> = {
+  confirm: "Cours confirmé.",
+  decline: "Demande refusée.",
+  cancel: "Cours annulé.",
+  complete: "Cours marqué comme donné.",
+  no_show: "Élève marqué absent.",
+};
+
 /** Même ligne, dates converties : le regroupement raisonne sur des instants. */
 type Enriched = Omit<BookingRow, "startsAt" | "endsAt"> & {
   startsAt: Date;
@@ -99,7 +108,6 @@ export function TeacherBookings({
 }) {
   const [rows, setRows] = useState(initial);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<Failure | null>(null);
   // Demande dont la modale « profil de l'élève » est ouverte.
   const [profileRow, setProfileRow] = useState<Enriched | null>(null);
 
@@ -122,7 +130,6 @@ export function TeacherBookings({
 
   const act = async (id: string, action: Action) => {
     setBusyId(id);
-    setError(null);
 
     try {
       const result = await postJson<{ status: BookingRow["status"] }>(
@@ -131,7 +138,7 @@ export function TeacherBookings({
       );
 
       if (!result.ok) {
-        setError(result.failure);
+        notifyFailure(result.failure, { onRetry: () => act(id, action) });
         return;
       }
 
@@ -140,6 +147,7 @@ export function TeacherBookings({
           row.id === id ? { ...row, status: result.data.status } : row
         )
       );
+      notifySuccess(ACTION_SUCCESS[action]);
     } finally {
       setBusyId(null);
     }
@@ -250,8 +258,6 @@ export function TeacherBookings({
 
   return (
     <div className="flex flex-col gap-6">
-      <FormFailure failure={error} />
-
       <section className="flex flex-col gap-4">
         <div>
           <SectionTitle

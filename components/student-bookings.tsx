@@ -14,14 +14,14 @@ import {
 
 import { SectionTitle } from "@/components/editorial";
 import { ReviewForm } from "@/components/review-form";
-import { FormFailure } from "@/components/form-failure";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Stars } from "@/components/ui/stars";
 import { ReportViewer, type ReportView } from "@/components/report-view";
-import { postJson, type Failure } from "@/lib/http/failure";
+import { postJson } from "@/lib/http/failure";
 import { groupBookings } from "@/lib/bookings/grouping";
 import { checkReviewable } from "@/lib/reviews/eligibility";
+import { notifyFailure, notifySuccess } from "@/lib/toast";
 
 export type StudentBookingRow = {
   id: string;
@@ -83,8 +83,6 @@ export function StudentBookings({
 }) {
   const [rows, setRows] = useState(initial);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<Failure | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   /** Cours dont le formulaire d'avis est ouvert. */
   const [reviewing, setReviewing] = useState<string | null>(null);
 
@@ -134,8 +132,6 @@ export function StudentBookings({
 
   const cancel = async (id: string) => {
     setBusyId(id);
-    setError(null);
-    setNotice(null);
 
     try {
       const result = await postJson<{
@@ -147,7 +143,7 @@ export function StudentBookings({
       });
 
       if (!result.ok) {
-        setError(result.failure);
+        notifyFailure(result.failure, { onRetry: () => cancel(id) });
         return;
       }
 
@@ -158,12 +154,16 @@ export function StudentBookings({
       );
 
       // Le serveur signale une annulation tardive : le prof avait fixé un
-      // préavis. Rien n'est facturé, mais l'élève doit le savoir.
-      setNotice(
-        result.data.lateCancellation
-          ? "Cours annulé. C'était dans le délai de préavis du prof — pensez à le prévenir directement."
-          : "Cours annulé."
-      );
+      // préavis. Rien n'est facturé, mais l'élève doit le savoir — d'où la
+      // précision en description du toast.
+      if (result.data.lateCancellation) {
+        notifySuccess(
+          "Cours annulé.",
+          "C'était dans le délai de préavis du prof — pensez à le prévenir directement."
+        );
+      } else {
+        notifySuccess("Cours annulé.");
+      }
     } finally {
       setBusyId(null);
     }
@@ -325,9 +325,6 @@ export function StudentBookings({
 
   return (
     <div className="flex flex-col gap-6">
-      <FormFailure failure={error} />
-      {notice ? <p className="text-sm text-muted">{notice}</p> : null}
-
       {groups.pending.length > 0 ? (
         <section className="flex flex-col gap-4">
           <div>
@@ -385,7 +382,7 @@ export function StudentBookings({
                         )
                       );
                       setReviewing(null);
-                      setNotice("Merci, votre avis est publié.");
+                      notifySuccess("Merci, votre avis est publié.");
                     }}
                   />
                 ) : (
