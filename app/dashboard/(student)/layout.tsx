@@ -1,7 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { StudentNav } from "@/components/student-nav";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
@@ -10,8 +9,8 @@ import prisma from "@/lib/prisma";
  *
  * Deuxième porte, après celle de /dashboard : le layout parent garantit qu'un
  * rôle est posé, celui-ci qu'il s'agit bien d'un élève. Symétrique du layout
- * prof — même structure à deux colonnes (nav à gauche, contenu à droite ; sur
- * mobile la nav repasse en rangée au-dessus).
+ * prof — le shell (barre latérale, marge du contenu) est porté par le layout
+ * parent ; ce layout ne fait plus que garder la porte.
  */
 export default async function StudentLayout({
   children,
@@ -33,10 +32,5 @@ export default async function StudentLayout({
     redirect("/dashboard");
   }
 
-  return (
-    <div className="gap-8 px-4 py-8 lg:flex lg:py-10">
-      <StudentNav />
-      <main className="min-w-0 flex-1">{children}</main>
-    </div>
-  );
+  return <>{children}</>;
 }

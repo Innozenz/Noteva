@@ -54,9 +54,17 @@ export type NavUser = {
 export function UserNav({
   role,
   user,
+  showDetails = false,
 }: {
   role: "TEACHER" | "STUDENT" | "ADMIN";
   user: NavUser;
+  /**
+   * Déclencheur « plein » : avatar + nom + e-mail, toute la rangée cliquable.
+   * Utilisé en pied de barre latérale, où l'identité est déjà affichée à côté
+   * de l'avatar — la cible de clic couvre alors tout le bloc, pas le seul
+   * avatar. Ailleurs (en-têtes), le déclencheur reste l'avatar seul.
+   */
+  showDetails?: boolean;
 }) {
   const router = useRouter();
 
@@ -102,16 +110,40 @@ export function UserNav({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
-          <Avatar className="h-8 w-8">
-            <AvatarImage
-              src={user.image || undefined}
-              alt={user.name || user.email}
-            />
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
-          <span className="sr-only">Mon compte</span>
-        </Button>
+        {showDetails ? (
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center gap-2 rounded-md p-1 text-left transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <Avatar className="h-8 w-8 shrink-0">
+              <AvatarImage
+                src={user.image || undefined}
+                alt={user.name || user.email}
+              />
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">
+                {user.name ?? "Mon compte"}
+              </span>
+              <span className="block truncate text-xs text-muted">
+                {user.email}
+              </span>
+            </span>
+            <span className="sr-only">Ouvrir le menu du compte</span>
+          </button>
+        ) : (
+          <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
+            <Avatar className="h-8 w-8">
+              <AvatarImage
+                src={user.image || undefined}
+                alt={user.name || user.email}
+              />
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
+            <span className="sr-only">Mon compte</span>
+          </Button>
+        )}
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className="w-56" align="end" forceMount>

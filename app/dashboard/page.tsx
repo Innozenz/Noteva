@@ -197,7 +197,7 @@ export default async function DashboardPage() {
       ];
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-12 sm:py-16">
+    <div className="mx-auto max-w-4xl">
       <PageHeader
         eyebrow={isTeacher ? "Espace professeur" : "Espace élève"}
         title={firstName ? `Bonjour ${firstName}` : "Bonjour"}
@@ -294,6 +294,6 @@ export default async function DashboardPage() {
           </Button>
         </div>
       ) : null}
-    </main>
+    </div>
   );
 }

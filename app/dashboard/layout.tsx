@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { AppHeader } from "@/components/app-header";
+import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
@@ -13,6 +13,13 @@ import prisma from "@/lib/prisma";
  * cantonné à l'edge —, mais on ne veut pas d'une requête Prisma à chaque
  * requête `/dashboard/*` qu'il intercepte. Le layout, lui, lit la base une fois
  * par navigation et redirige vers l'onboarding tant que `role` est nul.
+ *
+ * Ce layout porte aussi le shell de tout l'espace : une seule barre latérale
+ * (marque, navigation, compte) au lieu d'un en-tête. Elle couvre donc le hub
+ * /dashboard comme les sous-espaces prof et élève, dont les layouts ne gardent
+ * plus que leur contrôle de rôle. Chaque page se re-plafonne elle-même
+ * (formulaires à `max-w-4xl`, agenda pleine largeur) ; le `main` ne pose que le
+ * gouttière et la marge verticale.
  */
 export default async function DashboardLayout({
   children,
@@ -25,29 +32,44 @@ export default async function DashboardLayout({
     redirect("/");
   }
 
-  // L'identité voyage avec le rôle : l'en-tête l'affiche, et la lire ici plutôt
+  // L'identité voyage avec le rôle : la sidebar l'affiche, et la lire ici plutôt
   // que côté client évite à la fois une requête et un nom périmé après un
   // changement sur /dashboard/compte.
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true, name: true, email: true, image: true },
+    select: {
+      role: true,
+      name: true,
+      email: true,
+      image: true,
+      teacherProfile: { select: { id: true } },
+    },
   });
 
   if (!user?.role) {
     redirect("/onboarding");
   }
 
+  // Pastille de l'onglet « Demandes » : une demande non traitée immobilise un
+  // créneau, elle ne doit pas pouvoir passer inaperçue. Prof uniquement.
+  const pendingCount = user.teacherProfile
+    ? await prisma.booking.count({
+        where: {
+          teacherId: user.teacherProfile.id,
+          status: "PENDING",
+          endsAt: { gt: new Date() },
+        },
+      })
+    : 0;
+
   return (
-    <>
-      {/* Porte l'identité et la sortie. L'ancien bandeau ne disait que
-          « Compte prof » et pointait vers l'espace : ni logo, ni retour vers le
-          site public, ni déconnexion, et l'espace prof empilait donc deux
-          barres anonymes. */}
-      <AppHeader
+    <div className="lg:flex">
+      <DashboardSidebar
         role={user.role}
         user={{ name: user.name, email: user.email, image: user.image }}
+        pendingCount={pendingCount}
       />
-      {children}
-    </>
+      <main className="min-w-0 flex-1 px-4 py-8 lg:py-10">{children}</main>
+    </div>
   );
 }
