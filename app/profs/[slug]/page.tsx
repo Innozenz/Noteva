@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -30,6 +31,8 @@ import {
   getRatingCounts,
 } from "@/lib/reviews/queries";
 import { summarizeFromCounts } from "@/lib/reviews/summary";
+import { auth } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 import { getPublicTeacher } from "@/lib/teacher/public-profile";
 import { ageOn } from "@/lib/user/age";
 
@@ -107,6 +110,22 @@ export default async function TeacherPublicPage({
     getPublicReviews(teacher.id),
   ]);
   const summary = summarizeFromCounts(counts);
+
+  // État du visiteur pour le widget : il détermine l'appel à l'action avant même
+  // le clic. Réserver exige un profil élève (la route répond 403 sinon), d'où
+  // les trois cas — invité, connecté sans profil élève, élève prêt à réserver.
+  // La page est déjà rendue à la demande (sans cache), donc lire la session ici
+  // ne coûte pas de mise en cache, et un invité obtient une page complète et
+  // indexable avec le bouton « Se connecter pour réserver ».
+  const session = await auth.api.getSession({ headers: await headers() });
+  let viewer: "guest" | "incomplete" | "student" = "guest";
+  if (session?.user) {
+    const studentProfile = await prisma.studentProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { id: true },
+    });
+    viewer = studentProfile ? "student" : "incomplete";
+  }
 
   const name = teacher.user.name ?? "Prof de musique";
   const instruments = teacher.instruments.map((i) => i.instrument);
@@ -306,6 +325,7 @@ export default async function TeacherPublicPage({
             }))}
             timezone={teacher.user.timezone}
             trialOffered={teacher.trialLessonOffered}
+            viewer={viewer}
           />
         </aside>
       </div>

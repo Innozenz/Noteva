@@ -26,9 +26,13 @@ type FieldErrors = {
   form?: string;
 };
 
-export function AuthButtons() {
+export function AuthButtons({ callbackUrl }: { callbackUrl?: string | null }) {
   const session = authClient.useSession();
   const router = useRouter();
+  // Destination après connexion : le chemin de retour s'il a été fourni (fiche
+  // prof → « Se connecter pour réserver »), sinon l'espace connecté qui routera
+  // selon le rôle. Déjà validé côté serveur comme chemin interne.
+  const destination = callbackUrl ?? "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
@@ -112,7 +116,7 @@ export function AuthButtons() {
     // pas). Un `window.location` recharge la page : /dashboard lit la session
     // fraîche et route selon le rôle (élève/prof, ou /onboarding si nul).
     const onSuccess = () => {
-      window.location.href = "/dashboard";
+      window.location.href = destination;
     };
 
     try {

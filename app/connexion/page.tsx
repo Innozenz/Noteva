@@ -28,8 +28,21 @@ export const metadata: Metadata = {
  * reste du boilerplate — elle doit d'abord expliquer le service à un visiteur
  * qui ne connaît pas SiNote.
  */
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
   const session = await auth.api.getSession({ headers: await headers() });
+
+  // Chemin de retour, p. ex. depuis une fiche prof (« Se connecter pour
+  // réserver »). Restreint aux chemins internes : jamais `//` ni `/\` — sans
+  // quoi ce serait une redirection ouverte vers un autre site.
+  const raw = (await searchParams).callbackUrl ?? "";
+  const callbackUrl =
+    raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/\\")
+      ? raw
+      : null;
 
   // Déjà connecté : renvoyer là où l'utilisateur a affaire.
   if (session?.user) {
@@ -38,12 +51,13 @@ export default async function LoginPage() {
       select: { role: true },
     });
 
+    // Un rôle posé et un retour demandé : on l'y renvoie (il vient d'une fiche
+    // prof). Sans rôle, l'onboarding passe d'abord.
     redirect(
-      user?.role === "TEACHER"
-        ? "/dashboard/prof"
-        : user?.role === "STUDENT"
-          ? "/dashboard/cours"
-          : "/onboarding"
+      !user?.role
+        ? "/onboarding"
+        : (callbackUrl ??
+            (user.role === "TEACHER" ? "/dashboard/prof" : "/dashboard/cours"))
     );
   }
 
@@ -66,7 +80,7 @@ export default async function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AuthButtons />
+          <AuthButtons callbackUrl={callbackUrl} />
         </CardContent>
       </Card>
 

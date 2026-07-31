@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -55,11 +57,19 @@ export function BookingWidget({
   instruments,
   timezone,
   trialOffered,
+  viewer,
 }: {
   teacherSlug: string;
   instruments: Instrument[];
   timezone: string;
   trialOffered: boolean;
+  /**
+   * État du visiteur, décidé côté serveur : `guest` (pas connecté),
+   * `incomplete` (connecté mais sans profil élève — la réservation répondrait
+   * 403) ou `student` (peut réserver). Détermine l'appel à l'action avant le
+   * clic, plutôt que de laisser l'élève buter sur une erreur.
+   */
+  viewer: "guest" | "incomplete" | "student";
 }) {
   const router = useRouter();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
@@ -72,6 +82,53 @@ export function BookingWidget({
   const [error, setError] = useState<Failure | null>(null);
   const [slotsFailed, setSlotsFailed] = useState(false);
   const [done, setDone] = useState(false);
+
+  // Sélection conservée à travers l'aller-retour de connexion / onboarding : un
+  // invité qui choisit un créneau puis part se connecter le retrouve à son
+  // retour, prêt à confirmer. Écrite au moment de partir (clic sur l'appel à
+  // l'action), relue une fois au montage.
+  const storageKey = `sinote:booking:${teacherSlug}`;
+  const restoredRef = useRef(false);
+
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+
+    const raw = sessionStorage.getItem(storageKey);
+    if (!raw) return;
+    sessionStorage.removeItem(storageKey);
+
+    try {
+      const saved = JSON.parse(raw) as {
+        selected?: string;
+        instrument?: string;
+        isTrial?: boolean;
+        message?: string;
+        weekStart?: string;
+      };
+      if (saved.weekStart) setWeekStart(new Date(saved.weekStart));
+      if (saved.selected) setSelected(saved.selected);
+      if (saved.instrument) setInstrument(saved.instrument);
+      if (typeof saved.isTrial === "boolean") setIsTrial(saved.isTrial);
+      if (saved.message) setMessage(saved.message);
+    } catch {
+      // Entrée illisible : on l'ignore, la sélection repart de zéro.
+    }
+  }, [storageKey]);
+
+  const persistSelection = () => {
+    if (!selected) return;
+    sessionStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        selected,
+        instrument,
+        isTrial,
+        message,
+        weekStart: weekStart.toISOString(),
+      })
+    );
+  };
 
   const loadSlots = useCallback(async () => {
     setSlots(null);
@@ -121,18 +178,7 @@ export function BookingWidget({
       });
 
       if (!result.ok) {
-        // Cette page est publique : un 401 signifie le plus souvent « pas
-        // encore de compte », pas « session expirée ». Le message générique
-        // parlerait d'une session que le visiteur n'a jamais ouverte.
-        setError(
-          result.failure.kind === "auth"
-            ? {
-                ...result.failure,
-                message:
-                  "Connectez-vous ou créez un compte pour réserver ce cours. Votre sélection reste à l'écran.",
-              }
-            : result.failure
-        );
+        setError(result.failure);
 
         // Un conflit veut dire que le créneau vient d'être pris : on recharge
         // plutôt que de laisser une liste périmée à l'écran.
@@ -140,6 +186,8 @@ export function BookingWidget({
         return;
       }
 
+      // La demande est passée : la sélection conservée n'a plus lieu d'être.
+      sessionStorage.removeItem(storageKey);
       setDone(true);
       router.refresh();
     } finally {
@@ -151,12 +199,32 @@ export function BookingWidget({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Demande envoyée</CardTitle>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-success" />
+            <CardTitle>Demande envoyée</CardTitle>
+          </div>
           <CardDescription>
-            Le prof doit maintenant la confirmer. Vous retrouverez ce cours dans
-            votre espace.
+            Le prof reçoit votre demande et doit la confirmer. Vous serez prévenu
+            et retrouverez ce cours dans votre espace.
           </CardDescription>
         </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <Button asChild size="lg">
+            <Link href="/dashboard/cours">Voir mes cours</Link>
+          </Button>
+          <button
+            type="button"
+            onClick={() => {
+              setDone(false);
+              setSelected(null);
+              setMessage("");
+              loadSlots();
+            }}
+            className="text-center text-sm text-muted hover:underline"
+          >
+            Réserver un autre créneau
+          </button>
+        </CardContent>
       </Card>
     );
   }
@@ -202,9 +270,7 @@ export function BookingWidget({
         </div>
 
         {slots === null ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-5 w-5 animate-spin text-subtle" />
-          </div>
+          <SlotsSkeleton />
         ) : slotsFailed ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <p className="text-sm text-muted">
@@ -313,14 +379,45 @@ export function BookingWidget({
               onChange={(e) => setMessage(e.target.value)}
             />
 
-            <FormFailure failure={error} onRetry={book} />
-
-            <Button size="lg" disabled={isBooking} onClick={book}>
-              {isBooking ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              Demander ce cours
-            </Button>
+            {viewer === "student" ? (
+              <>
+                <FormFailure failure={error} onRetry={book} />
+                <Button size="lg" disabled={isBooking} onClick={book}>
+                  {isBooking ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Demander ce cours
+                </Button>
+              </>
+            ) : viewer === "guest" ? (
+              <div className="flex flex-col gap-2">
+                <Button asChild size="lg">
+                  <Link
+                    href={`/connexion?callbackUrl=${encodeURIComponent(`/profs/${teacherSlug}`)}`}
+                    onClick={persistSelection}
+                  >
+                    Se connecter pour réserver
+                  </Link>
+                </Button>
+                <p className="text-center text-xs text-muted">
+                  Pas encore de compte ? La création est gratuite, votre
+                  sélection est conservée.
+                </p>
+              </div>
+            ) : (
+              // Connecté, mais pas encore de profil élève.
+              <div className="flex flex-col gap-2">
+                <Button asChild size="lg">
+                  <Link href="/onboarding" onClick={persistSelection}>
+                    Créer mon profil élève
+                  </Link>
+                </Button>
+                <p className="text-center text-xs text-muted">
+                  Il ne manque que ça pour réserver — votre sélection est
+                  conservée.
+                </p>
+              </div>
+            )}
             <p className="text-center text-xs text-muted">
               Rien n&apos;est prélevé : vous réglez le prof directement.
             </p>
@@ -328,6 +425,33 @@ export function BookingWidget({
         ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Ossature de chargement des créneaux : des pastilles grises pulsées, disposées
+ * comme la vraie liste. Un simple spinner ne disait pas « du contenu arrive
+ * ici » ; l'ossature en donne la forme et rassure sur ce qui se charge.
+ */
+function SlotsSkeleton() {
+  return (
+    <div className="flex flex-col gap-5">
+      <span className="sr-only">Chargement des créneaux…</span>
+      {[0, 1].map((day) => (
+        <div key={day} aria-hidden>
+          <div className="mb-2.5 h-4 w-40 animate-pulse rounded bg-surface-strong" />
+          <div className="mb-1.5 h-3 w-16 animate-pulse rounded bg-surface" />
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: day === 0 ? 6 : 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-8 w-16 animate-pulse rounded-md bg-surface"
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
