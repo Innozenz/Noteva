@@ -2,6 +2,7 @@ import { Download, FileText, Mic } from "lucide-react";
 
 import { AudioPlayer } from "@/components/audio-player";
 import { MessageThread, type MessageView } from "@/components/message-thread";
+import { ReportImages } from "@/components/report-images";
 
 export type ReportView = {
   content: string | null;
@@ -48,24 +49,10 @@ export function ReportViewer({
       ) : null}
 
       {images.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {images.map((a) => (
-            <a
-              key={a.id}
-              href={`${base}/${a.id}`}
-              target="_blank"
-              rel="noreferrer"
-              className="block overflow-hidden rounded-lg border border-border transition hover:border-border-strong"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`${base}/${a.id}`}
-                alt={a.filename}
-                className="h-28 w-28 object-cover transition hover:scale-[1.03]"
-              />
-            </a>
-          ))}
-        </div>
+        <ReportImages
+          base={base}
+          images={images.map((a) => ({ id: a.id, filename: a.filename }))}
+        />
       ) : null}
 
       {audios.length > 0 ? (
