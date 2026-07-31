@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { isStudentNews } from "@/lib/bookings/student-news";
-import { countUnread, type InboxMessage } from "@/lib/messages/inbox";
+import { messageUnreadCount } from "@/lib/messages/unread-count";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
@@ -53,79 +53,51 @@ export default async function DashboardLayout({
     redirect("/onboarding");
   }
 
-  // Pastille de l'onglet « Demandes » (prof) : une demande non traitée
-  // immobilise un créneau, elle ne doit pas passer inaperçue.
-  const pendingCount = user.teacherProfile
-    ? await prisma.booking.count({
-        where: {
-          teacherId: user.teacherProfile.id,
-          status: "PENDING",
-          endsAt: { gt: new Date() },
-        },
-      })
-    : 0;
+  // Compteurs de la barre latérale, en parallèle — un rôle n'en alimente que
+  // les siens :
+  // - « Demandes » (prof) : une demande en attente immobilise un créneau ;
+  // - « Mes cours » (élève) : le prof a tranché depuis la dernière visite (même
+  //   règle que `isStudentNews` ; un élève a peu de cours, on filtre en mémoire) ;
+  // - « Messages » : fils non lus, comptés en une requête indexée plutôt qu'en
+  //   rapatriant les messages (cf. `messageUnreadCount`).
+  const teacherProfile = user.teacherProfile;
+  const studentProfile = user.studentProfile;
+  const profile = teacherProfile ?? studentProfile;
 
-  // Pastille de « Mes cours » (élève) : le prof a tranché une demande depuis la
-  // dernière visite. Même règle que le marqueur « Nouveau » des cartes — on lit
-  // le minimum et on filtre en mémoire pour n'avoir qu'une seule définition.
-  let studentNewsCount = 0;
-  if (user.studentProfile) {
-    const recent = await prisma.booking.findMany({
-      where: { studentId: user.studentProfile.id },
-      take: 200,
-      select: {
-        status: true,
-        confirmedAt: true,
-        cancelledAt: true,
-        cancelledById: true,
-        updatedAt: true,
-      },
-    });
-    const seenAt = user.studentProfile.coursSeenAt;
-    studentNewsCount = recent.filter((b) =>
-      isStudentNews(b, seenAt, session.user.id)
-    ).length;
-  }
-
-  // Pastille « Messages » : fils généraux avec des messages de l'autre
-  // participant postérieurs à mon repère de lecture. Même règle que l'inbox.
-  let messagesUnread = 0;
-  const profile = user.teacherProfile ?? user.studentProfile;
-  if (profile) {
-    const isTeacher = Boolean(user.teacherProfile);
-    const [incoming, reads] = await Promise.all([
-      prisma.message.findMany({
-        where: isTeacher
-          ? { teacherId: profile.id, reportId: null, sender: "STUDENT" }
-          : { studentId: profile.id, reportId: null, sender: "TEACHER" },
-        take: 500,
-        select: {
-          teacherId: true,
-          studentId: true,
-          sender: true,
-          createdAt: true,
-        },
-      }),
-      prisma.messageThreadState.findMany({
-        where: isTeacher ? { teacherId: profile.id } : { studentId: profile.id },
-        select: {
-          teacherId: true,
-          studentId: true,
-          teacherReadAt: true,
-          studentReadAt: true,
-        },
-      }),
-    ]);
-    const messages: InboxMessage[] = incoming.map((m) => ({
-      teacherId: m.teacherId,
-      studentId: m.studentId,
-      sender: m.sender,
-      content: "",
-      hasAttachment: false,
-      createdAt: m.createdAt,
-    }));
-    messagesUnread = countUnread(messages, reads, isTeacher ? "TEACHER" : "STUDENT");
-  }
+  const [pendingCount, studentNewsCount, messagesUnread] = await Promise.all([
+    teacherProfile
+      ? prisma.booking.count({
+          where: {
+            teacherId: teacherProfile.id,
+            status: "PENDING",
+            endsAt: { gt: new Date() },
+          },
+        })
+      : Promise.resolve(0),
+    studentProfile
+      ? prisma.booking
+          .findMany({
+            where: { studentId: studentProfile.id },
+            take: 200,
+            select: {
+              status: true,
+              confirmedAt: true,
+              cancelledAt: true,
+              cancelledById: true,
+              updatedAt: true,
+            },
+          })
+          .then(
+            (recent) =>
+              recent.filter((b) =>
+                isStudentNews(b, studentProfile.coursSeenAt, session.user.id)
+              ).length
+          )
+      : Promise.resolve(0),
+    profile
+      ? messageUnreadCount(teacherProfile ? "TEACHER" : "STUDENT", profile.id)
+      : Promise.resolve(0),
+  ]);
 
   return (
     <div className="lg:flex">

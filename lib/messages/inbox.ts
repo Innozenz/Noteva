@@ -66,21 +66,6 @@ function isUnread(
 }
 
 /**
- * Nombre total de messages non lus pour l'utilisateur, tous fils confondus.
- * Sert la pastille ; l'appelant peut ne passer que les messages entrants.
- */
-export function countUnread(
-  messages: InboxMessage[],
-  reads: ThreadRead[],
-  viewer: Viewer
-): number {
-  const readAt = readAtMap(reads, viewer);
-  return messages.filter((m) =>
-    isUnread(m, viewer, readAt.get(key(m.teacherId, m.studentId)))
-  ).length;
-}
-
-/**
  * Une entrée par couple ayant au moins un message, du plus récent au plus
  * ancien, avec le dernier message et le compte de non-lus.
  */

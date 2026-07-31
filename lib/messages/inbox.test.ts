@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  buildInbox,
-  countUnread,
-  type InboxMessage,
-  type ThreadRead,
-} from "./inbox";
+import { buildInbox, type InboxMessage, type ThreadRead } from "./inbox";
 
 const T1 = "t1";
 const S1 = "s1";
@@ -60,7 +55,6 @@ describe("buildInbox", () => {
     ];
 
     expect(buildInbox(messages, reads, "TEACHER")[0].unread).toBe(1);
-    expect(countUnread(messages, reads, "TEACHER")).toBe(1);
   });
 
   it("sans repère de lecture, tout ce qui vient de l'autre est non lu", () => {
@@ -69,8 +63,8 @@ describe("buildInbox", () => {
       msg({ sender: "STUDENT" }),
       msg({ sender: "TEACHER" }),
     ];
-    expect(countUnread(messages, [], "TEACHER")).toBe(2);
+    expect(buildInbox(messages, [], "TEACHER")[0].unread).toBe(2);
     // Côté élève, c'est le message du prof qui est non lu.
-    expect(countUnread(messages, [], "STUDENT")).toBe(1);
+    expect(buildInbox(messages, [], "STUDENT")[0].unread).toBe(1);
   });
 });
