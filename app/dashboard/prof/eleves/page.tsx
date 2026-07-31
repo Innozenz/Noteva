@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 
 import { PageTitle } from "@/components/editorial";
+import { ListFilters } from "@/components/list-filters";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -14,9 +15,14 @@ import { ageOn } from "@/lib/user/age";
  *
  * La liste se déduit des réservations : est « mon élève » quiconque a déjà
  * réservé avec moi. Chaque ligne résume l'essentiel (instruments, nombre de
- * cours, prochain / dernier), et mène à sa fiche.
+ * cours, prochain / dernier), et mène à sa fiche. Recherche par nom et filtre
+ * par instrument vivent dans l'URL — la page filtre côté serveur.
  */
-export default async function TeacherStudentsPage() {
+export default async function TeacherStudentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; instrument?: string }>;
+}) {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session?.user) redirect("/");
@@ -86,6 +92,20 @@ export default async function TeacherStudentsPage() {
     })
     .sort((a, b) => b.lastActivity - a.lastActivity);
 
+  const { q, instrument } = await searchParams;
+  const needle = (q ?? "").trim().toLowerCase();
+  const instrumentOptions = [
+    ...new Set(students.flatMap((s) => s.bookings.map((b) => b.instrument.name))),
+  ]
+    .sort((a, b) => a.localeCompare(b, "fr"))
+    .map((name) => ({ value: name, label: name }));
+
+  const visibleRows = rows.filter(
+    (row) =>
+      (!needle || row.name.toLowerCase().includes(needle)) &&
+      (!instrument || row.instruments.includes(instrument))
+  );
+
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <header className="flex flex-col gap-2 border-b border-border pb-6">
@@ -98,8 +118,26 @@ export default async function TeacherStudentsPage() {
       </header>
 
       {rows.length > 0 ? (
+        <ListFilters
+          searchKey="q"
+          searchPlaceholder="Rechercher un élève…"
+          chip={
+            instrumentOptions.length >= 2
+              ? { key: "instrument", label: "Instrument", options: instrumentOptions }
+              : undefined
+          }
+        />
+      ) : null}
+
+      {rows.length > 0 && visibleRows.length === 0 ? (
+        <p className="rounded-lg border border-border bg-surface px-4 py-8 text-center text-sm text-muted">
+          Aucun élève ne correspond à ces filtres.
+        </p>
+      ) : null}
+
+      {visibleRows.length > 0 ? (
         <ul className="divide-y divide-border border-y border-border">
-          {rows.map((row) => (
+          {visibleRows.map((row) => (
             <li key={row.id}>
               <Link
                 href={`/dashboard/prof/eleves/${row.id}`}

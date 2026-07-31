@@ -5,6 +5,7 @@ import { ChevronLeft, FileText } from "lucide-react";
 
 import { PageTitle } from "@/components/editorial";
 import { FicheTabs } from "@/components/fiche-tabs";
+import { ListFilters } from "@/components/list-filters";
 import { MessageThread } from "@/components/message-thread";
 import { ReportViewer } from "@/components/report-view";
 import { StudentNoteEditor } from "@/components/student-note-editor";
@@ -42,7 +43,7 @@ export default async function StudentFilePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ onglet?: string }>;
+  searchParams: Promise<{ onglet?: string; cr_q?: string; cr_instrument?: string }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
 
@@ -205,9 +206,24 @@ export default async function StudentFilePage({
     { key: "messages", label: "Messages", badge: messages.length },
     { key: "note", label: "Note privée" },
   ];
-  const requested = (await searchParams).onglet;
-  const active = tabs.some((t) => t.key === requested) ? requested! : "profil";
+  const sp = await searchParams;
+  const active = tabs.some((t) => t.key === sp.onglet) ? sp.onglet! : "profil";
   const basePath = `/dashboard/prof/eleves/${student.id}`;
+
+  const crNeedle = (sp.cr_q ?? "").trim().toLowerCase();
+  const crInstrument = sp.cr_instrument ?? "";
+  const reportInstruments = [
+    ...new Set(reports.map((b) => b.instrument.name)),
+  ]
+    .sort((a, b) => a.localeCompare(b, "fr"))
+    .map((name) => ({ value: name, label: name }));
+  const visibleReports = reports.filter(
+    (b) =>
+      (!crInstrument || b.instrument.name === crInstrument) &&
+      (!crNeedle ||
+        (b.report?.content ?? "").toLowerCase().includes(crNeedle) ||
+        b.instrument.name.toLowerCase().includes(crNeedle))
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
@@ -318,8 +334,29 @@ export default async function StudentFilePage({
             Aucun compte rendu pour cet élève pour l&apos;instant.
           </p>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {reports.map((b) => (
+          <div className="flex flex-col gap-4">
+            <ListFilters
+              searchKey="cr_q"
+              searchPlaceholder="Rechercher dans les comptes rendus…"
+              chip={
+                reportInstruments.length >= 2
+                  ? {
+                      key: "cr_instrument",
+                      label: "Instrument",
+                      options: reportInstruments,
+                    }
+                  : undefined
+              }
+            />
+
+            {visibleReports.length === 0 ? (
+              <p className="rounded-lg border border-border bg-surface px-4 py-8 text-center text-sm text-muted">
+                Aucun compte rendu ne correspond à ces filtres.
+              </p>
+            ) : null}
+
+            <ul className="flex flex-col gap-3">
+              {visibleReports.map((b) => (
               <li
                 key={b.id}
                 id={`cr-${b.id}`}
@@ -360,8 +397,9 @@ export default async function StudentFilePage({
                   />
                 </div>
               </li>
-            ))}
-          </ul>
+              ))}
+            </ul>
+          </div>
         )
       ) : null}
     </div>
