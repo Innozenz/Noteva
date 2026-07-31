@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "commits": "node scripts/generate-commits-csv.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
