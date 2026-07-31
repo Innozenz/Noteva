@@ -15,6 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { auth } from "@/lib/auth";
+import { lessonTitle } from "@/lib/bookings/title";
 import prisma from "@/lib/prisma";
 import { isMinor } from "@/lib/student/profile";
 import { ageOn } from "@/lib/user/age";
@@ -87,6 +88,7 @@ export default async function StudentFilePage({
           id: true,
           startsAt: true,
           status: true,
+          isTrial: true,
           instrument: { select: { name: true } },
           report: {
             select: {
@@ -280,7 +282,9 @@ export default async function StudentFilePage({
                 className="flex items-center justify-between gap-3 py-3"
               >
                 <p className="min-w-0 text-sm">
-                  <span className="font-medium">{b.instrument.name}</span>
+                  <span className="font-medium">
+                    {lessonTitle(b.instrument.name, b.isTrial)}
+                  </span>
                   <span className="text-muted">
                     {" "}
                     · {dateFormat.format(b.startsAt)}
@@ -319,32 +323,42 @@ export default async function StudentFilePage({
               <li
                 key={b.id}
                 id={`cr-${b.id}`}
-                className="flex scroll-mt-20 flex-col gap-3 rounded-lg border border-border p-4"
+                className="scroll-mt-20 overflow-hidden rounded-lg border border-border"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm">
-                    <span className="font-medium">{b.instrument.name}</span>
-                    <span className="text-muted">
-                      {" "}
-                      · {dateFormat.format(b.startsAt)}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
+                      <FileText className="h-4 w-4" />
                     </span>
-                  </p>
-                  <Badge variant="secondary">
+                    <div className="min-w-0">
+                      <p className="font-medium leading-tight">
+                        {lessonTitle(b.instrument.name, b.isTrial)}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {dateFormat.format(b.startsAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant={b.status === "CONFIRMED" ? "success" : "secondary"}
+                  >
                     {STATUS_LABELS[b.status] ?? b.status}
                   </Badge>
                 </div>
-                <ReportViewer
-                  bookingId={b.id}
-                  me="TEACHER"
-                  report={{
-                    content: b.report!.content,
-                    attachments: b.report!.attachments,
-                    comments: b.report!.comments.map((c) => ({
-                      ...c,
-                      createdAt: c.createdAt.toISOString(),
-                    })),
-                  }}
-                />
+                <div className="p-4">
+                  <ReportViewer
+                    bookingId={b.id}
+                    me="TEACHER"
+                    report={{
+                      content: b.report!.content,
+                      attachments: b.report!.attachments,
+                      comments: b.report!.comments.map((c) => ({
+                        ...c,
+                        createdAt: c.createdAt.toISOString(),
+                      })),
+                    }}
+                  />
+                </div>
               </li>
             ))}
           </ul>

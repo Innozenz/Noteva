@@ -17,6 +17,7 @@ import { AudioPlayer } from "@/components/audio-player";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { lessonTitle } from "@/lib/bookings/title";
 import { FILE_ACCEPT } from "@/lib/reports/attachments";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ export type ReportEditorLesson = {
   dateLabel: string;
   studentName: string;
   instrumentName: string;
+  isTrial: boolean;
   content: string;
   attachments: ReportAttachmentView[];
 };
@@ -183,7 +185,8 @@ export function ReportEditor({ lesson }: { lesson: ReportEditorLesson }) {
       >
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">
-            {lesson.instrumentName} avec {lesson.studentName}
+            {lessonTitle(lesson.instrumentName, lesson.isTrial)} avec{" "}
+            {lesson.studentName}
           </p>
           <p className="truncate text-xs text-muted">{lesson.dateLabel}</p>
         </div>

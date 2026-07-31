@@ -39,6 +39,7 @@ export default async function TeacherReportsPage() {
     select: {
       id: true,
       startsAt: true,
+      isTrial: true,
       instrument: { select: { name: true } },
       student: { select: { user: { select: { name: true } } } },
       report: {
@@ -73,6 +74,7 @@ export default async function TeacherReportsPage() {
     dateLabel: dateFormat.format(b.startsAt),
     studentName: b.student.user.name ?? "Élève",
     instrumentName: b.instrument.name,
+    isTrial: b.isTrial,
     content: b.report?.content ?? "",
     attachments: b.report?.attachments ?? [],
   }));

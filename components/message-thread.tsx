@@ -15,6 +15,16 @@ export type MessageView = {
   createdAt: string;
 };
 
+/** Date + heure d'envoi, dans le fuseau du lecteur. */
+function formatWhen(iso: string): string {
+  return new Date(iso).toLocaleString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 /**
  * Fil d'échanges asynchrone, réutilisable.
  *
@@ -79,11 +89,17 @@ export function MessageThread({
           {emptyLabel ?? "Aucun message pour l'instant."}
         </p>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-3">
           {messages.map((msg) => {
             const mine = msg.sender === me;
             return (
-              <li key={msg.id} className={cn("flex", mine && "justify-end")}>
+              <li
+                key={msg.id}
+                className={cn(
+                  "flex flex-col gap-0.5",
+                  mine ? "items-end" : "items-start"
+                )}
+              >
                 <div
                   className={cn(
                     "max-w-[80%] whitespace-pre-line rounded-lg px-3 py-2 text-sm",
@@ -92,6 +108,9 @@ export function MessageThread({
                 >
                   {msg.content}
                 </div>
+                <span className="px-1 text-xs text-subtle">
+                  {formatWhen(msg.createdAt)}
+                </span>
               </li>
             );
           })}
