@@ -408,7 +408,10 @@ export function BookingWidget({
               // Connecté, mais pas encore de profil élève.
               <div className="flex flex-col gap-2">
                 <Button asChild size="lg">
-                  <Link href="/onboarding" onClick={persistSelection}>
+                  <Link
+                    href={`/onboarding?callbackUrl=${encodeURIComponent(`/profs/${teacherSlug}`)}`}
+                    onClick={persistSelection}
+                  >
                     Créer mon profil élève
                   </Link>
                 </Button>

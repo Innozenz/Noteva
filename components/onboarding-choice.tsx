@@ -50,7 +50,11 @@ const CHOICES: {
   },
 ];
 
-export function OnboardingChoice() {
+export function OnboardingChoice({
+  callbackUrl,
+}: {
+  callbackUrl?: string | null;
+}) {
   const router = useRouter();
   const [selected, setSelected] = useState<Role | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -78,7 +82,14 @@ export function OnboardingChoice() {
         return;
       }
 
-      router.push(result.data.redirectTo ?? "/dashboard");
+      // Un chemin de retour ne vaut que pour un nouvel élève : il vient d'une
+      // fiche prof qu'il voulait réserver, et il peut désormais le faire. Un
+      // prof, lui, n'a rien à y faire — il file vers son espace.
+      router.push(
+        callbackUrl && selected === "STUDENT"
+          ? callbackUrl
+          : (result.data.redirectTo ?? "/dashboard")
+      );
       router.refresh();
     } finally {
       setIsLoading(false);

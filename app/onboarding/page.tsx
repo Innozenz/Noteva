@@ -22,12 +22,25 @@ export const metadata: Metadata = {
  * Node, plus seulement l'edge), mais une lecture DB à chaque requête
  * interceptée n'y a pas sa place ; il s'en tient à la présence d'un cookie.
  */
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session?.user) {
     redirect("/");
   }
+
+  // Chemin de retour transmis depuis la fiche prof (« Créer mon profil élève »),
+  // pour reprendre la réservation une fois le profil créé. Restreint aux chemins
+  // internes, comme sur /connexion, contre les redirections ouvertes.
+  const raw = (await searchParams).callbackUrl ?? "";
+  const callbackUrl =
+    raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/\\")
+      ? raw
+      : null;
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
@@ -36,7 +49,7 @@ export default async function OnboardingPage() {
 
   // Le choix est définitif : repasser ici une fois le rôle posé n'a pas de sens.
   if (user?.role) {
-    redirect("/dashboard");
+    redirect(callbackUrl ?? "/dashboard");
   }
 
   const firstName = user ? givenName(user) : null;
@@ -63,7 +76,7 @@ export default async function OnboardingPage() {
         </p>
       </div>
 
-      <OnboardingChoice />
+      <OnboardingChoice callbackUrl={callbackUrl} />
     </main>
   );
 }
