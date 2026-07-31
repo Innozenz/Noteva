@@ -367,6 +367,36 @@ function assignColumns<T extends AgendaEvent>(
 }
 
 /**
+ * Plages fermées d'une journée : le complément des ouvertures dans les bornes
+ * verticales de la grille.
+ *
+ * C'est le gris de fond — ni ouvert, ni congé (un congé se pose *sur* une
+ * ouverture, jamais dans le gris). Sert à écrire « Fermé » à même ces plages,
+ * plutôt que de laisser la seule légende les nommer. Pur et testé : le
+ * complément d'intervalles se relit mal à l'œil.
+ */
+export function closedGaps(
+  open: Interval[],
+  rangeStart: number,
+  rangeEnd: number
+): Interval[] {
+  const sorted = [...open].sort((a, b) => a.start - b.start);
+  const gaps: Interval[] = [];
+  let cursor = rangeStart;
+
+  for (const interval of sorted) {
+    if (interval.start > cursor) {
+      gaps.push({ start: cursor, end: interval.start });
+    }
+    cursor = Math.max(cursor, interval.end);
+  }
+
+  if (cursor < rangeEnd) gaps.push({ start: cursor, end: rangeEnd });
+
+  return gaps;
+}
+
+/**
  * Amplitude horaire à afficher.
  *
  * Elle englobe les **cours** autant que les ouvertures : un cours réservé avant

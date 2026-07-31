@@ -4,6 +4,7 @@ import { TZDate } from "@date-fns/tz";
 import {
   buildMonthAgenda,
   buildWeekAgenda,
+  closedGaps,
   currentWeekStart,
   monthRange,
   startOfWeek,
@@ -460,5 +461,46 @@ describe("buildWeekAgenda — amplitude affichée", () => {
 
     expect(agenda.startMinute).toBe(8 * 60);
     expect(agenda.endMinute).toBe(20 * 60);
+  });
+});
+
+describe("closedGaps", () => {
+  it("rend le complément des ouvertures dans les bornes", () => {
+    // Ouvert 9–12 et 14–17, grille 8–20 → fermé 8–9, 12–14, 17–20.
+    expect(
+      closedGaps(
+        [
+          { start: 540, end: 720 },
+          { start: 840, end: 1020 },
+        ],
+        480,
+        1200
+      )
+    ).toEqual([
+      { start: 480, end: 540 },
+      { start: 720, end: 840 },
+      { start: 1020, end: 1200 },
+    ]);
+  });
+
+  it("une journée sans ouverture est un seul gros trou", () => {
+    expect(closedGaps([], 480, 1200)).toEqual([{ start: 480, end: 1200 }]);
+  });
+
+  it("une journée ouverte de bout en bout n'a aucun trou", () => {
+    expect(closedGaps([{ start: 480, end: 1200 }], 480, 1200)).toEqual([]);
+  });
+
+  it("fusionne des ouvertures qui se chevauchent sans inventer de trou", () => {
+    expect(
+      closedGaps(
+        [
+          { start: 540, end: 720 },
+          { start: 660, end: 900 },
+        ],
+        540,
+        900
+      )
+    ).toEqual([]);
   });
 });

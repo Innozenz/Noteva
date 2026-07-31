@@ -53,6 +53,7 @@ import {
 } from "@/lib/availability/zone";
 import {
   buildWeekAgenda,
+  closedGaps,
   type AgendaDay,
   type PlacedEvent,
 } from "@/lib/teacher/agenda";
@@ -617,6 +618,8 @@ export function TeacherAgenda({
                       day={day}
                       dayIndex={dayIndex}
                       offset={offset}
+                      rangeStart={agenda.startMinute}
+                      rangeEnd={agenda.endMinute}
                       selectedId={selectedId}
                       onSelect={select}
                       dnd={dnd}
@@ -741,6 +744,8 @@ function DayColumn({
   day,
   dayIndex,
   offset,
+  rangeStart,
+  rangeEnd,
   selectedId,
   onSelect,
   dnd,
@@ -748,6 +753,8 @@ function DayColumn({
   day: AgendaDay<AgendaLesson>;
   dayIndex: number;
   offset: (minute: number) => number;
+  rangeStart: number;
+  rangeEnd: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
   dnd: Dnd;
@@ -756,6 +763,12 @@ function DayColumn({
     top: `${offset(start)}%`,
     height: `${offset(end) - offset(start)}%`,
   });
+
+  // Plages fermées (le gris) à nommer : « Fermé » à même la bande, comme
+  // « Congé » sur la hachure. Sur une journée sans aucune ouverture, c'est un
+  // seul gros trou → un « Fermé » centré ; sur une journée partielle, un par
+  // creux assez haut.
+  const gaps = closedGaps(day.open, rangeStart, rangeEnd);
 
   return (
     // Gris par défaut : hors des plages ouvertes, personne ne peut réserver.
@@ -772,14 +785,22 @@ function DayColumn({
       ))}
 
       {/* Congés : hachures sur le blanc de l'ouverture, pour dire « c'était
-          ouvert, je l'ai fermé » — et non « jamais ouvert », qui est le gris. */}
+          ouvert, je l'ai fermé » — et non « jamais ouvert », qui est le gris.
+          Le mot est écrit à même la bande, pas seulement en légende, dès qu'elle
+          est assez haute — sur un fond opaque pour rester lisible sur la hachure. */}
       {day.closed.map((interval) => (
         <div
           key={`closed-${interval.start}`}
-          className="absolute inset-x-0 bg-background"
+          className="absolute inset-x-0 flex items-center justify-center overflow-hidden bg-background"
           style={{ ...band(interval.start, interval.end), backgroundImage: HATCH }}
           title="Congé"
-        />
+        >
+          {interval.end - interval.start >= 45 ? (
+            <span className="pointer-events-none rounded bg-background/85 px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted">
+              Congé
+            </span>
+          ) : null}
+        </div>
       ))}
 
       {/* Les lignes horaires passent par-dessus les fonds, sinon la bande
@@ -788,6 +809,21 @@ function DayColumn({
         className="pointer-events-none absolute inset-0"
         style={{ backgroundImage: HOUR_LINES }}
       />
+
+      {/* « Fermé » au centre de chaque plage fermée assez haute — au-dessus des
+          lignes horaires, sous les cours (un cours posé sur un créneau fermé le
+          recouvre). Les creux trop courts restent muets pour ne pas charger. */}
+      {gaps.map((gap) =>
+        gap.end - gap.start >= 45 ? (
+          <span
+            key={`closed-label-${gap.start}`}
+            className="pointer-events-none absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded bg-background/85 px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted"
+            style={{ top: `${offset((gap.start + gap.end) / 2)}%` }}
+          >
+            Fermé
+          </span>
+        ) : null
+      )}
 
       {day.events.map((placed) => (
         <EventBlock
