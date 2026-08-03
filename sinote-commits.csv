@@ -82,3 +82,18 @@ Lien vers le compte rendu depuis l'historique des cours,✨ Fonctionnalité,🧑
 Filtrer les élèves et les comptes rendus,✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-31,10:09,bb14dc0
 Visionneuse plein écran des images,✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-31,10:21,cd2acd6
 "Kanban à jour + historique des commits, et docs projet",📝 Docs,🛠️ Infra,2026-07-31,11:19,8aba838
+Script de regeneration de l'historique des commits,🔧 Config,🛠️ Infra,2026-07-31,11:36,22358a9
+Navigation unifiée dans une barre latérale,♻️ Refactor,🖌️ Design,2026-07-31,16:45,5dbfdf9
+"Pièces jointes, audio, pliage animé et filtre par date",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-31,16:45,bdf1c02
+"Filtres élève, instrument, dates et recherche",✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-31,17:11,0713380
+Rédaction et édition depuis la fiche élève,✨ Fonctionnalité,🧑‍🏫 Espace prof,2026-07-31,18:05,956110a
+Retours d'action unifiés en toasts,✨ Fonctionnalité,🖌️ Design,2026-07-31,19:57,f073e73
+Formulaires de profil sur les toasts,✨ Fonctionnalité,🖌️ Design,2026-07-31,20:02,ef74590
+Dernières surfaces d'enregistrement sur les toasts,✨ Fonctionnalité,🖌️ Design,2026-07-31,20:29,bc1e9ee
+Tunnel de réservation sans impasse,✨ Fonctionnalité,🏗️ Fondations,2026-07-31,20:58,6446db5
+CallbackUrl à travers l'onboarding,✨ Fonctionnalité,🏗️ Fondations,2026-07-31,21:02,b0b1e3a
+Signal in-app pour l'élève,✨ Fonctionnalité,🖌️ Design,2026-07-31,22:43,daca22c
+Boîte de réception agrégée,✨ Fonctionnalité,💬 Messagerie,2026-07-31,22:58,68d8421
+Zone de saisie des messages et pièces jointes audio,🐛 Correctif,🖌️ Design,2026-07-31,23:18,06e763b
+"Compteur de messages en SQL, compteurs parallélisés",⚡ Perf,🖌️ Design,2026-07-31,23:37,eda7359
+"Nommer les zones à même la grille (congé, fermé)",✨ Fonctionnalité,📅 Agenda,2026-08-01,00:05,dd4bd5a

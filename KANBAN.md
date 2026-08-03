@@ -20,7 +20,7 @@ Marketplace où des élèves trouvent un prof de musique/chant et réservent des
 - [x] Page d'accueil éditoriale (portée gravée animée, direction artistique)
 - [x] Recherche `/profs` (filtres dans l'URL, classement bayésien, indexable)
 - [x] Fiche prof publique (SEO, JSON-LD, créneaux groupés matin/après-midi/soir)
-- [x] Widget de réservation (créneaux réels, une demande en quelques clics)
+- [x] Widget de réservation (créneaux réels, une demande en quelques clics) — **tunnel sans impasse** : appel à l'action selon le visiteur (se connecter / créer un profil élève / réserver), retour sur la fiche après connexion (callbackUrl à travers l'onboarding), sélection conservée, squelette de chargement, confirmation renforcée
 - [x] Âge sur les profils (prof : optionnel et opt-in sur la fiche publique ; élève : affiché sur la fiche)
 
 ### Espace prof
@@ -28,9 +28,9 @@ Marketplace où des élèves trouvent un prof de musique/chant et réservent des
 - [x] Disponibilités (semaine type + congés)
 - [x] Demandes de cours (boîte de réception, confirmer/refuser/clôturer)
 - [x] **Photo de profil** (sur `User`, publique côté prof ; traitée par sharp — redim/WebP/EXIF retiré)
-- [x] **Comptes rendus de cours** : écrit par le prof, lu par l'élève, accroché au `Booking`. Pièces jointes images/partitions + notes audio (lecteur sur mesure), en-tête « Cours de … », visionneuse d'images plein écran
-- [x] **Fiches élèves** (façon fiche client) : profil, historique, comptes rendus, messages, note privée — en onglets, avec filtres (recherche + instrument)
-- [x] **Messagerie prof ↔ élève** (asynchrone) : commentaires par compte rendu + fil général, notif e-mail, horodatage. Notes audio via le stockage
+- [x] **Comptes rendus de cours** : écrit par le prof, lu par l'élève, accroché au `Booking`. Pièces jointes images/partitions + notes audio (lecteur sur mesure), en-tête « Cours de … », visionneuse d'images plein écran, **pliage/dépliage animé**
+- [x] **Fiches élèves** (façon fiche client) : profil, historique, comptes rendus, messages, note privée — en onglets, avec filtres (recherche, instrument, **dates**) et **rédaction/édition des comptes rendus directement depuis la fiche**
+- [x] **Messagerie prof ↔ élève** (asynchrone) : commentaires par compte rendu + fil général, notif e-mail, horodatage. Pièces jointes + notes audio dans les fils, via le stockage
 - [x] Avis reçus + droit de réponse + signalement
 - [x] Abonnement Stripe (checkout, portail, visibilité dérivée de l'abonnement)
 - [x] **Suivi d'activité** : revenus par période, filtres, graphe mensuel, par instrument/élève, journal, export CSV
@@ -41,7 +41,11 @@ Marketplace où des élèves trouvent un prof de musique/chant et réservent des
 - [x] Mon profil (niveau par instrument, objectifs, responsable si mineur)
 - [x] Dépôt d'avis après un cours clôturé
 - [x] **Dossier partagé** (pendant de la fiche élève) : cours, comptes rendus, échanges — en onglets, note privée du prof exclue
-- [x] **Sidebar de l'espace élève** (symétrique de la sidebar prof)
+- [x] **Signal in-app** : pastille « Mes cours » quand le prof tranche une demande (confirmé / refusé / annulé), vidée à la consultation
+
+### Messagerie
+- [x] **Boîte de réception agrégée** (`/dashboard/messages`) : tous les fils prof↔élève au même endroit, aperçu du dernier message, tri par récence, des deux côtés
+- [x] **Non-lus** : compteur par conversation + pastille « Messages » dans la barre (repère de lecture par participant, marqué lu à l'ouverture du fil, compté en SQL indexé)
 
 ### Agenda « pro »
 - [x] Lignes de demi-heure + repère « maintenant »
@@ -49,6 +53,7 @@ Marketplace où des élèves trouvent un prof de musique/chant et réservent des
 - [x] Bascule jour / semaine
 - [x] Vue mois (aperçu calendrier, lecture seule)
 - [x] **Glisser-déposer** pour reprogrammer un cours confirmé (re-validation dispo + chevauchement, élève prévenu)
+- [x] **Zones nommées à même la grille** : « Congé » sur la hachure, « Fermé » sur les plages fermées (partielles comme entières), en plus de la légende
 
 ### Avis & modération
 - [x] Avis rattachés à une réservation (impossible à fabriquer), moyennes dérivées
@@ -64,7 +69,8 @@ Marketplace où des élèves trouvent un prof de musique/chant et réservent des
 - [x] Palette « ReChord » : encre sur papier chaud, primaire épicéa, accent bronze
 - [x] Polices Inter (corps) + Fraunces (titres)
 - [x] Système de mise en page éditorial (filets, titres démesurés, plus de grilles de cartes) sur tout le site
-- [x] Navigation de l'espace prof en sidebar + lien « Tableau de bord »
+- [x] **Barre latérale unique** de tout l'espace connecté (prof / élève / admin) : marque, navigation, compte cliquable — plus d'en-tête, bordure qui délimite la place
+- [x] **Retours d'action unifiés en toasts** (succès + échecs, réessai / reconnexion) : cycle de vie des cours, comptes rendus, avis, formulaires, agenda
 - [x] Renommage **Noteva → SiNote** (marque + nom du projet)
 
 ### Infra & déploiement
@@ -72,6 +78,8 @@ Marketplace où des élèves trouvent un prof de musique/chant et réservent des
 - [x] Génération du client Prisma en `postinstall` (build Vercel)
 - [x] Correctifs auth prod : client relatif à l'origine, cookie `__Secure-` lu via `getSessionCookie`, redirection après connexion
 - [x] Retrait de la connexion Google (e-mail + mot de passe uniquement pour l'instant)
+- [x] **Perf tableau de bord** : compteur de messages non lus en SQL indexé (au lieu de rapatrier les messages), compteurs de la barre parallélisés
+- [x] **Correctifs mobile** ciblés : zone de saisie des messages pleine largeur, pièces jointes audio qui ne débordent plus
 
 ---
 
@@ -83,7 +91,8 @@ Marketplace où des élèves trouvent un prof de musique/chant et réservent des
 - [ ] **Conformité RGPD** — outils FR/UE (Scaleway fr-par déjà en place), consentement du responsable pour les mineurs (photo, audio, fiches), politique de conservation et de suppression
 - [ ] **Régler le ressenti du glisser-déposer** (aimantation, fantôme, détection de colonne) après tests visuels
 - [ ] Version **élève** du suivi (cours à venir / suivis / budget)
-- [ ] **Indicateurs de non-lus** dans la messagerie (badges par fil)
+- [ ] **Audit visuel mobile** (navigateur ou test terrain) : agenda, inbox, formulaires — au-delà des correctifs déjà passés depuis la revue de code
+- [ ] **Fils de comptes rendus dans l'inbox** : agréger aussi les commentaires (aujourd'hui seuls les fils généraux y figurent)
 
 ---
 
