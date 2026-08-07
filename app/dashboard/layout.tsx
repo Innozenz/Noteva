@@ -41,6 +41,7 @@ export default async function DashboardLayout({
     where: { id: session.user.id },
     select: {
       role: true,
+      isAdmin: true,
       name: true,
       email: true,
       image: true,
@@ -49,8 +50,11 @@ export default async function DashboardLayout({
     },
   });
 
-  if (!user?.role) {
-    redirect("/onboarding");
+  // Cet espace est celui d'un prof ou d'un élève. Sans rôle marketplace, un
+  // admin n'a rien à y faire : on l'envoie à son espace plutôt qu'à l'onboarding
+  // (qui l'obligerait à se choisir prof/élève). Sinon, onboarding.
+  if (!user || (user.role !== "TEACHER" && user.role !== "STUDENT")) {
+    redirect(user?.isAdmin ? "/admin/utilisateurs" : "/onboarding");
   }
 
   // Compteurs de la barre latérale, en parallèle — un rôle n'en alimente que
@@ -103,6 +107,7 @@ export default async function DashboardLayout({
     <div className="lg:flex">
       <DashboardSidebar
         role={user.role}
+        isAdmin={user.isAdmin}
         user={{ name: user.name, email: user.email, image: user.image }}
         badges={{
           "/dashboard/prof/demandes": pendingCount,

@@ -1,3 +1,4 @@
+import type { Role } from "@prisma/client";
 import Link from "next/link";
 import { Music4, Search } from "lucide-react";
 
@@ -13,23 +14,28 @@ import { Button } from "@/components/ui/button";
  * vers les pages publiques, ni de moyen de se déconnecter, et l'espace prof
  * empilait donc deux barres sans identité.
  *
- * Le rôle **et l'identité** sont passés par le layout, qui a déjà lu
+ * Le rôle, `isAdmin` **et l'identité** sont passés par le layout, qui a déjà lu
  * l'utilisateur pour son propre contrôle : les relire ici ferait une requête de
  * plus par page, et les lire côté client les ferait clignoter — puis rester
  * périmés après un changement de nom, la session étant mise en cache.
+ *
+ * Cet en-tête n'habille que l'espace d'administration (le reste de l'espace
+ * connecté a sa barre latérale). Un admin peut aussi être prof ou élève : s'il
+ * a un rôle, « chez soi » reste son tableau de bord ; sinon, son espace admin.
  */
 export function AppHeader({
   role,
+  isAdmin,
   user,
 }: {
-  role: "TEACHER" | "STUDENT" | "ADMIN";
+  role: Role | null;
+  isAdmin: boolean;
   user: NavUser;
 }) {
-  // Le logo renvoie au hub `/dashboard`, pas à une sous-page : « chez soi »,
-  // une fois connecté, c'est le tableau de bord, qui route ensuite selon le
-  // rôle. L'admin, lui, n'a pas de hub `/dashboard` (il y serait redirigé) :
-  // on l'envoie droit à son espace.
-  const home = role === "ADMIN" ? "/admin/avis" : "/dashboard";
+  // Le logo renvoie au hub `/dashboard` quand la personne a un rôle marketplace
+  // (le hub route ensuite selon le rôle). Un admin sans rôle n'a pas de hub — il
+  // y serait redirigé vers l'onboarding : on l'envoie droit à son espace.
+  const home = role === "TEACHER" || role === "STUDENT" ? "/dashboard" : "/admin/utilisateurs";
 
   return (
     <header className="border-b border-border bg-white">
@@ -47,7 +53,7 @@ export function AppHeader({
               Trouver un prof
             </Link>
           </Button>
-          <UserNav role={role} user={user} />
+          <UserNav role={role} isAdmin={isAdmin} user={user} />
         </nav>
       </div>
     </header>

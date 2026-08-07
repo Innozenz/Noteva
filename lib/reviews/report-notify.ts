@@ -20,7 +20,7 @@ export function notifyReportInBackground(context: ReportContext): void {
   void (async () => {
     try {
       const admins = await prisma.user.findMany({
-        where: { role: "ADMIN" },
+        where: { isAdmin: true },
         select: { email: true },
       });
 

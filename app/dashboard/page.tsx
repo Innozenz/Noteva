@@ -73,11 +73,6 @@ export default async function DashboardPage() {
     },
   });
 
-  // Un administrateur n'a ni fiche prof ni cours : sans cette sortie il
-  // tomberait dans la branche « élève » et lirait « Vos cours et votre profil
-  // d'élève » au-dessus de cartes vides.
-  if (user.role === "ADMIN") redirect("/admin/avis");
-
   const firstName = givenName(user);
 
   const now = new Date();

@@ -24,15 +24,11 @@ export default async function MessagesInboxPage() {
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: session.user.id },
     select: {
-      role: true,
       timezone: true,
       teacherProfile: { select: { id: true } },
       studentProfile: { select: { id: true } },
     },
   });
-
-  // Un administrateur n'a pas de fils : il n'a rien à voir ici.
-  if (user.role === "ADMIN") redirect("/admin/avis");
 
   const viewer: Viewer = user.teacherProfile ? "TEACHER" : "STUDENT";
   const where = user.teacherProfile

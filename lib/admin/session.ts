@@ -11,11 +11,13 @@ import prisma from "@/lib/prisma";
  * agissent — il n'y a qu'un rôle à vérifier, ce qui rend l'autorisation
  * triviale à relire.
  *
- * **Un compte ne devient jamais administrateur par l'application.**
- * `/api/onboarding` n'accepte que TEACHER et STUDENT, et rien d'autre n'écrit
- * ce rôle. La promotion se fait à la main en base :
+ * L'administration est une **capacité** (`User.isAdmin`), pas un rôle : un prof
+ * ou un élève peut être admin, ce qu'une valeur `role = ADMIN` interdisait.
  *
- *     UPDATE "user" SET role = 'ADMIN' WHERE email = '…';
+ * **Un compte ne devient jamais administrateur par l'application.** Rien
+ * n'écrit `isAdmin`. La promotion se fait à la main en base :
+ *
+ *     UPDATE "user" SET "isAdmin" = true WHERE email = '…';
  *
  * C'est volontaire. Une interface qui distribue les droits d'administration
  * est une surface d'attaque permanente pour un besoin qui, sur cette
@@ -39,12 +41,12 @@ export async function requireAdmin(): Promise<AdminSession> {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true },
+    select: { isAdmin: true },
   });
 
   // 404 et non 403 : confirmer l'existence d'une zone d'administration à
   // quelqu'un qui n'y a pas droit lui apprend où insister.
-  if (user?.role !== "ADMIN") {
+  if (!user?.isAdmin) {
     return { ok: false, status: 404, error: "Introuvable" };
   }
 

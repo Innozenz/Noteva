@@ -1,11 +1,13 @@
 "use client";
 
+import type { Role } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
   CreditCard,
   LogOut,
   Settings,
+  ShieldCheck,
   Star,
   UserCog,
 } from "lucide-react";
@@ -40,6 +42,10 @@ export type NavUser = {
  * /dashboard, ce qui donnait un menu où « Abonnement » n'ouvrait pas
  * l'abonnement.
  *
+ * `isAdmin` est **orthogonal** au rôle : un prof ou un élève peut être admin,
+ * et voit alors une entrée « Administration » en plus de ses entrées de rôle.
+ * Un admin **sans** rôle marketplace (role null) n'a que cette entrée.
+ *
  * **L'identité vient du layout, pas de `authClient.useSession()`.** Better Auth
  * garde la session en cache côté client : après un changement de nom sur
  * /dashboard/compte, l'en-tête continuait d'afficher l'ancien juste au-dessus
@@ -53,10 +59,12 @@ export type NavUser = {
  */
 export function UserNav({
   role,
+  isAdmin = false,
   user,
   showDetails = false,
 }: {
-  role: "TEACHER" | "STUDENT" | "ADMIN";
+  role: Role | null;
+  isAdmin?: boolean;
   user: NavUser;
   /**
    * Déclencheur « plein » : avatar + nom + e-mail, toute la rangée cliquable.
@@ -78,9 +86,7 @@ export function UserNav({
     : user.email.charAt(0).toUpperCase();
 
   const byRole =
-    role === "ADMIN"
-      ? [{ icon: Star, label: "Modération des avis", href: "/admin/avis" }]
-      : role === "TEACHER"
+    role === "TEACHER"
       ? [
           { icon: UserCog, label: "Ma fiche", href: "/dashboard/prof" },
           { icon: Star, label: "Mes avis", href: "/dashboard/prof/avis" },
@@ -90,21 +96,29 @@ export function UserNav({
             href: "/dashboard/prof/abonnement",
           },
         ]
-      : [
+      : role === "STUDENT"
+      ? [
           { icon: CalendarDays, label: "Mes cours", href: "/dashboard/cours" },
           {
             icon: UserCog,
             label: "Mon profil",
             href: "/dashboard/cours/profil",
           },
-        ];
+        ]
+      : [];
 
-  // « Mon compte » vaut pour les trois rôles : le nom appartient à la personne,
-  // pas à sa fiche prof ni à son profil élève. C'est aussi le seul endroit où
-  // un administrateur peut modifier le sien.
+  // L'administration s'ajoute par-dessus le rôle (capacité orthogonale). « Mon
+  // compte » n'apparaît qu'avec un rôle marketplace : c'est /dashboard/compte,
+  // et l'espace connecté est fermé à un admin sans rôle. Le nom appartient à la
+  // personne, pas à sa fiche prof ni à son profil élève.
   const items = [
     ...byRole,
-    { icon: Settings, label: "Mon compte", href: "/dashboard/compte" },
+    ...(isAdmin
+      ? [{ icon: ShieldCheck, label: "Administration", href: "/admin/utilisateurs" }]
+      : []),
+    ...(role
+      ? [{ icon: Settings, label: "Mon compte", href: "/dashboard/compte" }]
+      : []),
   ];
 
   return (

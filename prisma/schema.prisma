@@ -27,6 +27,10 @@ datasource db {
 enum Role {
   STUDENT
   TEACHER
+  // Déprécié : l'administration est désormais une capacité orthogonale
+  // (`User.isAdmin`), pas un rôle — un prof ou un élève peut être admin. La
+  // valeur reste ici uniquement parce que retirer un membre d'un enum Postgres
+  // est une chirurgie inutile : plus rien ne l'écrit ni ne la lit.
   ADMIN
 }
 
@@ -59,8 +63,16 @@ model User {
 
   // null tant que l'onboarding n'est pas fait : l'inscription crée le compte
   // avant que l'utilisateur ait choisi son rôle. Les routes doivent rediriger
-  // vers /onboarding tant que ce champ est nul.
+  // vers /onboarding tant que ce champ est nul. Ne vaut plus que STUDENT ou
+  // TEACHER (voir la note sur l'enum Role) : l'admin est porté à part.
   role     Role?
+
+  // Capacité d'administration, **orthogonale** au rôle : un prof ou un élève
+  // peut être administrateur. Volontairement un booléen et non une valeur de
+  // `role`, qui forçait une exclusivité fausse (un admin ne pouvait être ni
+  // prof ni élève). Aucune interface ne l'écrit — promotion à la main en base
+  // (`UPDATE "user" SET "isAdmin" = true WHERE email='…'`), comme avant.
+  isAdmin  Boolean @default(false)
   // Fuseau IANA ("Europe/Paris"). Sert à interpréter les règles de dispo côté
   // prof, et à afficher les créneaux dans l'heure locale côté élève.
   timezone String @default("Europe/Paris")

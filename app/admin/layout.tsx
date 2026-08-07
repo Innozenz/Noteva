@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ShieldCheck, Star } from "lucide-react";
 
+import { AdminTabs } from "@/components/admin-tabs";
 import { AppHeader } from "@/components/app-header";
 import { requireAdmin } from "@/lib/admin/session";
 import prisma from "@/lib/prisma";
@@ -29,29 +28,23 @@ export default async function AdminLayout({
 
   // `requireAdmin` ne rend que l'identifiant — il sert aussi aux routes d'API,
   // qui n'ont que faire d'un nom d'affichage.
+  // Le rôle voyage avec l'identité : un admin peut aussi être prof ou élève,
+  // et l'en-tête l'utilise pour savoir où renvoie « chez soi ».
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: admin.userId },
-    select: { name: true, email: true, image: true },
+    select: { name: true, email: true, image: true, role: true },
   });
 
   return (
     <div className="min-h-screen bg-surface">
-      <AppHeader role="ADMIN" user={user} />
+      <AppHeader
+        role={user.role}
+        isAdmin
+        user={{ name: user.name, email: user.email, image: user.image }}
+      />
 
       <header className="border-b border-border bg-white">
-        <nav className="mx-auto flex max-w-4xl items-center gap-1 px-4">
-          <span className="flex items-center gap-2 py-4 pr-4 text-sm font-semibold">
-            <ShieldCheck className="h-4 w-4 text-primary" />
-            Administration
-          </span>
-          <Link
-            href="/admin/avis"
-            className="flex items-center gap-2 border-b-2 border-primary px-4 py-4 text-sm font-medium"
-          >
-            <Star className="h-4 w-4" />
-            Avis
-          </Link>
-        </nav>
+        <AdminTabs />
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>

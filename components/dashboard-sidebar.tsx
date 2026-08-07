@@ -15,7 +15,6 @@ import {
   MessageSquare,
   Music4,
   Search,
-  ShieldCheck,
   Star,
   TrendingUp,
   UserCog,
@@ -66,19 +65,19 @@ const STUDENT_ITEMS: Item[] = [
   { href: "/dashboard/cours/profil", icon: UserCog, label: "Mon profil" },
 ];
 
-const ADMIN_ITEMS: Item[] = [
-  { href: "/admin/avis", icon: ShieldCheck, label: "Administration" },
-];
-
 const ITEM_CLASS =
   "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors lg:w-full";
 
 export function DashboardSidebar({
   role,
+  isAdmin,
   user,
   badges,
 }: {
-  role: "TEACHER" | "STUDENT" | "ADMIN";
+  role: "TEACHER" | "STUDENT";
+  /** Capacité admin, orthogonale au rôle : ajoute l'entrée « Administration »
+   * au menu du compte. */
+  isAdmin: boolean;
   user: NavUser;
   /** Compteur par href (demandes en attente, cours avec du nouveau…). */
   badges: Record<string, number>;
@@ -86,13 +85,8 @@ export function DashboardSidebar({
   const pathname = usePathname();
   const activeRef = useRef<HTMLAnchorElement>(null);
 
-  const items =
-    role === "TEACHER"
-      ? TEACHER_ITEMS
-      : role === "STUDENT"
-        ? STUDENT_ITEMS
-        : ADMIN_ITEMS;
-  const home = role === "ADMIN" ? "/admin/avis" : "/dashboard";
+  const items = role === "TEACHER" ? TEACHER_ITEMS : STUDENT_ITEMS;
+  const home = "/dashboard";
 
   // Sur mobile la rangée défile et les derniers items sont hors champ : on amène
   // l'item courant dans le champ pour qu'il ne soit jamais souligné « nulle part ».
@@ -143,7 +137,7 @@ export function DashboardSidebar({
           SiNote
         </Link>
         <div className="lg:hidden">
-          <UserNav role={role} user={user} />
+          <UserNav role={role} isAdmin={isAdmin} user={user} />
         </div>
       </div>
 
@@ -151,30 +145,26 @@ export function DashboardSidebar({
       <nav className="flex gap-1 overflow-x-auto px-4 pb-2 lg:flex-1 lg:flex-col lg:gap-0.5 lg:overflow-x-visible lg:overflow-y-auto lg:px-3 lg:pb-2">
         {items.map(renderItem)}
 
-        {role !== "ADMIN" ? (
-          <>
-            <span
-              aria-hidden
-              className="hidden h-px shrink-0 bg-border lg:my-2 lg:block"
-            />
-            <Link
-              href="/profs"
-              className={cn(
-                ITEM_CLASS,
-                "text-muted hover:bg-surface hover:text-foreground"
-              )}
-            >
-              <Search className="h-4 w-4 shrink-0" />
-              <span className="lg:flex-1">Trouver un prof</span>
-            </Link>
-          </>
-        ) : null}
+        <span
+          aria-hidden
+          className="hidden h-px shrink-0 bg-border lg:my-2 lg:block"
+        />
+        <Link
+          href="/profs"
+          className={cn(
+            ITEM_CLASS,
+            "text-muted hover:bg-surface hover:text-foreground"
+          )}
+        >
+          <Search className="h-4 w-4 shrink-0" />
+          <span className="lg:flex-1">Trouver un prof</span>
+        </Link>
       </nav>
 
       {/* Compte, en pied de sidebar sur grand écran. Toute la rangée (avatar,
           nom, e-mail) ouvre le menu, pas seulement l'avatar. */}
       <div className="hidden border-t border-border p-2 lg:block">
-        <UserNav role={role} user={user} showDetails />
+        <UserNav role={role} isAdmin={isAdmin} user={user} showDetails />
       </div>
     </aside>
   );
