@@ -199,6 +199,76 @@ h3 {
   accent-color: var(--primary);
 }
 
+/**
+ * Mise en forme des comptes rendus riches (éditeur TipTap et rendu en lecture).
+ *
+ * Le reset de Tailwind efface puces et tailles de titres : on les rétablit ici,
+ * sur les seules balises de notre liste blanche d'assainissement (voir
+ * `lib/reports/sanitize.ts`), avec les jetons du thème. Une seule classe pour
+ * les deux usages, pour que ce que le prof écrit soit exactement ce que l'élève
+ * lit.
+ */
+.rich-text {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--foreground);
+}
+.rich-text > :first-child {
+  margin-top: 0;
+}
+.rich-text > :last-child {
+  margin-bottom: 0;
+}
+.rich-text p {
+  margin: 0 0 0.5rem;
+}
+.rich-text h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0.85rem 0 0.3rem;
+}
+.rich-text h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.25rem;
+}
+.rich-text ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0 0 0.5rem;
+}
+.rich-text ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+  margin: 0 0 0.5rem;
+}
+.rich-text li {
+  margin: 0.125rem 0;
+}
+.rich-text li > p {
+  margin: 0;
+}
+.rich-text strong {
+  font-weight: 600;
+}
+.rich-text em {
+  font-style: italic;
+}
+.rich-text blockquote {
+  border-left: 2px solid var(--border-strong);
+  padding-left: 0.75rem;
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+}
+/* Marque-place de l'éditeur vide (extension Placeholder de TipTap). */
+.rich-text p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
 @media (pointer: fine) {
   * {
     scrollbar-width: thin;

@@ -4,6 +4,7 @@ import { AudioPlayer } from "@/components/audio-player";
 import { type MessageView } from "@/components/message-thread";
 import { ReportComments } from "@/components/report-comments";
 import { ReportImages } from "@/components/report-images";
+import { RichTextContent } from "@/components/rich-text-content";
 
 export type ReportView = {
   content: string | null;
@@ -43,11 +44,7 @@ export function ReportViewer({
 
   return (
     <div className="flex flex-col gap-4">
-      {report.content ? (
-        <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
-          {report.content}
-        </p>
-      ) : null}
+      {report.content ? <RichTextContent html={report.content} /> : null}
 
       {images.length > 0 ? (
         <ReportImages

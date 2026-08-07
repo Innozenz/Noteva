@@ -215,7 +215,7 @@ export default async function TeacherAgendaPage({
         priceCents: true,
         studentMessage: true,
         instrument: { select: { name: true } },
-        student: { select: { user: { select: { name: true } } } },
+        student: { select: { id: true, user: { select: { name: true } } } },
       },
     }),
   ]);
@@ -230,6 +230,7 @@ export default async function TeacherAgendaPage({
     priceCents: booking.priceCents,
     studentMessage: booking.studentMessage,
     instrumentName: booking.instrument.name,
+    studentId: booking.student.id,
     studentName: booking.student.user.name,
   }));
 

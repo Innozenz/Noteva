@@ -6,6 +6,7 @@ import { ListFilters } from "@/components/list-filters";
 import { ReportEditor, type ReportEditorLesson } from "@/components/report-editor";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { reportPlainText, sanitizeReportHtml } from "@/lib/reports/sanitize";
 
 /**
  * Comptes rendus de cours.
@@ -136,7 +137,7 @@ export default async function TeacherReportsPage({
       (!needle ||
         (b.student.user.name ?? "").toLowerCase().includes(needle) ||
         b.instrument.name.toLowerCase().includes(needle) ||
-        (b.report?.content ?? "").toLowerCase().includes(needle))
+        reportPlainText(b.report?.content ?? "").toLowerCase().includes(needle))
     );
   });
 
@@ -146,7 +147,7 @@ export default async function TeacherReportsPage({
     studentName: b.student.user.name ?? "Élève",
     instrumentName: b.instrument.name,
     isTrial: b.isTrial,
-    content: b.report?.content ?? "",
+    content: b.report?.content ? sanitizeReportHtml(b.report.content) : "",
     attachments: b.report?.attachments ?? [],
   }));
 

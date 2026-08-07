@@ -6,6 +6,7 @@ import { notifyInBackground } from "@/lib/notifications/send";
 import { buildNotification } from "@/lib/notifications/templates";
 import prisma from "@/lib/prisma";
 import { canDocument } from "@/lib/reports/eligibility";
+import { sanitizeReportHtml } from "@/lib/reports/sanitize";
 
 /**
  * Compte rendu d'un cours — le texte.
@@ -56,7 +57,16 @@ export async function PUT(
       );
     }
 
-    const content = parsed.data.content?.trim() || null;
+    // Le HTML de l'éditeur riche est assaini avant stockage (liste blanche
+    // stricte) : rendu tel quel à l'élève, il serait sinon un vecteur XSS. Un
+    // contenu réduit à des balises vides retombe sur null.
+    const sanitized = parsed.data.content
+      ? sanitizeReportHtml(parsed.data.content)
+      : null;
+    const content =
+      sanitized && sanitized.replace(/<[^>]*>/g, "").trim()
+        ? sanitized
+        : null;
 
     const existing = await prisma.lessonReport.findUnique({
       where: { bookingId: access.booking.id },

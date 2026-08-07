@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   FileText,
+  Image as ImageIcon,
   Loader2,
   MessageSquare,
   Mic,
   Paperclip,
+  Pencil,
   Square,
   Trash2,
 } from "lucide-react";
@@ -16,9 +18,10 @@ import {
 import { AudioPlayer } from "@/components/audio-player";
 import { type MessageView } from "@/components/message-thread";
 import { ReportComments } from "@/components/report-comments";
+import { RichTextContent } from "@/components/rich-text-content";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { lessonTitle } from "@/lib/bookings/title";
 import { FILE_ACCEPT } from "@/lib/reports/attachments";
 import { notifySuccess } from "@/lib/toast";
@@ -78,6 +81,10 @@ export function ReportEditor({
   const [content, setContent] = useState(lesson.content);
   const [saved, setSaved] = useState(lesson.content);
   const [savingContent, setSavingContent] = useState(false);
+  // Le texte s'affiche en lecture une fois enregistré ; ce drapeau bascule vers
+  // l'édition. Tant qu'aucun texte n'est enregistré, il n'y a rien à lire, donc
+  // le champ reste ouvert quoi qu'il arrive (voir le rendu plus bas).
+  const [editingText, setEditingText] = useState(false);
   const [attachments, setAttachments] = useState(lesson.attachments);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +106,13 @@ export function ReportEditor({
   const dirty = content !== saved;
   const documented = saved.trim().length > 0 || attachments.length > 0;
 
+  // Pièces jointes regroupées par type — images, notes audio, partitions — pour
+  // que l'éditeur soit aussi lisible que la vue en lecture seule, plutôt qu'un
+  // mélange de vignettes, de lecteurs et de documents dans une seule rangée.
+  const images = attachments.filter((a) => a.kind === "IMAGE");
+  const audios = attachments.filter((a) => a.kind === "AUDIO");
+  const scores = attachments.filter((a) => a.kind === "SCORE");
+
   const saveContent = async () => {
     setSavingContent(true);
     setError(null);
@@ -108,12 +122,20 @@ export function ReportEditor({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
       });
+      const data = (await res.json().catch(() => null)) as
+        | { content?: string | null; error?: string }
+        | null;
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
         setError(data?.error ?? "L'enregistrement a échoué.");
         return;
       }
-      setSaved(content);
+      // On adopte la valeur renvoyée par le serveur : c'est elle qui a été
+      // assainie et stockée, donc la seule vérité pour la lecture et le prochain
+      // « Modifier ».
+      const stored = data?.content ?? "";
+      setContent(stored);
+      setSaved(stored);
+      setEditingText(false);
       notifySuccess("Compte rendu enregistré.");
       router.refresh();
     } catch {
@@ -272,36 +294,119 @@ export function ReportEditor({
       >
         <div className="overflow-hidden" inert={!open}>
           <div className="flex flex-col gap-4 border-t border-border px-4 py-4">
-            {/* Texte */}
-          <div className="flex flex-col gap-2">
-            <Textarea
-              rows={5}
-              value={content}
-              placeholder="Ce qui a été travaillé, les points à revoir, les exercices pour la prochaine fois…"
-              onChange={(e) => setContent(e.target.value)}
-            />
-            <div className="flex items-center gap-3">
-              <Button size="sm" disabled={!dirty || savingContent} onClick={saveContent}>
-                {savingContent ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            {/* Texte. Une fois enregistré, il s'affiche en lecture — tel que
+                l'élève le voit — avec un bouton « Modifier ». Tant qu'il est
+                vide, il n'y a rien à lire : le champ reste ouvert. */}
+          {editingText || saved.trim().length === 0 ? (
+            <div className="flex flex-col gap-2">
+              <RichTextEditor
+                value={content}
+                disabled={savingContent}
+                // Un document TipTap « vide » vaut « <p></p> » : on le ramène à
+                // une chaîne vide pour que « dirty » et « documenté » restent
+                // justes, et que le serveur le stocke bien comme null.
+                onChange={(html) => setContent(htmlIsBlank(html) ? "" : html)}
+              />
+              <div className="flex items-center gap-3">
+                <Button size="sm" disabled={!dirty || savingContent} onClick={saveContent}>
+                  {savingContent ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Enregistrer le texte
+                </Button>
+                {saved.trim().length > 0 ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={savingContent}
+                    onClick={() => {
+                      setContent(saved);
+                      setEditingText(false);
+                    }}
+                  >
+                    Annuler
+                  </Button>
                 ) : null}
-                Enregistrer le texte
-              </Button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <RichTextContent html={saved} />
+              <div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingText(true)}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Modifier
+                </Button>
+              </div>
+            </div>
+          )}
 
-          {/* Pièces jointes */}
+          {/* Pièces jointes, groupées par type */}
           {attachments.length > 0 ? (
-            <div className="flex flex-wrap gap-3">
-              {attachments.map((a) => (
-                <AttachmentTile
-                  key={a.id}
-                  attachment={a}
-                  src={`${base}/attachments/${a.id}`}
-                  onDelete={() => removeAttachment(a.id)}
-                  disabled={busy}
-                />
-              ))}
+            <div className="flex flex-col gap-4">
+              {images.length > 0 ? (
+                <AttachmentBlock
+                  icon={ImageIcon}
+                  label="Images"
+                  count={images.length}
+                >
+                  <div className="flex flex-wrap gap-3">
+                    {images.map((a) => (
+                      <AttachmentTile
+                        key={a.id}
+                        attachment={a}
+                        src={`${base}/attachments/${a.id}`}
+                        onDelete={() => removeAttachment(a.id)}
+                        disabled={busy}
+                      />
+                    ))}
+                  </div>
+                </AttachmentBlock>
+              ) : null}
+
+              {audios.length > 0 ? (
+                <AttachmentBlock
+                  icon={Mic}
+                  label="Notes audio"
+                  count={audios.length}
+                >
+                  <div className="flex flex-col gap-2">
+                    {audios.map((a) => (
+                      <AttachmentTile
+                        key={a.id}
+                        attachment={a}
+                        src={`${base}/attachments/${a.id}`}
+                        onDelete={() => removeAttachment(a.id)}
+                        disabled={busy}
+                      />
+                    ))}
+                  </div>
+                </AttachmentBlock>
+              ) : null}
+
+              {scores.length > 0 ? (
+                <AttachmentBlock
+                  icon={FileText}
+                  label="Partitions"
+                  count={scores.length}
+                >
+                  <div className="flex flex-wrap gap-3">
+                    {scores.map((a) => (
+                      <AttachmentTile
+                        key={a.id}
+                        attachment={a}
+                        src={`${base}/attachments/${a.id}`}
+                        onDelete={() => removeAttachment(a.id)}
+                        disabled={busy}
+                      />
+                    ))}
+                  </div>
+                </AttachmentBlock>
+              ) : null}
             </div>
           ) : null}
 
@@ -366,6 +471,39 @@ export function ReportEditor({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** HTML vide au sens du contenu : que des balises, aucun texte visible. */
+function htmlIsBlank(html: string): boolean {
+  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;|\s/g, "").length === 0;
+}
+
+/**
+ * Bloc d'un type de pièce jointe : un intitulé discret (icône, libellé, nombre)
+ * au-dessus de ses vignettes. C'est ce qui donne à l'éditeur la même lisibilité
+ * groupée que la vue en lecture seule.
+ */
+function AttachmentBlock({
+  icon: Icon,
+  label,
+  count,
+  children,
+}: {
+  icon: typeof Mic;
+  label: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-subtle">
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+        <span className="text-muted">{count}</span>
+      </p>
+      {children}
     </div>
   );
 }

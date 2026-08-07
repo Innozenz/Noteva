@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { auth } from "@/lib/auth";
 import { lessonTitle } from "@/lib/bookings/title";
 import prisma from "@/lib/prisma";
+import { reportPlainText, sanitizeReportHtml } from "@/lib/reports/sanitize";
 import { isMinor } from "@/lib/student/profile";
 import { ageOn } from "@/lib/user/age";
 
@@ -262,7 +263,7 @@ export default async function StudentFilePage({
       (!crFrom || day >= crFrom) &&
       (!crTo || day <= crTo) &&
       (!crNeedle ||
-        (b.report?.content ?? "").toLowerCase().includes(crNeedle) ||
+        reportPlainText(b.report?.content ?? "").toLowerCase().includes(crNeedle) ||
         b.instrument.name.toLowerCase().includes(crNeedle))
     );
   });
@@ -417,7 +418,7 @@ export default async function StudentFilePage({
                     studentName: name,
                     instrumentName: b.instrument.name,
                     isTrial: b.isTrial,
-                    content: b.report?.content ?? "",
+                    content: b.report?.content ? sanitizeReportHtml(b.report.content) : "",
                     attachments: b.report?.attachments ?? [],
                   }}
                   comments={(b.report?.comments ?? []).map((c) => ({

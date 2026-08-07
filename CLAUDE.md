@@ -369,6 +369,23 @@ The queue's order lives in `lib/reviews/report.ts` (`sortForModeration`, unit-te
 
 `aggregateRating` is emitted in the profile's JSON-LD **only when reviews exist**. An `aggregateRating` with no reviews is a manual-action risk with search engines, not a cosmetic detail.
 
+### Lesson reports (comptes rendus)
+
+A `LessonReport` hangs off a booking (unique `bookingId`), written by the teacher and read by the student on their dashboard. It carries a `content` text plus attachments (images, PDF scores, audio notes recorded at the mic). `canDocument` in `lib/reports/eligibility.ts` is the single rule — `CONFIRMED` or `COMPLETED` **and** started — feeding the write route, the teacher's workshop (`/dashboard/prof/comptes-rendus`), the per-student sheet (`/dashboard/prof/eleves/[id]`), and the agenda modal's "Compte rendu" button. Attachments are grouped by type (images / audio / scores) in both the editor and the read view, not dumped in one mixed row.
+
+**The text is a rich-text WYSIWYG editor (TipTap v3), and `content` is HTML.** `components/rich-text-editor.tsx` is the editor (client, `"use client"`) — a clickable toolbar (bold, italic, strike, H2/H3, bullet/ordered list, blockquote) over a TipTap `StarterKit`, chosen so non-technical teachers click rather than type syntax. It emits HTML via `getHTML()`. `immediatelyRender: false` is required — Next server-renders first, and without it the editor draws on the first pass and throws a hydration mismatch. An "empty" TipTap doc serializes to `<p></p>`, not `""`, so the editor's `onChange` normalizes blank HTML back to `""` (`htmlIsBlank`) or `dirty`/`documented`/the stored value all go wrong.
+
+**The editor is not always on.** Once saved, the teacher sees the rendered report — exactly what the student sees — with a **"Modifier"** button; the textarea is not permanent. Editing offers **"Annuler"** (restores the saved value). A blank report opens straight in edit mode (nothing to read). After a save, the client adopts the **server's returned (sanitized) value**, not its local draft — the server's is the stored truth.
+
+**Sanitization is the load-bearing decision, and it is server-only.** The teacher's HTML is rendered to the student, so rendering it raw is a **stored-XSS vector** — a `<script>` POSTed straight to the write route, bypassing the editor. `sanitizeReportHtml` (`lib/reports/sanitize.ts`) keeps a **strict allowlist** — exactly the tags the toolbar produces (`p br strong em s h2 h3 ul ol li blockquote`), no attributes, **no links** (a `javascript:` href would itself be a vector). It runs in **two** places:
+
+- **the write route** (`PUT /api/bookings/[id]/report`), so the DB only ever stores clean HTML going forward;
+- **every server boundary where `content` crosses into a render component** — the four pages that build render props (`comptes-rendus`, `eleves/[id]`, `(student)/cours`, `(student)/dossiers/[teacherId]`). This is the real XSS guard (render is where it matters) and it also neutralizes **legacy** plain-text content that predates the editor.
+
+**`sanitize-html` must never reach the client bundle.** It is a Node library, and the render components receive **already-clean** HTML — so `ReportViewer` (`components/report-view.tsx`) and `RichTextContent` (`components/rich-text-content.tsx`) do a bare `dangerouslySetInnerHTML` with **no sanitizer import**. This is not optional tidiness: `ReportViewer` is imported by `student-bookings.tsx`, which is `"use client"`, so a sanitizer inside it would ship `sanitize-html` to the browser. Sanitize at the server boundary, render the trusted result.
+
+`RichTextContent` is the one renderer, used by the student view and the teacher's read mode alike — so what the teacher writes is what the student reads. Its `.rich-text` class in `globals.css` rebuilds the list markers and heading sizes that the Tailwind reset strips, on the theme tokens, and is shared by the editable area too. `whitespace-pre-line` on it preserves newlines in **legacy** plain text (TipTap HTML has no inter-tag newlines, so it is unaffected). Search filters run through `reportPlainText` (also in `sanitize.ts`) so a term matches across formatting tags — "la gamme" still hits when "gamme" is bold.
+
 ### Notifications (`lib/notifications`)
 
 All the logic — who gets told, of what, in what words — lives in `templates.ts` as pure functions, so it's tested without a provider. `send.ts` is a thin adapter: one hand-rolled `fetch` to Resend, no SDK for a single call.

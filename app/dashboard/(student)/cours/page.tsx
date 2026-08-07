@@ -8,6 +8,7 @@ import {
 } from "@/components/student-bookings";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { sanitizeReportHtml } from "@/lib/reports/sanitize";
 import { MarkCoursSeen } from "./mark-seen";
 
 /**
@@ -104,7 +105,9 @@ export default async function StudentBookingsPage() {
       : null,
     report: booking.report
       ? {
-          content: booking.report.content,
+          content: booking.report.content
+            ? sanitizeReportHtml(booking.report.content)
+            : null,
           attachments: booking.report.attachments,
           comments: booking.report.comments.map((c) => ({
             ...c,

@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { auth } from "@/lib/auth";
 import { lessonTitle } from "@/lib/bookings/title";
 import prisma from "@/lib/prisma";
+import { sanitizeReportHtml } from "@/lib/reports/sanitize";
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: "En attente",
@@ -343,7 +344,9 @@ export default async function StudentDossierPage({
                       bookingId={b.id}
                       me="STUDENT"
                       report={{
-                        content: b.report!.content,
+                        content: b.report!.content
+                          ? sanitizeReportHtml(b.report!.content)
+                          : null,
                         attachments: b.report!.attachments,
                         comments: b.report!.comments.map((c) => ({
                           ...c,

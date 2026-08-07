@@ -13,6 +13,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  FileText,
   Globe,
   Home,
   Info,
@@ -44,6 +45,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { checkTransition, type BookingAction } from "@/lib/bookings/transitions";
+import { canDocument } from "@/lib/reports/eligibility";
 import { postJson } from "@/lib/http/failure";
 import { notifyFailure, notifySuccess } from "@/lib/toast";
 import {
@@ -81,6 +83,7 @@ export type AgendaRow = {
   priceCents: number | null;
   studentMessage: string | null;
   instrumentName: string;
+  studentId: string;
   studentName: string | null;
 };
 
@@ -974,6 +977,11 @@ function BookingDetail({
       }).ok
   );
 
+  // Le compte rendu s'ouvre dès que le cours a commencé (confirmé ou terminé) —
+  // même règle que l'atelier et la fiche élève. Le lien pointe sur l'ancre du
+  // bon compte rendu dans la fiche élève, comme le fait l'historique.
+  const documentable = canDocument(row.status, startsAt, now);
+
   const format = (date: Date, options: Intl.DateTimeFormatOptions) =>
     date.toLocaleString("fr-FR", { ...options, timeZone: timezone });
 
@@ -1048,6 +1056,17 @@ function BookingDetail({
           Ce cours n&apos;attend plus rien de vous.
         </p>
       )}
+
+      {documentable ? (
+        <Button asChild variant="outline" size="sm" className="self-start">
+          <Link
+            href={`/dashboard/prof/eleves/${row.studentId}?onglet=comptes-rendus#cr-${row.id}`}
+          >
+            <FileText className="mr-2 h-3 w-3" />
+            Compte rendu
+          </Link>
+        </Button>
+      ) : null}
 
       <p className="text-xs text-subtle">
         Le profil complet de l&apos;élève est sur{" "}
