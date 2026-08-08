@@ -229,22 +229,51 @@ function ExceptionsCard({
   onChange: (rows: ExceptionRow[]) => void;
 }) {
   const [date, setDate] = useState("");
+  // Bloquer une plage horaire plutôt que la journée entière : sans bornes, le
+  // moteur retire tout le jour ; avec bornes, seulement ce créneau.
+  const [partial, setPartial] = useState(false);
+  const [start, setStart] = useState("10:00");
+  const [end, setEnd] = useState("11:00");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Failure | null>(null);
 
-  const addBlockedDay = async () => {
+  const addBlock = async () => {
     if (!date) return;
 
-    setIsSaving(true);
     setError(null);
+
+    let startMinute: number | undefined;
+    let endMinute: number | undefined;
+
+    if (partial) {
+      const s = parseTime(start);
+      const e = parseTime(end);
+
+      if (s === null || e === null) {
+        setError(localFailure("Horaire illisible, attendu au format 10:00."));
+        return;
+      }
+      if (s >= e) {
+        setError(localFailure("L'heure de fin doit suivre l'heure de début."));
+        return;
+      }
+
+      startMinute = s;
+      endMinute = e;
+    }
+
+    setIsSaving(true);
 
     try {
       const result = await postJson<ExceptionRow>(
         "/api/teacher/availability/exceptions",
         {
           method: "POST",
-          // Sans bornes horaires, la journée entière est bloquée.
-          body: JSON.stringify({ date, type: "BLOCKED" }),
+          body: JSON.stringify(
+            partial
+              ? { date, type: "BLOCKED", startMinute, endMinute }
+              : { date, type: "BLOCKED" }
+          ),
         }
       );
 
@@ -255,7 +284,7 @@ function ExceptionsCard({
 
       onChange([...exceptions, { ...result.data, date }]);
       setDate("");
-      notifySuccess("Journée bloquée.");
+      notifySuccess(partial ? "Plage bloquée." : "Journée bloquée.");
     } finally {
       setIsSaving(false);
     }
@@ -284,16 +313,26 @@ function ExceptionsCard({
   return (
     <section className="flex flex-col gap-5">
       <div>
-        <SectionTitle>Congés et absences</SectionTitle>
+        <SectionTitle>Congés et indisponibilités</SectionTitle>
         <p className="mt-2 text-sm text-muted">
-          Ces journées sont retirées de votre semaine type. Les cours déjà
-          réservés ne sont pas annulés pour autant.
+          Retirez une journée entière, ou seulement une plage horaire, de votre
+          semaine type. Les cours déjà réservés ne sont pas annulés pour autant.
         </p>
       </div>
       <div className="flex flex-col gap-4">
+        <label className="flex items-center gap-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            className="accent-primary h-4 w-4"
+            checked={partial}
+            onChange={(e) => setPartial(e.target.checked)}
+          />
+          Sur une plage horaire seulement (sinon, la journée entière)
+        </label>
+
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1">
-            <Label htmlFor="exception-date">Journée à bloquer</Label>
+            <Label htmlFor="exception-date">Date</Label>
             <Input
               id="exception-date"
               type="date"
@@ -302,7 +341,33 @@ function ExceptionsCard({
               onChange={(e) => setDate(e.target.value)}
             />
           </div>
-          <Button variant="outline" disabled={!date || isSaving} onClick={addBlockedDay}>
+
+          {partial ? (
+            <>
+              <div className="space-y-1">
+                <Label htmlFor="exception-start">De</Label>
+                <Input
+                  id="exception-start"
+                  type="time"
+                  className="w-32"
+                  value={start}
+                  onChange={(e) => setStart(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="exception-end">À</Label>
+                <Input
+                  id="exception-end"
+                  type="time"
+                  className="w-32"
+                  value={end}
+                  onChange={(e) => setEnd(e.target.value)}
+                />
+              </div>
+            </>
+          ) : null}
+
+          <Button variant="outline" disabled={!date || isSaving} onClick={addBlock}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Bloquer
           </Button>
@@ -324,7 +389,11 @@ function ExceptionsCard({
  "fr-FR",
                     { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }
                   )}
-                  {exception.startMinute === null ? " — journée entière" : ""}
+                  {exception.startMinute === null
+                    ? " — journée entière"
+                    : ` — ${formatTime(exception.startMinute)}–${formatTime(
+                        exception.endMinute ?? exception.startMinute
+                      )}`}
                 </span>
                 <Button
                   variant="ghost"
