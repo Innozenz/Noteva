@@ -165,23 +165,43 @@ export default async function SearchPage({
               key={teacher.slug}
               href={`/profs/${teacher.slug}`}
               main={
-                <>
-                  <p className="font-display text-xl font-medium leading-tight text-foreground">
-                    {teacher.name ?? "Prof de musique"}
-                  </p>
-                  <p className="mt-1.5 truncate text-sm text-muted">
-                    {teacher.instruments
-                      .slice(0, 4)
-                      .map((instrument) => instrument.name)
-                      .join(" · ")}
-                    {teacher.trialLessonOffered ? " · Cours d’essai" : ""}
-                  </p>
-                  {teacher.headline ? (
-                    <p className="mt-1 line-clamp-1 text-sm text-subtle">
-                      {teacher.headline}
+                <div className="flex items-center gap-4">
+                  {/* Photo du prof. Rendue en `<img>` côté serveur (la page est
+                      un RSC) plutôt qu'en composant client, avec un repli sur
+                      l'initiale quand aucune photo n'est renseignée. */}
+                  <span className="relative flex h-14 w-14 shrink-0 overflow-hidden rounded-full border border-border bg-surface-strong">
+                    {teacher.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={teacher.image}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center font-display text-lg text-muted">
+                        {(teacher.name ?? "?").charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </span>
+
+                  <div className="min-w-0">
+                    <p className="font-display text-xl font-medium leading-tight text-foreground">
+                      {teacher.name ?? "Prof de musique"}
                     </p>
-                  ) : null}
-                </>
+                    <p className="mt-1.5 truncate text-sm text-muted">
+                      {teacher.instruments
+                        .slice(0, 4)
+                        .map((instrument) => instrument.name)
+                        .join(" · ")}
+                      {teacher.trialLessonOffered ? " · Cours d’essai" : ""}
+                    </p>
+                    {teacher.headline ? (
+                      <p className="mt-1 line-clamp-1 text-sm text-subtle">
+                        {teacher.headline}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
               }
               meta={
                 <>
