@@ -86,21 +86,8 @@ export function TeacherReviews({
 
       <ul className="flex flex-col gap-5">
         {reviews.map((review) => (
-          <li key={review.id} className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Stars value={review.rating} />
-              <span className="text-sm font-medium">
-                {review.studentName ?? "Élève"}
-              </span>
-              <span className="text-sm text-subtle">
-                {/* Instrument et mois du cours : c'est ce qui rend un avis
-                    vérifiable de l'extérieur, une étoile seule ne l'est pas. */}
-                {`· ${review.instrumentName} · ${review.lessonAt.toLocaleDateString(
-                  "fr-FR",
-                  { month: "long", year: "numeric", timeZone: timezone }
-                )}`}
-              </span>
-            </div>
+          <li key={review.id} className="flex flex-col gap-3">
+            <Stars value={review.rating} />
 
             {review.comment ? (
               <p className="whitespace-pre-line text-muted">{review.comment}</p>
@@ -119,6 +106,22 @@ export function TeacherReviews({
                 </div>
               </div>
             ) : null}
+
+            {/* Signature : le prénom de l'élève, à la plume — l'avis est déjà
+                « signé du prénom », on lui donne sa main. L'instrument et le mois
+                restent en clair : c'est ce qui rend l'avis vérifiable, une
+                signature seule ne l'est pas. */}
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
+              <span className="font-signature text-3xl leading-tight text-foreground">
+                {review.studentName ?? "Élève"}
+              </span>
+              <span className="text-sm text-subtle">
+                {`${review.instrumentName} · ${review.lessonAt.toLocaleDateString(
+                  "fr-FR",
+                  { month: "long", year: "numeric", timeZone: timezone }
+                )}`}
+              </span>
+            </div>
           </li>
         ))}
       </ul>

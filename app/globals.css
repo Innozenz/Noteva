@@ -148,6 +148,7 @@
 
   --font-sans: var(--font-sans-custom);
   --font-display: var(--font-display);
+  --font-signature: var(--font-signature-custom), "Segoe Script", cursive;
 }
 
 body {

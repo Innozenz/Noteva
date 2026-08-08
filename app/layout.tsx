@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Fraunces, Inter, Pinyon_Script } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -18,6 +18,18 @@ const sans = Inter({
 const display = Fraunces({
   variable: "--font-display",
   subsets: ["latin"],
+  display: "swap",
+});
+
+/**
+ * Signature : Pinyon Script, une anglaise copperplate. Réservée à une seule
+ * chose — signer un avis du prénom de l'élève, comme une vraie main. Rationnée
+ * comme le bronze : partout ailleurs, ce serait du décor.
+ */
+const signature = Pinyon_Script({
+  variable: "--font-signature-custom",
+  subsets: ["latin"],
+  weight: "400",
   display: "swap",
 });
 
@@ -50,7 +62,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body
-        className={`${sans.variable} ${display.variable} antialiased`}
+        className={`${sans.variable} ${display.variable} ${signature.variable} antialiased`}
       >
         <Providers>
           {children}
