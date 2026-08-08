@@ -4,10 +4,11 @@ import { redirect } from "next/navigation";
 import {
   ArrowRight,
   CalendarDays,
+  FileText,
   Inbox,
   Search,
-  Star,
   UserCog,
+  Users,
 } from "lucide-react";
 
 import { PageHeader, Row, RowList } from "@/components/editorial";
@@ -146,6 +147,20 @@ export default async function DashboardPage() {
           highlight: pendingCount > 0,
         },
         {
+          href: "/dashboard/prof/eleves",
+          icon: Users,
+          title: "Mes élèves",
+          text: "Fiches, historique et comptes rendus par élève.",
+          highlight: false,
+        },
+        {
+          href: "/dashboard/prof/comptes-rendus",
+          icon: FileText,
+          title: "Comptes rendus",
+          text: "Documentez chaque cours : texte, images, note audio.",
+          highlight: false,
+        },
+        {
           href: "/dashboard/prof",
           icon: UserCog,
           title: "Ma fiche",
@@ -157,13 +172,6 @@ export default async function DashboardPage() {
           icon: CalendarDays,
           title: "Mes disponibilités",
           text: "La semaine type et les exceptions ponctuelles.",
-          highlight: false,
-        },
-        {
-          href: "/dashboard/prof/avis",
-          icon: Star,
-          title: "Mes avis",
-          text: "Ce que vos élèves ont écrit, et votre droit de réponse.",
           highlight: false,
         },
       ]
